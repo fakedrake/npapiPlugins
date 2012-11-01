@@ -1,0 +1,66 @@
+HKCR {
+    codebendercc.Codebendercc.1 = s 'Plugin for the Codebender.cc Arduino - Browser Communication' {
+        CLSID = s '{b640bb42-591a-51dc-bc7a-cb0f2812296a}'
+    }
+    codebendercc.Codebendercc = s 'Plugin for the Codebender.cc Arduino - Browser Communication' {
+        CLSID = s '{b640bb42-591a-51dc-bc7a-cb0f2812296a}'
+        CurVer = s 'codebendercc.Codebendercc.1'
+    }
+    NoRemove CLSID {
+        ForceRemove {b640bb42-591a-51dc-bc7a-cb0f2812296a} = s 'Plugin for the Codebender.cc Arduino - Browser Communication' {
+            ProgID = s 'codebendercc.Codebendercc.1'
+            VersionIndependentProgID = s 'codebendercc.Codebendercc'
+            ForceRemove 'Programmable'
+            InprocServer32 = s '%MODULE%' {
+                val ThreadingModel = s '%THREADING%'
+            }
+            val AppID = s '%APPID%'
+            ForceRemove 'Control'
+            'MiscStatus' = s '0' {
+                '1' = s '131473'
+            }
+            'TypeLib' = s '%LIBID%'
+            'Version' = s '1'
+        }
+    }
+    NoRemove MIME {
+        NoRemove Database {
+            NoRemove 'Content Type' {
+                'application/x-codebendercc' = s 'Plugin for the Codebender.cc Arduino - Browser Communication' {
+                    val Extension = s ''
+                    val CLSID = s '{b640bb42-591a-51dc-bc7a-cb0f2812296a}'
+                }
+            }
+        }
+    }            
+}
+HKCU {
+    NoRemove Software {
+        NoRemove Microsoft {
+            NoRemove Windows {
+                NoRemove CurrentVersion {
+                    NoRemove Ext {
+                        NoRemove PreApproved {
+                            ForceRemove '{b640bb42-591a-51dc-bc7a-cb0f2812296a}'
+                        }
+                        NoRemove Stats {
+                            ForceRemove '{b640bb42-591a-51dc-bc7a-cb0f2812296a}' {
+                                iexplore {
+                                    AllowedDomains {
+                                        '*'
+                                    }
+                                    val Count = d ''
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        NoRemove MozillaPlugins {
+            ForceRemove 'codebender.cc/Codebendercc' {
+                val Path = s '%MODULE%'
+            }
+        }
+    }
+}
