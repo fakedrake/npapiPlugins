@@ -59,7 +59,8 @@
                                 <File Id="uniqueFileId" KeyPath="yes" Source="SourceDir\filename.ext" />
                             </Component>
                             /example -->
-                            <!--  -->
+
+                          <!--  -->
                         </Directory>
                     </Directory>
                 </Directory>

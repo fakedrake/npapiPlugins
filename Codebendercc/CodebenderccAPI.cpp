@@ -3,87 +3,86 @@
   Auto-generated CodebenderccAPI.cpp
 
 \**********************************************************/
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#ifdef ISWIN
-#include <SDKDDKVer.h>
-#include "dirent.h"
-#include <windows.h>
-#include <tchar.h>
-#else
-#include <dirent.h>
-#endif
-#include <sys/stat.h>
-#include <iostream>
-#include <fstream>
-#include <boost/algorithm/string/predicate.hpp>
-#include "JSObject.h"
-#include "variant_list.h"
-#include "DOM/Document.h"
-#include "global/config.h"
 #include "CodebenderccAPI.h"
-#include "src/3rdParty/boost/boost/thread/detail/thread.hpp"
+
+//deprecated
 
 FB::variant CodebenderccAPI::download() {
-    std::string os = getPlugin().get()->getOS();
-    std::string url = sitebase+os+".avrdude";
-	std::string confurl = sitebase+os+".avrdude.conf?1";
-		
-	if (os == "Windows") {	
-		std::string dllurl = sitebase+"libusb0.dll";
-		if (!fileExists(libusb)) {
-			getURL(dllurl, libusb);
-		}
-	}
-	if (os == "X11") {		
-		url = sitebase+os+".32.avrdude";
-		confurl = sitebase+os+".32.avrdude.conf";			
-	}
-	
-    if (!fileExists(avrdude)) {
-        getURL(url, avrdude);
-	}    
-    if (!fileExists(avrdudeConf)) {
-        getURL(confurl, avrdudeConf);
-	}
-    return sitebase;
+    return "deprecated";
 }
 
 FB::variant CodebenderccAPI::flash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu) {
- #ifdef ISWIN
-	//_chmod(avrdude.c_str(), _S_IREAD|_S_IWRITE|0x00400000);	
-#else
-	chmod(avrdude.c_str(), S_IRWXU);
+#if !defined  _WIN32 || _WIN64	
+    chmod(avrdude.c_str(), S_IRWXU);    
 #endif
-    unsigned char buffer [50000];
-    size_t size = base64_decode(code.c_str(), buffer, 50000);
+    if (!validate_device(device)) return -1;
+    if (!validate_code(code)) return -2;
+    if (!validate_number(maxsize)) return -3;
+    if (!validate_number(speed)) return -4;
+    if (!validate_charnum(protocol)) return -5;    
+    if (!validate_charnum(mcu)) return -6;
+    
+    unsigned char buffer [150000];
+    size_t size = base64_decode(code.c_str(), buffer, 150000);
     saveToBin(buffer, size);
 
-    std::string command = "\"" + avrdude + "\" "
+    std::string command = "\"" + avrdude + "\""
             + " -C\"" + avrdudeConf + "\""
-            + " -P " + device
-            + " -p " + mcu
+            + " -P" + device
+            + " -p" + mcu
             + " -u -U flash:w:\"" + binFile + "\":a"
-            + " -c " + protocol
-            + " -b " + speed
+            + " -c" + protocol
+            + " -b" + speed
             + " -F 2> "
             + "\"" + outfile + "\"";
-	
-	if (getPlugin().get()->getOS()=="Windows"){
-		command="\""+command+"\"";
-	}
+
+    if (getPlugin().get()->getOS() == "Windows") {
+        command = "\"" + command + "\"";
+    }
+
+    lastcommand = command;
 
     int retVal = system(command.c_str());
     perror(command.c_str());
     return retVal;
 }
 
+#if defined _WIN32||_WIN64
+
 FB::variant CodebenderccAPI::probeUSB() {
-#ifdef ISWIN
-	return probeUSB_win();
+    HANDLE hCom;
+    std::string ports = "";
+
+    for (int i = 1; i < 10; i++) {
+        //std::string port ="COM"+i;   //"\\\\.\\"
+
+        TCHAR pcCommPort [16]; //  Most systems have a COM1 port
+        swprintf(pcCommPort, L"COM%d", i);
+        //_tcscpy(pcCommPort ,port.c_str());
+        //  Open a handle to the specified com port.
+        hCom = CreateFile(pcCommPort,
+                GENERIC_READ | GENERIC_WRITE,
+                1, //  must be opened with exclusive-access
+                NULL, //  default security attributes
+                OPEN_EXISTING, //  must use OPEN_EXISTING
+                0, //  not overlapped I/O
+                NULL); //  hTemplate must be NULL for comm devices
+
+        if (hCom == INVALID_HANDLE_VALUE) {
+
+        } else {
+            CloseHandle(hCom);
+            ports.append("COM");
+            ports.append(boost::lexical_cast<std::string, int>(i));
+            ports.append(",");
+        }
+    }
+
+    return ports;
+}
 #else
+
+FB::variant CodebenderccAPI::probeUSB() {
     DIR *dp;
     std::string dirs = "";
     struct dirent *ep;
@@ -106,11 +105,11 @@ FB::variant CodebenderccAPI::probeUSB() {
         perror("Couldn't open the directory");
 
     return dirs;
-#endif
 }
+#endif
 
 bool CodebenderccAPI::fileExists(const std::string& filename) {
-	return false;
+    return false;
     FILE *pFile;
     pFile = fopen(filename.c_str(), "r");
     if (pFile == NULL) {
@@ -126,7 +125,7 @@ void CodebenderccAPI::getURL(const std::string& url, const std::string& destinat
             m_host,
             FB::URI::fromString(url),
             boost::bind(&CodebenderccAPI::getURLCallback, this, _1, _2, _3, _4, destination)
-            ,false);
+            , false);
 }
 
 
@@ -151,6 +150,10 @@ CodebenderccPtr CodebenderccAPI::getPlugin() {
 
 std::string CodebenderccAPI::get_version() {
     return FBSTRING_PLUGIN_VERSION;
+}
+
+FB::variant CodebenderccAPI::getLastCommand() {
+    return lastcommand;
 }
 
 FB::variant CodebenderccAPI::getFlashResult() {
@@ -186,7 +189,7 @@ void CodebenderccAPI::getURLCallback(bool success,
     }
     if (success) {
         std::ofstream myfile;
-        myfile.open(destination.c_str(),std::fstream::binary);
+        myfile.open(destination.c_str(), std::fstream::binary);
         for (size_t i = 0; i < size; i++) {
             myfile << data[i];
         }
@@ -197,31 +200,14 @@ void CodebenderccAPI::getURLCallback(bool success,
 }
 
 /**
- * Runs the given command and returns its output.
- */
-/*std::string CodebenderccAPI::exec(const char * cmd) {
-    FILE* pipe = popen(cmd, "r");
-    if (!pipe) return "ERROR";
-    char buffer[128];
-    std::string result = "";
-    while (!feof(pipe)) {
-        if (fgets(buffer, 128, pipe) != NULL)
-            result += buffer;
-    }
-    pclose(pipe);
-    return result;
-}
-*/
-
-/**
  * Saven the binary data to the binary file specified in the constructor.
  */
 void CodebenderccAPI::saveToBin(unsigned char * data, size_t size) {
     std::ofstream myfile;
-	myfile.open(binFile.c_str(),std::fstream::binary);
+    myfile.open(binFile.c_str(), std::fstream::binary);
     for (size_t i = 0; i < size; i++) {
         myfile << data[i];
-    } 
+    }
     myfile.close();
 }
 
@@ -238,7 +224,7 @@ size_t CodebenderccAPI::base64_decode(const char *source, unsigned char *target,
     char quadruple[4];
     unsigned char tmpresult[3];
     int i;
-	size_t tmplen = 3;
+    size_t tmplen = 3;
     int converted = 0;
 
     /* concatinate '===' to the source to handle unpadded base64 data */
@@ -350,42 +336,37 @@ int CodebenderccAPI::_base64_decode_triple(char quadruple[4], unsigned char *res
         result[i] = triple_value % 256;
         triple_value /= 256;
     }
-
+    
     return bytes_to_decode;
 }
 
-#ifdef ISWIN
-FB::variant CodebenderccAPI::probeUSB_win(){
-  HANDLE hCom;
-   std::string ports = "";
-   
-   for (int i=1;i<10;i++){
-	//std::string port ="COM"+i;   //"\\\\.\\"
-	
-   TCHAR pcCommPort [16]; //  Most systems have a COM1 port
-   swprintf(pcCommPort,L"COM%d",i);
-   //_tcscpy(pcCommPort ,port.c_str());
-   //  Open a handle to the specified com port.
-   hCom = CreateFile( pcCommPort,
-                      GENERIC_READ | GENERIC_WRITE,
-                      1,      //  must be opened with exclusive-access
-                      NULL,   //  default security attributes
-                      OPEN_EXISTING, //  must use OPEN_EXISTING
-                      0,      //  not overlapped I/O
-                      NULL ); //  hTemplate must be NULL for comm devices
-
-   if (hCom == INVALID_HANDLE_VALUE) 
-   {       
-       
-   }else{
-		CloseHandle(hCom);
-		ports.append("COM");
-		ports.append(boost::lexical_cast<std::string,int>(i));
-		ports.append(",");		
-   }
-   }
-
-	return ports;
-
+bool CodebenderccAPI::validate_number(const std::string &input){
+    try{
+        boost::lexical_cast<double>(input);
+        return true;
+    }catch(boost::bad_lexical_cast &){
+        return false;    
+    }        
 }
-#endif
+
+bool CodebenderccAPI::validate_device(const std::string &input){
+    static const boost::regex acm("\\/dev\\/ttyACM[[:digit:]]+");
+    static const boost::regex usb("\\/dev\\/ttyUSB[[:digit:]]+");
+    static const boost::regex com("COM[[:digit:]]+");
+    static const boost::regex cu("\\/dev\\/cu.[0-9a-zA-Z\\-]+");
+    return boost::regex_match(input, acm)
+            ||boost::regex_match(input, usb)
+            ||boost::regex_match(input, com)
+            ||boost::regex_match(input, cu)            
+            ;
+}
+
+bool CodebenderccAPI::validate_code(const std::string &input){
+    static const boost::regex base64("[0-9a-zA-Z+\\/=\n]+");
+    return boost::regex_match(input, base64);
+}
+
+bool CodebenderccAPI::validate_charnum(const std::string &input){
+    static const boost::regex charnum("[0-9a-zA-Z]+");
+    return boost::regex_match(input, charnum);
+}

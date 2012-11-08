@@ -26,7 +26,14 @@ set (SOURCES
 
 add_x11_plugin(${PROJECT_NAME} SOURCES)
 
+
+
 # add library dependencies here; leave ${PLUGIN_INTERNAL_DEPS} there unless you know what you're doing!
 target_link_libraries(${PROJECT_NAME}
     ${PLUGIN_INTERNAL_DEPS}
     )
+
+
+
+#set (STDCPP_LIBRARY_PATH /usr/lib/x86_64-linux-gnu/libstdc++.so.6)
+#target_link_libraries(${PROJECT_NAME} ${STDCPP_LIBRARY_PATH})
