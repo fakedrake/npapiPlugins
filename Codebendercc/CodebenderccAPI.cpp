@@ -13,15 +13,15 @@ FB::variant CodebenderccAPI::download() {
 
 FB::variant CodebenderccAPI::flash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu) {
 #if !defined  _WIN32 || _WIN64	
-    chmod(avrdude.c_str(), S_IRWXU);    
+    chmod(avrdude.c_str(), S_IRWXU);
 #endif
     if (!validate_device(device)) return -1;
     if (!validate_code(code)) return -2;
     if (!validate_number(maxsize)) return -3;
     if (!validate_number(speed)) return -4;
-    if (!validate_charnum(protocol)) return -5;    
+    if (!validate_charnum(protocol)) return -5;
     if (!validate_charnum(mcu)) return -6;
-    
+
     unsigned char buffer [150000];
     size_t size = base64_decode(code.c_str(), buffer, 150000);
     saveToBin(buffer, size);
@@ -53,23 +53,22 @@ FB::variant CodebenderccAPI::probeUSB() {
     HANDLE hCom;
     std::string ports = "";
 
-    for (int i = 1; i < 10; i++) {
-        //std::string port ="COM"+i;   //"\\\\.\\"
+    for (int i = 1; i < 150; i++) {
+        //std::string port ="COM11";   //"\\\\.\\"
 
-        TCHAR pcCommPort [16]; //  Most systems have a COM1 port
-        swprintf(pcCommPort, L"COM%d", i);
-        //_tcscpy(pcCommPort ,port.c_str());
+        TCHAR pcCommPort [32]; //  Most systems have a COM1 port
+        swprintf(pcCommPort, L"\\\\.\\COM%d", i);
+        //_tcscpy(pcCommPort ,L(port.c_str()));
         //  Open a handle to the specified com port.
         hCom = CreateFile(pcCommPort,
-                GENERIC_READ | GENERIC_WRITE,
-                1, //  must be opened with exclusive-access
+                GENERIC_READ,
+                0, //  must be opened with exclusive-access
                 NULL, //  default security attributes
                 OPEN_EXISTING, //  must use OPEN_EXISTING
                 0, //  not overlapped I/O
                 NULL); //  hTemplate must be NULL for comm devices
 
         if (hCom == INVALID_HANDLE_VALUE) {
-
         } else {
             CloseHandle(hCom);
             ports.append("COM");
@@ -336,37 +335,69 @@ int CodebenderccAPI::_base64_decode_triple(char quadruple[4], unsigned char *res
         result[i] = triple_value % 256;
         triple_value /= 256;
     }
-    
+
     return bytes_to_decode;
 }
 
-bool CodebenderccAPI::validate_number(const std::string &input){
-    try{
+bool CodebenderccAPI::validate_number(const std::string &input) {
+    try {
         boost::lexical_cast<double>(input);
         return true;
-    }catch(boost::bad_lexical_cast &){
-        return false;    
-    }        
+    } catch (boost::bad_lexical_cast &) {
+        return false;
+    }
 }
 
-bool CodebenderccAPI::validate_device(const std::string &input){
+bool CodebenderccAPI::validate_device(const std::string &input) {
     static const boost::regex acm("\\/dev\\/ttyACM[[:digit:]]+");
     static const boost::regex usb("\\/dev\\/ttyUSB[[:digit:]]+");
     static const boost::regex com("COM[[:digit:]]+");
     static const boost::regex cu("\\/dev\\/cu.[0-9a-zA-Z\\-]+");
     return boost::regex_match(input, acm)
-            ||boost::regex_match(input, usb)
-            ||boost::regex_match(input, com)
-            ||boost::regex_match(input, cu)            
+            || boost::regex_match(input, usb)
+            || boost::regex_match(input, com)
+            || boost::regex_match(input, cu)
             ;
 }
 
-bool CodebenderccAPI::validate_code(const std::string &input){
+bool CodebenderccAPI::validate_code(const std::string &input) {
     static const boost::regex base64("[0-9a-zA-Z+\\/=\n]+");
     return boost::regex_match(input, base64);
 }
 
-bool CodebenderccAPI::validate_charnum(const std::string &input){
+bool CodebenderccAPI::validate_charnum(const std::string &input) {
     static const boost::regex charnum("[0-9a-zA-Z]+");
     return boost::regex_match(input, charnum);
+}
+
+bool CodebenderccAPI::serialRead(const std::string &port, const std::string &baudrate, const FB::JSObjectPtr &callback) {
+
+    std::string message = "connecting at ";
+    //message += port;
+    message += baudrate;
+    callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(message));
+
+    unsigned int brate = boost::lexical_cast<unsigned int, std::string > (baudrate);
+    doclose = false;
+
+    boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::serialReader,
+            this, port, brate, callback));
+    //callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(2));
+
+
+    return true; // the thread is started
+}
+
+void CodebenderccAPI::serialReader(const std::string &port, const unsigned int baudrate, const FB::JSObjectPtr &callback) {
+    SimpleSerial *serial =new SimpleSerial(port, baudrate);
+    while (!doclose) {
+        std::string text = serial->readLine();
+        callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(text));
+    }
+    callback->InvokeAsync("", FB::variant_list_of(shared_from_this())("closed"));
+}
+
+FB::variant CodebenderccAPI::disconnect() {    
+    doclose = true;    
+    return 1;
 }

@@ -59,5 +59,7 @@ set(FBMAC_USE_INVALIDATINGCOREANIMATION 0)
 #set (FB_ATLREG_MACHINEWIDE 1)
 
 add_boost_library(regex)
+add_boost_library(thread)
+add_boost_library(system)
 
 

@@ -16,6 +16,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/regex.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/thread.hpp>
 //#include <boost/optional.hpp>
 //#include <boost/weak_ptr.hpp>
 #include <fstream>
@@ -26,6 +27,11 @@
 #include <sys/stat.h>
 //#include <sys/types.h>
 
+#include <fcntl.h>
+
+
+
+
 #include "BrowserHost.h"
 #include "Codebendercc.h"
 #include "DOM/Document.h"
@@ -35,11 +41,10 @@
 #include "src/3rdParty/boost/boost/thread/detail/thread.hpp"
 #include "SimpleStreamHelper.h"
 #include "variant_list.h"
-
+#include "SimpleSerial.h"
 
 #ifndef H_CodebenderccAPI
 #define H_CodebenderccAPI
-
 
 class CodebenderccAPI : public FB::JSAPIAuto {
 public:
@@ -63,6 +68,8 @@ public:
         registerMethod("getFlashResult", make_method(this, &CodebenderccAPI::getFlashResult));
         registerMethod("getLastCommand", make_method(this, &CodebenderccAPI::getLastCommand));
         registerMethod("validate_device", make_method(this, &CodebenderccAPI::validate_device));
+        registerMethod("serialRead", make_method(this, &CodebenderccAPI::serialRead));
+        registerMethod("disconnect", make_method(this, &CodebenderccAPI::disconnect));
 
         // Read-only property
         registerProperty("version",
@@ -88,7 +95,7 @@ public:
         } else if (os == "X11") {
             avrdude = path + os + "." + arch + ".avrdude";
             avrdudeConf = path + os + "." + arch + ".avrdude.conf";
-        } 
+        }
     }
 
     /**
@@ -158,6 +165,9 @@ public:
      */
     bool validate_device(const std::string &input);
 
+    bool serialRead(const std::string &port, const std::string &baudrate, const FB::JSObjectPtr &callback);
+    void serialReader(const std::string &port, const unsigned int baudrate,const FB::JSObjectPtr &callback);
+    FB::variant disconnect();
 
 private:
     /**
@@ -237,6 +247,9 @@ private:
     /**
      */
     std::string lastcommand;
+    int mnum;
+
+    bool doclose;
 };
 
 #endif // H_CodebenderccAPI
