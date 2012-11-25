@@ -22,7 +22,11 @@ public:
      */
     SimpleSerial(std::string port, unsigned int baud_rate)
     : io(), serial(io, port) {
-        serial.set_option(boost::asio::serial_port_base::baud_rate(baud_rate));
+        serial.set_option(boost::asio::serial_port_base::baud_rate(1200));
+        //        serial.open(port);
+        //        serial.set_option(boost::asio::serial_port_base::flow_control(boost::asio::serial_port_base::flow_control::none));
+        //        serial->open(port);
+
     }
 
     /**
@@ -31,6 +35,7 @@ public:
      * \throws boost::system::system_error on failure
      */
     void writeString(std::string s) {
+
         boost::asio::write(serial, boost::asio::buffer(s.c_str(), s.size()));
     }
 
@@ -52,6 +57,7 @@ public:
                     break;
                 case '\n':
                     return result;
+
                 default:
                     result += c;
             }
@@ -59,7 +65,7 @@ public:
     }
 
     void close() {
-        serial.close();        
+        serial.close();
     }
 
 private:

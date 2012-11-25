@@ -6,6 +6,7 @@
 
 
 #if defined _WIN32 || _WIN64
+#define WIN32_LEAN_AND_MEAN 
 #include <SDKDDKVer.h>
 #include "dirent.h"
 #include <windows.h>
@@ -17,9 +18,12 @@
 #include <boost/regex.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/thread.hpp>
+#include <boost/thread/thread.hpp> 
+#include <boost/date_time.hpp>
 //#include <boost/optional.hpp>
 //#include <boost/weak_ptr.hpp>
 #include <fstream>
+#include <vector>
 //#include <iostream>
 //#include <sstream>
 //#include <stdio.h>
@@ -70,6 +74,8 @@ public:
         registerMethod("validate_device", make_method(this, &CodebenderccAPI::validate_device));
         registerMethod("serialRead", make_method(this, &CodebenderccAPI::serialRead));
         registerMethod("disconnect", make_method(this, &CodebenderccAPI::disconnect));
+        registerMethod("checkPermissions", make_method(this, &CodebenderccAPI::checkPermissions));
+        registerMethod("setCallback", make_method(this, &CodebenderccAPI::setCallback));
 
         // Read-only property
         registerProperty("version",
@@ -137,12 +143,12 @@ public:
      * @param mcu
      * @return 
      */
-    FB::variant flash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu);
+    FB::variant flash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr &);
     /**
      * Checks for all available USB Arduino devices.
      * @return a comma separated list of the detected devices.
      */
-    FB::variant probeUSB();
+    std::string probeUSB();
     /**
      * Returns the avrdude 's output.
      * @return the output recorded from avrdude.
@@ -165,9 +171,15 @@ public:
      */
     bool validate_device(const std::string &input);
 
+    bool setCallback(const FB::JSObjectPtr &callback);
+
+
     bool serialRead(const std::string &port, const std::string &baudrate, const FB::JSObjectPtr &callback);
-    void serialReader(const std::string &port, const unsigned int baudrate,const FB::JSObjectPtr &callback);
+    void serialReader(const std::string &port, const unsigned int baudrate, const FB::JSObjectPtr &callback);
+    FB::variant checkPermissions(const std::string &port);
     FB::variant disconnect();
+    std::string exec(const char * cmd);
+
 
 private:
     /**
@@ -232,6 +244,13 @@ private:
      */
     bool validate_charnum(const std::string &input);
 
+    void notify(const std::string& mess);
+    void doflash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu,const FB::JSObjectPtr &);
+
+    //std::vector<std::string> split(const std::string &s, char delim, std::vector<std::string> &elems);
+
+    //std::vector<std::string> split(const std::string &s, char delim) ;
+
     /**
      */
     CodebenderccWeakPtr m_plugin;
@@ -248,6 +267,8 @@ private:
      */
     std::string lastcommand;
     int mnum;
+
+    FB::JSObjectPtr callback_;
 
     bool doclose;
 };

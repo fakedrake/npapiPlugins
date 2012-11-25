@@ -11,24 +11,88 @@ FB::variant CodebenderccAPI::download() {
     return "deprecated";
 }
 
-FB::variant CodebenderccAPI::flash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu) {
-#if !defined  _WIN32 || _WIN64	
-    chmod(avrdude.c_str(), S_IRWXU);
-#endif
+FB::variant CodebenderccAPI::flash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr &flash_callback) {
     if (!validate_device(device)) return -1;
     if (!validate_code(code)) return -2;
     if (!validate_number(maxsize)) return -3;
     if (!validate_number(speed)) return -4;
     if (!validate_charnum(protocol)) return -5;
     if (!validate_charnum(mcu)) return -6;
+    perror("validated");
 
+    boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doflash,
+            this, device, code, maxsize, protocol, speed, mcu, flash_callback));
+
+    return 0;
+}
+
+void CodebenderccAPI::doflash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr &flash_callback) {
+    perror("doflash");
+#if !defined  _WIN32 || _WIN64	
+    chmod(avrdude.c_str(), S_IRWXU);
+#endif
+
+    if (mcu == "atmega32u4") {
+        notify("Trying Arduino Leonardo auto-reset. If it does not reset automatically please reset the Arduino manualy!");
+    }
+	
     unsigned char buffer [150000];
     size_t size = base64_decode(code.c_str(), buffer, 150000);
     saveToBin(buffer, size);
 
+    std::string fdevice = device;
+	
+    if (mcu == "atmega32u4") {     
+#if !defined  _WIN32 || _WIN64	
+		{
+            SimpleSerial * serial = new SimpleSerial(device, 1200);
+            serial->close();
+        }	
+
+
+        usleep(500000);
+#else
+		Sleep(500);
+#endif
+	
+        std::string oldPorts = probeUSB();
+        perror(oldPorts.c_str());
+
+        for (int i = 0; i < 20; i++) {
+#if !defined  _WIN32 || _WIN64	
+            sleep(1);
+#else
+			Sleep(1000);
+#endif
+            std::vector<std::string> newPorts;
+            std::string newports = probeUSB();
+            perror(newports.c_str());
+            std::stringstream ss(newports);
+            std::string item;
+            while (std::getline(ss, item, ',')) {
+                newPorts.push_back(item);
+            }
+
+            for (std::vector<std::string>::iterator it = newPorts.begin(); it != newPorts.end(); ++it) {
+                if (oldPorts.find(*it) == std::string::npos) {
+                    fdevice = *it;
+                    i = 20;
+                    break;
+                }
+            }
+            //            boost::posix_time::ptime t2 = boost::posix_time::second_clock::local_time();
+
+            if (i == 19) {
+                notify("Could not auto-reset or detect a manual reset!");
+                flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-1));
+                return;
+            }
+        }
+    }
+
     std::string command = "\"" + avrdude + "\""
             + " -C\"" + avrdudeConf + "\""
-            + " -P" + device
+            + " -P" + fdevice
             + " -p" + mcu
             + " -u -U flash:w:\"" + binFile + "\":a"
             + " -c" + protocol
@@ -44,12 +108,25 @@ FB::variant CodebenderccAPI::flash(const std::string& device, const std::string&
 
     int retVal = system(command.c_str());
     perror(command.c_str());
-    return retVal;
+    flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
 }
+
+bool CodebenderccAPI::setCallback(const FB::JSObjectPtr &callback) {
+    callback_ = callback;
+    return true;
+}
+
+
+
+/*
+std::vector<std::string> split(const std::string &s, char delim) {
+    std::vector<std::string> elems;
+    return split(s, delim, elems);
+}*/
 
 #if defined _WIN32||_WIN64
 
-FB::variant CodebenderccAPI::probeUSB() {
+std::string CodebenderccAPI::probeUSB() {
     HANDLE hCom;
     std::string ports = "";
 
@@ -81,7 +158,7 @@ FB::variant CodebenderccAPI::probeUSB() {
 }
 #else
 
-FB::variant CodebenderccAPI::probeUSB() {
+std::string CodebenderccAPI::probeUSB() {
     DIR *dp;
     std::string dirs = "";
     struct dirent *ep;
@@ -389,15 +466,52 @@ bool CodebenderccAPI::serialRead(const std::string &port, const std::string &bau
 }
 
 void CodebenderccAPI::serialReader(const std::string &port, const unsigned int baudrate, const FB::JSObjectPtr &callback) {
-    SimpleSerial *serial =new SimpleSerial(port, baudrate);
+    SimpleSerial *serial = new SimpleSerial(port, baudrate);
     while (!doclose) {
         std::string text = serial->readLine();
-        callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(text));
+        if (callback != NULL) {
+            callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(text));
+        }
     }
+    serial->close();
     callback->InvokeAsync("", FB::variant_list_of(shared_from_this())("closed"));
 }
 
-FB::variant CodebenderccAPI::disconnect() {    
-    doclose = true;    
+FB::variant CodebenderccAPI::disconnect() {
+    doclose = true;
     return 1;
+}
+
+FB::variant CodebenderccAPI::checkPermissions(const std::string &port) {
+#if !defined  _WIN32 || _WIN64	
+    if (!validate_device(port)) return "";
+    if (getPlugin().get()->getOS() != "X11") return "";
+
+    std::string command = "cat /etc/group | grep $(ls -l " + port + " | cut -d ' ' -f 4) |  grep $USER";
+
+    std::string result = exec(command.c_str());
+    if (result == "") {
+        command = "ls -l " + port + " | cut -d ' ' -f 4";
+        return exec(command.c_str());
+    }
+#endif
+    return "";
+}
+
+std::string CodebenderccAPI::exec(const char * cmd) {
+    std::string result = "";
+#if !defined  _WIN32 || _WIN64	
+    FILE* pipe = popen(cmd, "r");
+    if (!pipe) return "ERROR";
+    char buffer[128];
+    while (fgets(buffer, 128, pipe) != NULL) {
+        result += buffer;
+    }
+    pclose(pipe);
+#endif
+    return result;
+}
+
+void CodebenderccAPI::notify(const std::string& message) {
+    callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
 }
