@@ -35,26 +35,26 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
     if (mcu == "atmega32u4") {
         notify("Trying Arduino Leonardo auto-reset. If it does not reset automatically please reset the Arduino manualy!");
     }
-	
+
     unsigned char buffer [150000];
     size_t size = base64_decode(code.c_str(), buffer, 150000);
     saveToBin(buffer, size);
 
     std::string fdevice = device;
-	
-    if (mcu == "atmega32u4") {     
+
+    if (mcu == "atmega32u4") {
 #if !defined  _WIN32 || _WIN64	
-		{
+        {
             SimpleSerial * serial = new SimpleSerial(device, 1200);
             serial->close();
-        }	
+        }
 
 
         usleep(500000);
 #else
-		Sleep(500);
+        Sleep(500);
 #endif
-	
+
         std::string oldPorts = probeUSB();
         perror(oldPorts.c_str());
 
@@ -62,7 +62,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 #if !defined  _WIN32 || _WIN64	
             sleep(1);
 #else
-			Sleep(1000);
+            Sleep(1000);
 #endif
             std::vector<std::string> newPorts;
             std::string newports = probeUSB();
@@ -450,7 +450,6 @@ bool CodebenderccAPI::validate_charnum(const std::string &input) {
 bool CodebenderccAPI::serialRead(const std::string &port, const std::string &baudrate, const FB::JSObjectPtr &callback) {
 
     std::string message = "connecting at ";
-    //message += port;
     message += baudrate;
     callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(message));
 
@@ -466,8 +465,8 @@ bool CodebenderccAPI::serialRead(const std::string &port, const std::string &bau
 }
 
 void CodebenderccAPI::serialReader(const std::string &port, const unsigned int baudrate, const FB::JSObjectPtr &callback) {
-    SimpleSerial *serial = new SimpleSerial(port, baudrate);
-    while (!doclose) {
+    SimpleSerial *serial = new SimpleSerial(port, baudrate);    
+    while (!doclose) {        
         std::string text = serial->readLine();
         if (callback != NULL) {
             callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(text));
@@ -512,6 +511,6 @@ std::string CodebenderccAPI::exec(const char * cmd) {
     return result;
 }
 
-void CodebenderccAPI::notify(const std::string& message) {
+void CodebenderccAPI::notify(const std::string &message) {
     callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
 }
