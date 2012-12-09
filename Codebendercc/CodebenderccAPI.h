@@ -20,6 +20,7 @@
 #include <boost/thread.hpp>
 #include <boost/thread/thread.hpp> 
 #include <boost/date_time.hpp>
+#include <boost/asio.hpp>
 //#include <boost/optional.hpp>
 //#include <boost/weak_ptr.hpp>
 #include <fstream>
@@ -38,6 +39,7 @@
 
 #include "BrowserHost.h"
 #include "Codebendercc.h"
+#include "DOM/Window.h"
 #include "DOM/Document.h"
 #include "global/config.h"
 #include "JSAPIAuto.h"
@@ -65,24 +67,40 @@ public:
     ////////////////////////////////////////////////////////////////////////////
 
     CodebenderccAPI(const CodebenderccPtr& plugin, const FB::BrowserHostPtr& host) :
-    m_plugin(plugin), m_host(host) {
+    m_plugin(plugin), m_host(host), io() {
+
+        // Retrieve a reference to the DOM Window
+        FB::DOM::WindowPtr window = m_host->getDOMWindow();
+
+        // Check if the DOM Window has an alert peroperty
+        if (window && window->getJSObject()->HasProperty("window")) {
+            // Create a reference to alert
+            FB::JSObjectPtr obj = window->getProperty<FB::JSObjectPtr > ("window");
+
+            // Invoke alert with some text
+            grantedPermission = (obj->Invoke("confirm", FB::variant_list_of("Grant permission to Codebender.cc plugin?")).convert_cast<bool>() );
+
+
+        }
+
         registerMethod("probeUSB", make_method(this, &CodebenderccAPI::probeUSB));
         registerMethod("download", make_method(this, &CodebenderccAPI::download));
         registerMethod("flash", make_method(this, &CodebenderccAPI::flash));
-        registerMethod("getFlashResult", make_method(this, &CodebenderccAPI::getFlashResult));
-        registerMethod("getLastCommand", make_method(this, &CodebenderccAPI::getLastCommand));
-        registerMethod("validate_device", make_method(this, &CodebenderccAPI::validate_device));
+        //registerMethod("getFlashResult", make_method(this, &CodebenderccAPI::getFlashResult));
+        //registerMethod("getLastCommand", make_method(this, &CodebenderccAPI::getLastCommand));
+        registerMethod("checkPermissions", make_method(this, &CodebenderccAPI::checkPermissions));
+        //        registerMethod("validate_device", make_method(this, &CodebenderccAPI::validate_device));
         registerMethod("serialRead", make_method(this, &CodebenderccAPI::serialRead));
         registerMethod("disconnect", make_method(this, &CodebenderccAPI::disconnect));
-        registerMethod("checkPermissions", make_method(this, &CodebenderccAPI::checkPermissions));
         registerMethod("setCallback", make_method(this, &CodebenderccAPI::setCallback));
+        registerMethod("serialWrite", make_method(this, &CodebenderccAPI::serialWrite));
 
         // Read-only property
-        registerProperty("version",
-                make_property(this,
-                &CodebenderccAPI::get_version));
+        registerProperty("version", make_property(this, &CodebenderccAPI::get_version));
+
         std::string os = getPlugin().get()->getOS();
         std::string path = getPlugin().get()->getFSPath();
+
         path = path.substr(0, path.find_last_of("/\\") + 1);
 
         std::string arch = "32";
@@ -102,6 +120,13 @@ public:
             avrdude = path + os + "." + arch + ".avrdude";
             avrdudeConf = path + os + "." + arch + ".avrdude.conf";
         }
+
+        boost::thread t(boost::bind(&boost::asio::io_service::run, &io));
+
+        serial = NULL;
+
+
+
     }
 
     /**
@@ -122,17 +147,12 @@ public:
      */
     std::string get_version();
 
+
     /**
      * Deprecated.
      * @return 
      */
     FB::variant download();
-    /**
-     * 
-     * @param url
-     * @param destination
-     */
-    void getURL(const std::string& url, const std::string& destination);
     /**
      * 
      * @param device
@@ -159,7 +179,6 @@ public:
      * @return 
      */
     FB::variant getLastCommand();
-
     /**
      * Validate Device Name.
      * Devices in Linux are /dev/tty{USB??,ACM??}.
@@ -170,33 +189,51 @@ public:
      * @return true if valid, false else.
      */
     bool validate_device(const std::string &input);
-
+    /**
+     * Sets a callback to notify the web page about changes.
+     * @param callback
+     * @return 
+     */
     bool setCallback(const FB::JSObjectPtr &callback);
-
-
+    /**
+     * Read from serial port.
+     * @param port
+     * @param baudrate
+     * @param callback
+     * @return 
+     */
     bool serialRead(const std::string &port, const std::string &baudrate, const FB::JSObjectPtr &callback);
-    void serialReader(const std::string &port, const unsigned int baudrate, const FB::JSObjectPtr &callback);
-    FB::variant checkPermissions(const std::string &port);
+    /**
+     * Write String to serial port.
+     * @param the string to write.
+     */
+    void serialWrite(const std::string &);
+    /**
+     * Disconnects from serial port.
+     * @return 
+     */
     FB::variant disconnect();
-    std::string exec(const char * cmd);
-
+    /**
+     * Checks for the correct permissions.
+     * @param port The port to check.
+     * @return the group needed (if needed).
+     */
+    FB::variant checkPermissions(const std::string &port);
 
 private:
+    /**
+     * Exec system command.
+     * @param filename
+     * @return 
+     */
+    std::string exec(const char * cmd);
+
     /**
      * Check if the file exists.
      * @param filename the file to check.
      * @return true if it exists.
      */
     bool fileExists(const std::string& filename);
-    /**
-     * 
-     * @param success
-     * @param headers
-     * @param data
-     * @param size
-     * @param destination
-     */
-    void getURLCallback(bool success, const FB::HeaderMap& headers, const boost::shared_array<uint8_t>& data, const size_t size, const std::string& destination);
     /**
      * 
      * @param source
@@ -223,34 +260,50 @@ private:
      * @param data the data to write.
      * @param size the size of the buffer.
      */
-    void saveToBin(unsigned char * data, size_t size);
+    void saveToBin(unsigned char *, size_t);
 
     /**
      * Validate a number string.
      * @param input the string to validate.
      * @return true if the string contains a number, false else.
      */
-    bool validate_number(const std::string &input);
+    bool validate_number(const std::string &);
     /**
      * Validate a base64 file string.
      * @param input the code for the Arduino in base64 format.
      * @return true if the string is valid, false else.
      */
-    bool validate_code(const std::string &input);
+    bool validate_code(const std::string &);
     /**
      * Validate a string that contains digits and characters.
      * @param input the string to validate.
      * @return true if valid,false else.
      */
-    bool validate_charnum(const std::string &input);
+    bool validate_charnum(const std::string &);
 
-    void notify(const std::string& mess);
-    void doflash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu,const FB::JSObjectPtr &);
+    /**
+     * 
+     */
+    void notify(const std::string&);
+    /**
+     * 
+     * @param 
+     * @param 
+     * @param 
+     * @param 
+     * @param 
+     * @param 
+     * @param 
+     */
+    void doflash(const std::string&, const std::string&, const std::string&, const std::string&, const std::string&, const std::string&, const FB::JSObjectPtr &);
 
-    //std::vector<std::string> split(const std::string &s, char delim, std::vector<std::string> &elems);
-
-    //std::vector<std::string> split(const std::string &s, char delim) ;
-
+    /**
+     * 
+     * @param 
+     * @param 
+     * @param 
+     */
+    void serialReader(const std::string &, const unsigned int &, const FB::JSObjectPtr &);
     /**
      */
     CodebenderccWeakPtr m_plugin;
@@ -271,6 +324,11 @@ private:
     FB::JSObjectPtr callback_;
 
     bool doclose;
+    //    SimpleSerial * serial;
+    boost::asio::io_service io;
+    boost::asio::serial_port * serial;
+    boost::array<char, 1 > buf;
+    bool grantedPermission;
 };
 
 #endif // H_CodebenderccAPI
