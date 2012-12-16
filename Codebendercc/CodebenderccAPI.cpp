@@ -235,16 +235,21 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
     std::string fdevice = device;
 
     if (mcu == "atmega32u4") {
-#if !defined  _WIN32 || _WIN64	
         {
-            boost::asio::serial_port mySerial(io, device);
-            mySerial.set_option(boost::asio::serial_port_base::baud_rate(1200));
-            mySerial.close();
-            //                SimpleSerial * serial = new SimpleSerial(device, 1200);
-            //            serial->close();
+            try {
+                boost::asio::serial_port mySerial(io, fdevice);
+                mySerial.set_option(boost::asio::serial_port_base::baud_rate(1200));
+#if !defined  _WIN32 || _WIN64	
+                usleep(2000000);
+#else
+                Sleep(2000);
+#endif
+                mySerial.close();
+            } catch (...) {
+            }
         }
 
-
+#if !defined  _WIN32 || _WIN64	
         usleep(500000);
 #else
         Sleep(500);
