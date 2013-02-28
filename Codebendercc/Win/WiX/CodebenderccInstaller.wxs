@@ -1,77 +1,111 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-    <Product Id="*" Name="${FBSTRING_PluginName}" Language="1033" Version="${FBSTRING_PLUGIN_VERSION}" Manufacturer="${FBSTRING_CompanyName}" UpgradeCode="{5ed63a74-511c-5a42-8646-a6b6d982a2d3}">
-        <Package InstallerVersion="200" Compressed="yes" Description="Installer for the ${PLUGIN_NAME} plugin" InstallScope="perUser" />
-        <Upgrade Id="{5ed63a74-511c-5a42-8646-a6b6d982a2d3}">
-            <UpgradeVersion
-                Property="OLD_VERSION_FOUND"
-                Minimum="0.0.1" IncludeMinimum="yes"
-                Maximum="${FBSTRING_PLUGIN_VERSION}" IncludeMaximum="yes"
-                OnlyDetect="no" IgnoreRemoveFailure="yes"
-                MigrateFeatures="yes" />
-        </Upgrade>
-		<Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
-        <InstallExecuteSequence>
-            <RemoveExistingProducts After="InstallInitialize" />
-            <InstallExecute After="RemoveExistingProducts" />
-        </InstallExecuteSequence>
-        <Media Id="1" Cabinet="${PLUGIN_NAME}.cab" EmbedCab="yes" />
+  <Product Id="*" Name="Codebender.cc" Language="1033" Version="1.5.4.0" Manufacturer="codebender.cc" UpgradeCode="{5ed63a74-511c-5a42-8646-a6b6d982a2d3}">
+    <Package InstallerVersion="200" Compressed="yes" Description="Installer for the Codebendercc plugin" InstallScope="perUser" />
+    <Upgrade Id="{5ed63a74-511c-5a42-8646-a6b6d982a2d3}">
+      <UpgradeVersion
+          Property="OLD_VERSION_FOUND"
+          Minimum="0.0.1" IncludeMinimum="yes"
+          Maximum="1.5.4.0" IncludeMaximum="yes"
+          OnlyDetect="no" IgnoreRemoveFailure="yes"
+          MigrateFeatures="yes" />
+    </Upgrade>
+    <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
+    <InstallExecuteSequence>
+      <RemoveExistingProducts After="InstallInitialize" />
+      <InstallExecute After="RemoveExistingProducts" />
+    </InstallExecuteSequence>
+    <Media Id="1" Cabinet="Codebendercc.cab" EmbedCab="yes" />
 
-        <Directory Id="TARGETDIR" Name="SourceDir">
-            <Directory Id="${FB_WIX_INSTALL_LOCATION}">
-                <Directory Id="CompanyDir" Name="${COMPANY_NAME}">
-                    <Component Id="CompanyDirComp" Guid="*">
-                        <RemoveFolder Id="RemoveCompanyDir" On="uninstall" />
-                        <RegistryValue
-                            Root="HKCU"
-                            Key="SOFTWARE\${COMPANY_NAME}"
-                            Name="Uninstall"
-                            Type="string"
-                            Value="${FBSTRING_PLUGIN_VERSION}"
-                            KeyPath="yes" />
-                    </Component>
-                    <Directory Id="PluginNameDir" Name="${PLUGIN_NAME}">
-                        <Component Id="PluginNameDirComp" Guid="*">
-                            <RemoveFolder Id="RemovePluginNameDir" On="uninstall" />
-                            <RegistryValue
-                                Root="HKCU"
-                                Key="SOFTWARE\${COMPANY_NAME}\${PLUGIN_NAME}"
-                                Name="Uninstall"
-                                Type="string"
-                                Value="${FBSTRING_PLUGIN_VERSION}"
-                                KeyPath="yes" />
-                        </Component>
-                        <Directory Id="INSTALLDIR" Name="${FBSTRING_PLUGIN_VERSION}">
-                            <Component Id="InstallDirComp" Guid="*">
-                                <RemoveFolder Id="RemoveInstallDir" On="uninstall" />
-                                <RegistryValue
-                                    Root="HKCU"
-                                    Key="SOFTWARE\${COMPANY_NAME}\${PLUGIN_NAME}\${FBSTRING_PLUGIN_VERSION}"
-                                    Name="Uninstall"
-                                    Type="string"
-                                    Value="${FBSTRING_PLUGIN_VERSION}"
-                                    KeyPath="yes" />
-                            </Component>
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="AppDataFolder">
+        <Directory Id="CompanyDir" Name="codebendercc">
+          <Component Id="CompanyDirComp" Guid="*">
+            <RemoveFolder Id="RemoveCompanyDir" On="uninstall" />
+            <RegistryValue
+                Root="HKCU"
+                Key="SOFTWARE\codebendercc"
+                Name="Uninstall"
+                Type="string"
+                Value="1.5.4.0"
+                KeyPath="yes" />
+          </Component>
+          <Directory Id="PluginNameDir" Name="Codebendercc">
+            <Component Id="PluginNameDirComp" Guid="*">
+              <RemoveFolder Id="RemovePluginNameDir" On="uninstall" />
+              <RegistryValue
+                  Root="HKCU"
+                  Key="SOFTWARE\codebendercc\Codebendercc"
+                  Name="Uninstall"
+                  Type="string"
+                  Value="1.5.4.0"
+                  KeyPath="yes" />
+            </Component>
+            <Directory Id="INSTALLDIR" Name="1.5.4.0">
+              <Component Id="InstallDirComp" Guid="{104D10A9-62C4-4122-8BA2-1C4644373DEF}">
+                <RemoveFolder Id="RemoveInstallDir" On="uninstall" />
+                <RegistryValue
+                    Root="HKCU"
+                    Key="SOFTWARE\codebendercc\Codebendercc\1.5.4.0"
+                    Name="Uninstall"
+                    Type="string"
+                    Value="1.5.4.0"
+                    KeyPath="yes" />
+                <File Id="admin.vbs" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\admin.vbs" />
+                <File Id="avrdude.exe" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\avrdude.exe" />
+                <File Id="driverCopy.bat" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\driverCopy.bat" />
+                <File Id="libusb0.dll" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\libusb0.dll" />
+                <File Id="Windows.avrdude.conf" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\Windows.avrdude.conf" />
+                <File Id="digispark.exe" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\digispark.exe" />
+              </Component>
+              
+              <Directory Id="DRIVERDIR" Name="drivers">
+                <Component Id="DriverDirComp" Guid="{C8FB1AA8-E60F-4805-B745-BDDEBC791BF9}">
+                  <RemoveFolder Id="RemoveDriversDir" On="uninstall" />
+                  <RegistryValue
+                   Root="HKCU"
+                   Key="SOFTWARE\codebendercc\Codebendercc\1.5.4.0\drivers"
+                   Name="Uninstall"
+                   Type="string"
+                   Value="drivers"
+                   KeyPath="yes" />
+                  <File Id="leonardo" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\drivers\Arduino Leonardo.inf" />
+                  <File Id="MEGA2560REV3" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\drivers\Arduino MEGA 2560 REV3.inf" />
+                  <File Id="MEGA2560" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\drivers\Arduino MEGA 2560.inf" />
+                  <File Id="MEGAADKREV3" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\drivers\Arduino Mega ADK REV3.inf" />
+                  <File Id="MEGAADK" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\drivers\Arduino Mega ADK.inf" />
+                  <File Id="MICRO" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\drivers\Arduino Micro.inf" />
+                  <File Id="UNOREV3" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\drivers\Arduino UNO REV3.inf" />
+                  <File Id="UNO" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\drivers\Arduino UNO.inf" />
+                  <File Id="USBSERIAL" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\drivers\Arduino USBSerial.inf" />
 
-                            <!-- Put Additional files here: -->
-                            <!-- example:
+
+                </Component>
+
+
+
+                <!-- Put Additional files here: -->
+                <!-- example:
                             <Component Id="UniqueComponentId" Guid="*">
                                 <File Id="uniqueFileId" KeyPath="yes" Source="SourceDir\filename.ext" />
                             </Component>
                             /example -->
 
-                          <!--  -->
-                        </Directory>
-                    </Directory>
-                </Directory>
+                <!--  -->
+              </Directory>
             </Directory>
+          </Directory>
         </Directory>
+      </Directory>
+    </Directory>
 
-        <Feature Id="MainPluginFeature" Title="${FBSTRING_ProductName}" Level="1">
-            <ComponentRef Id="InstallDirComp"/>
-            <ComponentRef Id="PluginNameDirComp"/>
-            <ComponentRef Id="CompanyDirComp"/>
-            <ComponentGroupRef Id="PluginDLLGroup"/>
-        </Feature>
-    </Product>
+    <Feature Id="MainPluginFeature" Title="Codebender.cc" Level="1">
+      <ComponentRef Id="DriverDirComp"/>
+      <ComponentRef Id="InstallDirComp"/>
+      <ComponentRef Id="PluginNameDirComp"/>
+      <ComponentRef Id="CompanyDirComp"/>
+      <ComponentGroupRef Id="PluginDLLGroup"/>
+    </Feature>
+  </Product>
 </Wix>
+
