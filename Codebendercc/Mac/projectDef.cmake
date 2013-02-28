@@ -6,6 +6,11 @@
 # Mac template platform definition CMake file
 # Included from ../CMakeLists.txt
 
+include_directories ( /Developer/Headers/FlatCarbon )
+
+find_library(SECURITY_FRAMEWORK Security)
+find_path(SECURITY_INCLUDE_DIR Security/Security.h )
+include_directories (${SECURITY_INCLUDE_DIR})
 # remember that the current source dir is the project root; this file is in Mac/
 file (GLOB PLATFORM RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     Mac/[^.]*.cpp
@@ -35,4 +40,6 @@ add_mac_plugin(${PROJECT_NAME} ${PLIST} ${STRINGS} ${LOCALIZED} SOURCES)
 # add library dependencies here; leave ${PLUGIN_INTERNAL_DEPS} there unless you know what you're doing!
 target_link_libraries(${PROJECT_NAME}
     ${PLUGIN_INTERNAL_DEPS}
+		"-framework Security"
     )
+
