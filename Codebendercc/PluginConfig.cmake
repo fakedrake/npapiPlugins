@@ -32,9 +32,9 @@ set(ACTIVEX_PROGID "codebendercc.Codebendercc")
 set(MOZILLA_PLUGINID "codebender.cc/Codebendercc")
 
 # strings
-set(FBSTRING_CompanyName "codebender.cc")
+set(FBSTRING_CompanyName "codebendercc")
 set(FBSTRING_FileDescription "Plugin for the Codebender.cc Arduino - Browser Communication")
-set(FBSTRING_PLUGIN_VERSION "1.5.3.0")
+set(FBSTRING_PLUGIN_VERSION "1.5.4.3")
 set(FBSTRING_LegalCopyright "Copyright 2012 codebender.cc")
 set(FBSTRING_PluginFileName "np${PLUGIN_NAME}.dll")
 set(FBSTRING_ProductName "Codebender.cc")
@@ -57,6 +57,7 @@ set(FBMAC_USE_INVALIDATINGCOREANIMATION 0)
 
 # If you want to register per-machine on Windows, uncomment this line
 #set (FB_ATLREG_MACHINEWIDE 1)
+
 
 add_boost_library(regex)
 add_boost_library(thread)
