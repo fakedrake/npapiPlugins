@@ -1,9 +1,20 @@
-/**********************************************************\
+/*! \mainpage Codebender Browser NPAPI Plugin Documentation Pages
+ *
+ * \section intro_sec Introduction
+ *
+ * These pages give a better understanding to the people that want to work on or use the Codebender Browser plugin.\n  
+ *
+ * \section install_sec Installation
+ * The generated library file should be placed in the suitable directory for each platform/browser.
+ *
+ * \author Dimitrios Amaxilatis {d.amaxilatis at gmail}
+ * @see http://codebender.cc
+ * @see http://www.firebreath.org/display/documentation/FireBreath+Home
+ */
 
-  Auto-generated CodebenderccAPI.h
-
-\**********************************************************/
-
+//#define ENABLE_TFTP
+//#define ENABLE_TFTP_AUTO_RESET
+#define ENABLE_DIGISPARK
 
 #if defined _WIN32 || _WIN64
 #define WIN32_LEAN_AND_MEAN 
@@ -21,8 +32,12 @@
 #include <boost/thread/thread.hpp> 
 #include <boost/date_time.hpp>
 #include <boost/asio.hpp>
+#include <boost/asio/buffer.hpp>
+#include <boost/array.hpp>
 //#include <boost/optional.hpp>
 //#include <boost/weak_ptr.hpp>
+
+
 #include <fstream>
 #include <vector>
 //#include <iostream>
@@ -34,6 +49,12 @@
 
 #include <fcntl.h>
 
+#ifdef ENABLE_TFTP
+#ifdef ENABLE_TFTP_AUTO_RESET
+#include "curl/curl.h"
+#endif
+#include "tftp_client.h"
+#endif
 
 
 
@@ -49,57 +70,67 @@
 #include "variant_list.h"
 #include "SimpleSerial.h"
 
+#ifdef __APPLE__
+#import <Security/Security.h>
+#endif
+
 #ifndef H_CodebenderccAPI
 #define H_CodebenderccAPI
 
 class CodebenderccAPI : public FB::JSAPIAuto {
 public:
     ////////////////////////////////////////////////////////////////////////////
-    /// @fn CodebenderccAPI::CodebenderccAPI(const CodebenderccPtr& plugin, const FB::BrowserHostPtr host)
     ///
-    /// @brief  Constructor for your JSAPI object.
-    ///         You should register your methods, properties, and events
-    ///         that should be accessible to Javascript from here.
-    ///
-    /// @see FB::JSAPIAuto::registerMethod
-    /// @see FB::JSAPIAuto::registerProperty
-    /// @see FB::JSAPIAuto::registerEvent
     ////////////////////////////////////////////////////////////////////////////
 
+    /**
+     * Constructor for your JSAPI object.
+     * You should register your methods, properties, and events
+     * that should be accessible to Javascript from here.
+     * 
+     * @see FB::JSAPIAuto::registerMethod
+     * @see FB::JSAPIAuto::registerProperty
+     * @see FB::JSAPIAuto::registerEvent
+     * @param plugin
+     * @param host
+     */
     CodebenderccAPI(const CodebenderccPtr& plugin, const FB::BrowserHostPtr& host) :
     m_plugin(plugin), m_host(host), io() {
 
         // Retrieve a reference to the DOM Window
         FB::DOM::WindowPtr window = m_host->getDOMWindow();
 
-        // Check if the DOM Window has an alert peroperty
-        if (window && window->getJSObject()->HasProperty("window")) {
-            // Create a reference to alert
-            FB::JSObjectPtr obj = window->getProperty<FB::JSObjectPtr > ("window");
+        // Check if the DOM Window has an alert property
+        //        if (window && window->getJSObject()->HasProperty("window")) {
+        //            // Create a reference to alert
+        //            FB::JSObjectPtr obj = window->getProperty<FB::JSObjectPtr > ("window");
+        //
+        //            // Invoke alert with some text
+        //            grantedPermission = (obj->Invoke("confirm", FB::variant_list_of("Grant permission to Codebender.cc plugin?")).convert_cast<bool>() );
+        //
+        //
+        //        }
+        grantedPermission = true;
 
-            // Invoke alert with some text
-            grantedPermission = (obj->Invoke("confirm", FB::variant_list_of("Grant permission to Codebender.cc plugin?")).convert_cast<bool>() );
-
-
-        }
-
+        //Register all JS callbacks
         registerMethod("probeUSB", make_method(this, &CodebenderccAPI::probeUSB));
         registerMethod("download", make_method(this, &CodebenderccAPI::download));
         registerMethod("flash", make_method(this, &CodebenderccAPI::flash));
-        //registerMethod("getFlashResult", make_method(this, &CodebenderccAPI::getFlashResult));
-        //registerMethod("getLastCommand", make_method(this, &CodebenderccAPI::getLastCommand));
+        registerMethod("installDrivers", make_method(this, &CodebenderccAPI::installDrivers));
         registerMethod("checkPermissions", make_method(this, &CodebenderccAPI::checkPermissions));
-        //        registerMethod("validate_device", make_method(this, &CodebenderccAPI::validate_device));
         registerMethod("serialRead", make_method(this, &CodebenderccAPI::serialRead));
         registerMethod("disconnect", make_method(this, &CodebenderccAPI::disconnect));
         registerMethod("setCallback", make_method(this, &CodebenderccAPI::setCallback));
         registerMethod("serialWrite", make_method(this, &CodebenderccAPI::serialWrite));
-
-        // Read-only property
+#ifdef ENABLE_TFTP
+        registerMethod("tftpUpload", make_method(this, &CodebenderccAPI::tftpUpload));
+#endif
+        //Register all JS read-only properties
         registerProperty("version", make_property(this, &CodebenderccAPI::get_version));
+        registerProperty("command", make_property(this, &CodebenderccAPI::getLastCommand));
 
         std::string os = getPlugin().get()->getOS();
-        std::string path = getPlugin().get()->getFSPath();
+        path = getPlugin().get()->getFSPath();
 
         path = path.substr(0, path.find_last_of("/\\") + 1);
 
@@ -108,25 +139,28 @@ public:
         arch = "64";
 #endif
 
+        //paths to files
         avrdude = path + os + ".avrdude";
+        digispark = path + os + ".digispark";
         avrdudeConf = path + os + ".avrdude.conf";
         binFile = path + "file.bin";
         outfile = path + "out";
 
-        libusb = path + "libusb0.dll";
         if (os == "Windows") {
+            //libusb for windows
+            libusb = path + "libusb0.dll";
+            //.exe for windows
             avrdude = path + "avrdude.exe";
+            digispark = path + "digispark.exe";
         } else if (os == "X11") {
             avrdude = path + os + "." + arch + ".avrdude";
             avrdudeConf = path + os + "." + arch + ".avrdude.conf";
+            digispark = path + os + "." + arch + ".digispark";
         }
 
         boost::thread t(boost::bind(&boost::asio::io_service::run, &io));
 
         serial = NULL;
-
-
-
     }
 
     /**
@@ -136,8 +170,12 @@ public:
     };
 
     /**
-     * 
-     * @return 
+     * Returns a reference to the Plugin Object.
+     *   Gets a reference to the plugin that was passed in when the object
+     *   was created.  If the plugin has already been released then this
+     *   will throw a FB::script_error that will be translated into a
+     *  javascript exception in the page.
+     * @return a reference to the plugin.
      */
     CodebenderccPtr getPlugin();
 
@@ -149,36 +187,102 @@ public:
 
 
     /**
-     * Deprecated.
-     * @return 
+     * Used to Download Avrdude Objects.
+     * @deprecated
+     * This function is now available only for compatibility. No functionality here.
+     * 
+     * @return "deprecated".
      */
     FB::variant download();
+
     /**
-     * 
-     * @param device
-     * @param code
-     * @param maxsize
-     * @param protocol
-     * @param speed
-     * @param mcu
-     * @return 
+     * Used to flash a binary file to a connected Arduino/device.
+     * The flash operation is initiated in a @b new @b thread
+     * @param device The port of the device as a string. @see validate_device
+     * @param code A base64 encoded string of the binary file to be flashed to the device. 
+     * @param maxsize The maximum size of a binary file that can be flashed to the specific Arduino/other Board.
+     * @param protocol The protocol to be used for Avrdude.
+     * @param speed The baudrate to be used with Avrdude.
+     * @param mcu The mcu to be used with Avrdude.
+     * @param cback A callback used to report the flash result.
+     * @return 0 if the flash process is started. Anything else is an error value.
      */
-    FB::variant flash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr &);
+    FB::variant flash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr & cback);
+
+#ifdef ENABLE_TFTP
+    /**
+     * Used to initiate a tftpUpload to a specified IP address.
+     * @param cback callback for status notifications
+     * @param ip the destination ip
+     * @param code the base64 encoded binary file
+     * @param port1 the destination port
+     * @param passphrase the passphrase for auto reset
+     * @param port2 the auto reset port to use
+     * @return 0 if the flash process is started. Anything else is an error value.
+     */
+    FB::variant tftpUpload(const FB::JSObjectPtr & cback, const std::string& ip, const std::string& code, const std::string& port1, const std::string& passphrase, const std::string& port2);
+#endif
+
     /**
      * Checks for all available USB Arduino devices.
      * @return a comma separated list of the detected devices.
      */
     std::string probeUSB();
     /**
-     * Returns the avrdude 's output.
+     * Returns the last avrdude's output.
      * @return the output recorded from avrdude.
      */
     FB::variant getFlashResult();
     /**
      * The last avrdude command executed.
-     * @return 
+     * @return the last avrdude command executed.
      */
     FB::variant getLastCommand();
+
+    /**
+     * Sets a callback to notify the web page about changes.
+     * A number of operational changes and exceptions are reported from here:
+     * @param callback a javaScript callback function.
+     * @return true if the callback is set, false in any error.
+     */
+    bool setCallback(const FB::JSObjectPtr &callback);
+    /**
+     * Opens a Serial Port and Reads input from it. 
+     * The connection is maintained in a @b new @b thread.
+     * 
+     * @see serialRead
+     * @param port The port of the device as a string. @see validate_device
+     * @param baudrate The baudrate to use for the connection as a string.
+     * @param callback A callback function to report all characters read from the Serial Port.
+     * @return true if connection was attempted, false otherwise.
+     */
+    bool serialRead(const std::string &port, const std::string &baudrate, const FB::JSObjectPtr &callback);
+    /**
+     * Write String to the open serial port.
+     * @param the string to write.
+     */
+    void serialWrite(const std::string &);
+    /**
+     * Disconnects from serial port.
+     * @return 1 when disconnected. Any other value is an error value. 
+     */
+    FB::variant disconnect();
+    /**
+     * Checks for the correct permissions under linux.
+     * @param port The port to check for. @see validate_device
+     * @return the group needed (if needed) for the user to be added.
+     */
+    FB::variant checkPermissions(const std::string &port);
+
+    /**
+     * Attempts to install the Drivers for all Arduino devices.
+     * @param os Identifies to os type. 0 for Windows, 1 for MacOS.
+     * @return 0 if installation was started, any other value is an error.
+     */
+    FB::variant installDrivers(int os);
+
+private:
+
     /**
      * Validate Device Name.
      * Devices in Linux are /dev/tty{USB??,ACM??}.
@@ -189,38 +293,32 @@ public:
      * @return true if valid, false else.
      */
     bool validate_device(const std::string &input);
+#ifdef ENABLE_TFTP
     /**
-     * Sets a callback to notify the web page about changes.
-     * @param callback
-     * @return 
+     * Implements the tftp upload to the arduino device.
+     * 
+     * @param cback JS callback to send notification
+     * @param ip the target arduino ip
+     * @param code base64 encoded code to send to the arduino
+     * @param port1 tftp initialization port
+     * @param passphrase passphrase for auto reset, "" if no auto reset
+     * @param port2 port to trigger auto reset, "" if no auto reset
      */
-    bool setCallback(const FB::JSObjectPtr &callback);
+    void doTftpUpload(const FB::JSObjectPtr & cback, const std::string& ip, const std::string& code, const std::string& port1, const std::string& passphrase, const std::string& port2);
     /**
-     * Read from serial port.
-     * @param port
-     * @param baudrate
-     * @param callback
-     * @return 
+     * Callback for incoming url connections.
+     * 
+     * @param success true if the get was a success.
+     * @param headers 
+     * @param data
+     * @param size
      */
-    bool serialRead(const std::string &port, const std::string &baudrate, const FB::JSObjectPtr &callback);
+    void getURLCallback(bool success, const FB::HeaderMap& headers, const boost::shared_array<uint8_t>& data, const size_t size);
+#endif
     /**
-     * Write String to serial port.
-     * @param the string to write.
+     * Called to install all MacOS Drivers.
      */
-    void serialWrite(const std::string &);
-    /**
-     * Disconnects from serial port.
-     * @return 
-     */
-    FB::variant disconnect();
-    /**
-     * Checks for the correct permissions.
-     * @param port The port to check.
-     * @return the group needed (if needed).
-     */
-    FB::variant checkPermissions(const std::string &port);
-
-private:
+    void installDriversMac();
     /**
      * Exec system command.
      * @param filename
@@ -282,9 +380,10 @@ private:
     bool validate_charnum(const std::string &);
 
     /**
-     * 
+     * Sends a notification to the default callback.
      */
     void notify(const std::string&);
+
     /**
      * 
      * @param 
@@ -296,6 +395,9 @@ private:
      * @param 
      */
     void doflash(const std::string&, const std::string&, const std::string&, const std::string&, const std::string&, const std::string&, const FB::JSObjectPtr &);
+#ifdef ENABLE_DIGISPARK
+    void doflashDigispark(const std::string&, const std::string&, const std::string&, const std::string&, const std::string&, const std::string&, const FB::JSObjectPtr &);
+#endif
 
     /**
      * 
@@ -312,7 +414,7 @@ private:
     FB::BrowserHostPtr m_host;
     /**
      */
-    std::string avrdude, avrdudeConf, binFile, outfile;
+    std::string avrdude, digispark, avrdudeConf, binFile, outfile;
     /**
      */
     std::string libusb;
@@ -329,6 +431,7 @@ private:
     boost::asio::serial_port * serial;
     boost::array<char, 1 > buf;
     bool grantedPermission;
+    std::string path;
 };
 
 #endif // H_CodebenderccAPI

@@ -16,6 +16,16 @@ FB::variant CodebenderccAPI::download() {
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////public//////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
+#ifdef ENABLE_TFTP
+FB::variant CodebenderccAPI::tftpUpload(const FB::JSObjectPtr & cback, const std::string& ip, const std::string& code, const std::string& port1, const std::string& passphrase, const std::string& port2) {
+    if (!validate_code(code)) return -2;
+    if (!validate_charnum(passphrase)) return -4;
+
+    boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doTftpUpload, this, cback, ip, code, port1, passphrase, port2));
+
+    return 0;
+}
+#endif
 
 FB::variant CodebenderccAPI::flash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr &flash_callback) {
     if (!grantedPermission) return "";
@@ -28,9 +38,15 @@ FB::variant CodebenderccAPI::flash(const std::string& device, const std::string&
     if (!validate_charnum(mcu)) return -6;
     perror("validated");
 
-    boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doflash,
-            this, device, code, maxsize, protocol, speed, mcu, flash_callback));
-
+    if (protocol == "digispark") {
+#ifdef ENABLE_DIGISPARK
+        boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doflashDigispark,
+                this, device, code, maxsize, protocol, speed, mcu, flash_callback));
+#endif
+    } else {
+        boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doflash,
+                this, device, code, maxsize, protocol, speed, mcu, flash_callback));
+    }
     return 0;
 }
 
@@ -105,19 +121,6 @@ std::string CodebenderccAPI::probeUSB() {
 }
 #endif
 
-///////////////////////////////////////////////////////////////////////////////
-/// @fn 
-///
-/// @brief  
-///////////////////////////////////////////////////////////////////////////////
-
-/**
- * Gets a reference to the plugin that was passed in when the object
- * was created.  If the plugin has already been released then this
- * will throw a FB::script_error that will be translated into a
- * javascript exception in the page.
- * @return 
- */
 CodebenderccPtr CodebenderccAPI::getPlugin() {
 
     CodebenderccPtr plugin(m_plugin.lock());
@@ -213,11 +216,172 @@ bool CodebenderccAPI::serialRead(const std::string &port, const std::string &bau
     return true; // the thread is started
 }
 
+FB::variant CodebenderccAPI::installDrivers(int version) {
+    if (!grantedPermission) return -1;
+    //#if defined _WIN32||_WIN64
+    if (getPlugin().get()->getOS() == "Windows") {
+        std::string path = getPlugin().get()->getFSPath();
+        path = path.substr(0, path.find_last_of("/\\") + 1);
+
+        std::string adminVBS = "Set UAC = CreateObject(\"Shell.Application\")\n UAC.ShellExecute \"" + path + "driverCopy.bat\", \"\", \"\", \"runas\", 1 \n";
+
+        std::ofstream myfile;
+        myfile.open((path + "admin.vbs").c_str(), std::fstream::out);
+        myfile << adminVBS;
+        myfile.close();
+
+        std::string driverCopyBAT = "xcopy /sy \"" + path + "drivers\" \\Windows\\inf";
+
+        std::ofstream myfile1;
+        myfile1.open((path + "driverCopy.bat").c_str(), std::fstream::out);
+        myfile1 << driverCopyBAT;
+        myfile1.close();
+
+
+        std::string command = "\"" + path + "admin.vbs\"";
+        if (version == 0) {
+            command = "\"" + path + "driverCopy.bat\"";
+        }
+
+        command = "\"" + command + "\"";
+        int retVal = system(command.c_str());
+        return 0;
+    }
+    //#endif
+#ifdef __APPLE__
+
+    boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::installDriversMac, this));
+
+    return "Attempting to install Drivers on Mac";
+#endif
+    return 0;
+}
+
+
+//std::string driverPath = path+ "/FTDIUSBSerialDriver_10_4_10_5_10_6_10_7.mpkg";
+//char *args[] = {"-pkg", driverPath.c_str(), "-target", "/"};
+
+
+
+#ifdef __APPLE__
+
+void CodebenderccAPI::installDriversMac() {
+
+    // Create authorization reference
+    OSStatus status;
+    AuthorizationRef authorizationRef;
+
+    // AuthorizationCreate and pass NULL as the initial
+    // AuthorizationRights set so that the AuthorizationRef gets created
+    // successfully, and then later call AuthorizationCopyRights to
+    // determine or extend the allowable rights.
+    // http://developer.apple.com/qa/qa2001/qa1172.html
+    status = AuthorizationCreate(NULL, kAuthorizationEmptyEnvironment, kAuthorizationFlagDefaults, &authorizationRef);
+    if (status != errAuthorizationSuccess) {
+        notify("Error 1: Could not create initial authorization.");
+        return "Error 1: Could not create initial authorization. " + status;
+    }
+
+
+    // kAuthorizationRightExecute == "system.privilege.admin"
+    AuthorizationItem right = {kAuthorizationRightExecute, 0, NULL, 0};
+    AuthorizationRights rights = {1, &right};
+    AuthorizationFlags flags = kAuthorizationFlagDefaults |
+            kAuthorizationFlagInteractionAllowed |
+            kAuthorizationFlagPreAuthorize |
+            kAuthorizationFlagExtendRights;
+
+
+    // Call AuthorizationCopyRights to determine or extend the allowable rights.
+    status = AuthorizationCopyRights(authorizationRef, &rights, NULL, flags, NULL);
+    if (status != errAuthorizationSuccess) {
+        notify("Error 2: Could not copy authorization rights.");
+        return "Error 2: Could not copy authorization rights. " + status;
+    }
+
+    notify("Installing Drivers...");
+    char buffer[1024];
+    int bytesRead;
+    std::string output = "output ";
+
+    char *tool = "/usr/sbin/installer";
+    std::string driverPath = path + "/FTDIUSBSerialDriver_10_4_10_5_10_6_10_7.mpkg";
+    //char *args[] = {NULL}; //{"-pkg", const_cast<char *> (driverPath.c_str()), "-target", "/"};
+    char *args[] = {"-pkg", const_cast<char *> (driverPath.c_str()), "-target", "/", NULL};
+    FILE *pipe = NULL;
+
+    status = AuthorizationExecuteWithPrivileges(authorizationRef, tool, kAuthorizationFlagDefaults, args, &pipe);
+
+    /* Just pipe processes' stdout to our stdout for now; hopefully can add stdin pipe later as well */
+    for (;;) {
+        bytesRead = fread(buffer, sizeof (char), 1024, pipe);
+        if (bytesRead < 1) break;
+        output += buffer;
+    }
+
+
+    if (status != errAuthorizationSuccess) {
+        notify("Error 3: Failed to execute call with privileges.");
+        return "Error 3: Failed to execute call with privileges." + status;
+    }
+
+    // The only way to guarantee that a credential acquired when you
+    // request a right is not shared with other authorization instances is
+    // to destroy the credential.  To do so, call the AuthorizationFree
+    // function with the flag kAuthorizationFlagDestroyRights.
+    // http://developer.apple.com/documentation/Security/Conceptual/authorization_concepts/02authconcepts/chapter_2_section_7.html
+    status = AuthorizationFree(authorizationRef, kAuthorizationFlagDestroyRights);
+    notify("Drivers Installed\n" + output);
+    return "Drivers Installed";
+}
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////PRIVATE////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
+#ifdef ENABLE_TFTP
+void CodebenderccAPI::doTftpUpload(const FB::JSObjectPtr & cback, const std::string& ip, const std::string& code, const std::string& port1, const std::string& passphrase, const std::string& port2) {
+#ifdef ENABLE_TFTP_AUTO_RESET
+    //reset if needed
+    if (passphrase != "") {
+        //buld the reset url
+        std::string url = "http://" + ip + ":" + port2 + "/" + passphrase + "/reset";
+		FB::SimpleStreamHelper::AsyncGet(m_host,FB::URI::fromString(url),
+		    boost::bind(&CodebenderccAPI::getURLCallback, this, _1, _2, _3, _4),false);
+    }
+#endif
 
-void CodebenderccAPI::doflash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr &flash_callback) {
+    //write file to disk
+    unsigned char buffer [150000];
+    size_t size = base64_decode(code.c_str(), buffer, 150000);
+    saveToBin(buffer, size);
+
+    //do the upload if nothing has gone sideways
+    char *s2 = new char[ip.size() + 1];
+    strcpy(s2, ip.c_str());
+    cback->InvokeAsync("", FB::variant_list_of(shared_from_this())("launching client "));
+    cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(s2));
+
+    //connect with tftp
+    TFTPClient client = TFTPClient(s2, boost::lexical_cast<int>(port1));
+    client.connectToServer();
+    //create the filenames
+    char remoteFile[9];
+    strcpy(remoteFile, "file.bin");
+    char *localFile= new char[binFile.size() + 1];
+    strcpy(localFile, binFile.c_str());
+    strcpy(localFile, remoteFile);
+    //actually send the file
+    client.sendFile(localFile, remoteFile);
+}
+
+void CodebenderccAPI::getURLCallback(bool success, const FB::HeaderMap& headers, const boost::shared_array<uint8_t>& data, const size_t size) {
+}
+
+#endif
+	
+
+void CodebenderccAPI::doflash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr & flash_callback) {
     if (!grantedPermission) return;
     perror("doflash");
 #if !defined  _WIN32 || _WIN64	
@@ -301,6 +465,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
             + "\"" + outfile + "\"";
 
     if (getPlugin().get()->getOS() == "Windows") {
+
         command = "\"" + command + "\"";
     }
 
@@ -310,6 +475,46 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
     perror(command.c_str());
     flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
 }
+#ifdef ENABLE_DIGISPARK
+void CodebenderccAPI::doflashDigispark(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr & flash_callback) {
+    if (!grantedPermission) return;
+    perror("doflashdigispark");
+#if !defined  _WIN32 || _WIN64	
+    chmod(digispark.c_str(), S_IRWXU);
+#endif
+
+    unsigned char buffer [150000];
+    size_t size = base64_decode(code.c_str(), buffer, 150000);
+    saveToBin(buffer, size);
+
+    std::string fdevice = device;
+
+    std::string command = "\"" + digispark + "\""
+            + " --run --timeout 20 --type raw "
+            + "\"" + binFile + "\" > \"" + outfile + "\"";
+
+    if (getPlugin().get()->getOS() == "Windows") {
+
+        command = "\"" + command + "\"";
+    }
+
+    lastcommand = command;
+
+    notify("Please plug in the device (timeout in 20 seconds)...");
+
+    int retVal = system(command.c_str());
+    perror(command.c_str());
+    if (retVal == 0) {
+        notify("Digispark Flashed");
+    } else if (retVal == 256) {
+        notify("Flashed Failed. Please Retry...");
+    } else if (retVal == 34304) {
+        notify("Please unplug your Digispark and try flashing again...");
+    } else {
+        flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
+    }
+}
+#endif
 
 /**
  * Save the binary data to the binary file specified in the constructor.
@@ -320,6 +525,7 @@ void CodebenderccAPI::saveToBin(unsigned char * data, size_t size) {
     std::ofstream myfile;
     myfile.open(binFile.c_str(), std::fstream::binary);
     for (size_t i = 0; i < size; i++) {
+
         myfile << data[i];
     }
     myfile.close();
@@ -377,6 +583,7 @@ size_t CodebenderccAPI::base64_decode(const char *source, unsigned char *target,
     }
 
     free(src);
+
     return converted;
 }
 
@@ -396,6 +603,7 @@ int CodebenderccAPI::_base64_char_value(char base64char) {
     if (base64char == '+')
         return 2 * 26 + 10;
     if (base64char == '/')
+
         return 2 * 26 + 11;
     return -1;
 }
@@ -447,6 +655,7 @@ int CodebenderccAPI::_base64_decode_triple(char quadruple[4], unsigned char *res
     for (i = bytes_to_decode; i < 3; i++)
         triple_value /= 256;
     for (i = bytes_to_decode - 1; i >= 0; i--) {
+
         result[i] = triple_value % 256;
         triple_value /= 256;
     }
@@ -454,18 +663,21 @@ int CodebenderccAPI::_base64_decode_triple(char quadruple[4], unsigned char *res
     return bytes_to_decode;
 }
 
-void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &baudrate, const FB::JSObjectPtr &callback) {
+void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &baudrate, const FB::JSObjectPtr & callback) {
     try {
         serial = new boost::asio::serial_port(io, port);
         serial->set_option(boost::asio::serial_port_base::baud_rate(baudrate));
         char c;
+        int d;
 
         for (;;) {
+            if (serial == NULL) break;
             boost::asio::read(*serial, boost::asio::buffer(&c, 1));
-            int d = (int) c;
+            d = (int) c;
             callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(d));
         }
     } catch (...) {
+
         serial = NULL;
         notify("disconnect");
     }
@@ -487,6 +699,7 @@ std::string CodebenderccAPI::exec(const char * cmd) {
 }
 
 void CodebenderccAPI::notify(const std::string & message) {
+
     callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
 }
 
@@ -495,20 +708,22 @@ void CodebenderccAPI::notify(const std::string & message) {
 ///////////////////////////////validations//////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-bool CodebenderccAPI::validate_number(const std::string &input) {
+bool CodebenderccAPI::validate_number(const std::string & input) {
     try {
         boost::lexical_cast<double>(input);
         return true;
     } catch (boost::bad_lexical_cast &) {
+
         return false;
     }
 }
 
-bool CodebenderccAPI::validate_device(const std::string &input) {
+bool CodebenderccAPI::validate_device(const std::string & input) {
     static const boost::regex acm("\\/dev\\/ttyACM[[:digit:]]+");
     static const boost::regex usb("\\/dev\\/ttyUSB[[:digit:]]+");
     static const boost::regex com("COM[[:digit:]]+");
     static const boost::regex cu("\\/dev\\/cu.[0-9a-zA-Z\\-]+");
+
     return boost::regex_match(input, acm)
             || boost::regex_match(input, usb)
             || boost::regex_match(input, com)
@@ -516,12 +731,13 @@ bool CodebenderccAPI::validate_device(const std::string &input) {
             ;
 }
 
-bool CodebenderccAPI::validate_code(const std::string &input) {
+bool CodebenderccAPI::validate_code(const std::string & input) {
     static const boost::regex base64("[0-9a-zA-Z+\\/=\n]+");
+
     return boost::regex_match(input, base64);
 }
 
-bool CodebenderccAPI::validate_charnum(const std::string &input) {
-    static const boost::regex charnum("[0-9a-zA-Z]+");
+bool CodebenderccAPI::validate_charnum(const std::string & input) {
+    static const boost::regex charnum("[0-9a-zA-Z]*");
     return boost::regex_match(input, charnum);
 }
