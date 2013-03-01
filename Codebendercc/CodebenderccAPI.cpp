@@ -189,7 +189,7 @@ FB::variant CodebenderccAPI::checkPermissions(const std::string & port) {
     if (!validate_device(port)) return "";
     if (getPlugin().get()->getOS() != "X11") return "";
 
-    std::string command = "cat /etc/group | grep $(ls -l " + port + " | cut -d ' ' -f 4) |  grep $USER";
+    std::string command = "groups | grep $(ls -l " + port + " | cut -d ' ' -f 4)";
 
     std::string result = exec(command.c_str());
     if (result == "") {
