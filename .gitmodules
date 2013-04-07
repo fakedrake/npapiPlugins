@@ -1,0 +1,3 @@
+[submodule "Codebendercc/micronucleus"]
+	path = Codebendercc/micronucleus
+	url = git://github.com/Bluebie/micronucleus-t85.git
