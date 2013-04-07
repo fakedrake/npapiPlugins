@@ -34,12 +34,12 @@ set(MOZILLA_PLUGINID "codebender.cc/Codebendercc")
 # strings
 set(FBSTRING_CompanyName "codebendercc")
 set(FBSTRING_FileDescription "Plugin for the Codebender.cc Arduino - Browser Communication")
-set(FBSTRING_PLUGIN_VERSION "1.5.4.3")
+set(FBSTRING_PLUGIN_VERSION "1.5.4.26")
 set(FBSTRING_LegalCopyright "Copyright 2012 codebender.cc")
 set(FBSTRING_PluginFileName "np${PLUGIN_NAME}.dll")
 set(FBSTRING_ProductName "Codebender.cc")
 set(FBSTRING_FileExtents "")
-set(FBSTRING_PluginName "Codebender.cc")
+set(FBSTRING_PluginName "Codebendercc")
 set(FBSTRING_MIMEType "application/x-codebendercc")
 
 # Uncomment this next line if you're not planning on your plugin doing
@@ -62,5 +62,5 @@ set(FBMAC_USE_INVALIDATINGCOREANIMATION 0)
 add_boost_library(regex)
 add_boost_library(thread)
 add_boost_library(system)
-
+add_boost_library(filesystem)
 

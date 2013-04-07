@@ -6,8 +6,10 @@
  *
  * \section install_sec Installation
  * The generated library file should be placed in the suitable directory for each platform/browser.
- *
+ * 
  * \author Dimitrios Amaxilatis {d.amaxilatis at gmail}
+ * 
+ * \todo fix the error messages add full-stops and rest
  * @see http://codebender.cc
  * @see http://www.firebreath.org/display/documentation/FireBreath+Home
  */
@@ -22,6 +24,10 @@
 #include "dirent.h"
 #include <windows.h>
 #include <tchar.h>
+#include <Shellapi.h>
+#include <Tchar.h>
+
+
 #else
 #include <dirent.h>
 #endif
@@ -36,7 +42,10 @@
 #include <boost/array.hpp>
 //#include <boost/optional.hpp>
 //#include <boost/weak_ptr.hpp>
-
+//used to check for the drivers
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
+namespace fs = boost::filesystem;
 
 #include <fstream>
 #include <vector>
@@ -50,9 +59,6 @@
 #include <fcntl.h>
 
 #ifdef ENABLE_TFTP
-#ifdef ENABLE_TFTP_AUTO_RESET
-#include "curl/curl.h"
-#endif
 #include "tftp_client.h"
 #endif
 
@@ -110,7 +116,6 @@ public:
         //
         //
         //        }
-        grantedPermission = true;
 
         //Register all JS callbacks
         registerMethod("probeUSB", make_method(this, &CodebenderccAPI::probeUSB));
@@ -118,6 +123,7 @@ public:
         registerMethod("flash", make_method(this, &CodebenderccAPI::flash));
         registerMethod("installDrivers", make_method(this, &CodebenderccAPI::installDrivers));
         registerMethod("checkPermissions", make_method(this, &CodebenderccAPI::checkPermissions));
+        registerMethod("checkForDrivers", make_method(this, &CodebenderccAPI::checkForDrivers));
         registerMethod("serialRead", make_method(this, &CodebenderccAPI::serialRead));
         registerMethod("disconnect", make_method(this, &CodebenderccAPI::disconnect));
         registerMethod("setCallback", make_method(this, &CodebenderccAPI::setCallback));
@@ -128,6 +134,7 @@ public:
         //Register all JS read-only properties
         registerProperty("version", make_property(this, &CodebenderccAPI::get_version));
         registerProperty("command", make_property(this, &CodebenderccAPI::getLastCommand));
+        registerProperty("retVal", make_property(this, &CodebenderccAPI::getRetVal));
 
         std::string os = getPlugin().get()->getOS();
         path = getPlugin().get()->getFSPath();
@@ -147,20 +154,31 @@ public:
         outfile = path + "out";
 
         if (os == "Windows") {
+            //WINDOWS
             //libusb for windows
             libusb = path + "libusb0.dll";
             //.exe for windows
             avrdude = path + "avrdude.exe";
             digispark = path + "digispark.exe";
         } else if (os == "X11") {
+            //LINUX
             avrdude = path + os + "." + arch + ".avrdude";
             avrdudeConf = path + os + "." + arch + ".avrdude.conf";
             digispark = path + os + "." + arch + ".digispark";
+        } else {
+            //MAC
+            path = path + "../../";
+            avrdude = path + os + ".avrdude";
+            digispark = path + os + ".digispark";
+            avrdudeConf = path + os + ".avrdude.conf";
+            binFile = path + "file.bin";
+            outfile = path + "out";
         }
 
         boost::thread t(boost::bind(&boost::asio::io_service::run, &io));
 
         serial = NULL;
+        _retVal = 9999;
     }
 
     /**
@@ -220,7 +238,7 @@ public:
      * @param port2 the auto reset port to use
      * @return 0 if the flash process is started. Anything else is an error value.
      */
-    FB::variant tftpUpload(const FB::JSObjectPtr & cback, const std::string& ip, const std::string& code, const std::string& port1, const std::string& passphrase, const std::string& port2);
+    FB::variant tftpUpload(const FB::JSObjectPtr & cback, const std::string& ip, const std::string& code);
 #endif
 
     /**
@@ -238,6 +256,10 @@ public:
      * @return the last avrdude command executed.
      */
     FB::variant getLastCommand();
+
+    FB::variant getRetVal() {
+        return _retVal;
+    }
 
     /**
      * Sets a callback to notify the web page about changes.
@@ -276,10 +298,16 @@ public:
 
     /**
      * Attempts to install the Drivers for all Arduino devices.
-     * @param os Identifies to os type. 0 for Windows, 1 for MacOS.
+     * @param os Identifies to os type. 0 for Windows <=XP, 1 >XP, any for MacOS.
      * @return 0 if installation was started, any other value is an error.
      */
     FB::variant installDrivers(int os);
+    /**
+     * Check for the Drivers Installed in the Codebender Directory under Windows.
+     * @param driver the name of the driver. So that users can ask for a specific Driver to be installed.
+     * @return true/false if the driver is found in the system.
+     */
+    bool checkForDrivers(const std::string& driver);
 
 private:
 
@@ -406,6 +434,9 @@ private:
      * @param 
      */
     void serialReader(const std::string &, const unsigned int &, const FB::JSObjectPtr &);
+
+    int runme(const std::string & cmd, const std::string & args);
+
     /**
      */
     CodebenderccWeakPtr m_plugin;
@@ -421,6 +452,7 @@ private:
     /**
      */
     std::string lastcommand;
+    int _retVal;
     int mnum;
 
     FB::JSObjectPtr callback_;
@@ -430,8 +462,21 @@ private:
     boost::asio::io_service io;
     boost::asio::serial_port * serial;
     boost::array<char, 1 > buf;
-    bool grantedPermission;
     std::string path;
+
+#if defined _WIN32 || _WIN64
+
+    std::wstring s2ws(const std::string& s) {
+        int len;
+        int slength = (int) s.length() + 1;
+        len = MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, 0, 0);
+        wchar_t* buf = new wchar_t[len];
+        MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, buf, len);
+        std::wstring r(buf);
+        delete[] buf;
+        return r;
+    }
+#endif
 };
 
 #endif // H_CodebenderccAPI

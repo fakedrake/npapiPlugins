@@ -51,12 +51,12 @@
                     Type="string"
                     Value="1.5.4.0"
                     KeyPath="yes" />
-                <File Id="admin.vbs" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\admin.vbs" />
-                <File Id="avrdude.exe" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\avrdude.exe" />
-                <File Id="driverCopy.bat" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\driverCopy.bat" />
-                <File Id="libusb0.dll" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\libusb0.dll" />
-                <File Id="Windows.avrdude.conf" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\Windows.avrdude.conf" />
-                <File Id="digispark.exe" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\digispark.exe" />
+                <File Id="admin.vbs" Source="F:\Dropbox\FireBreath\filesIncluded\admin.vbs" />
+                <File Id="avrdude.exe" Source="F:\Dropbox\FireBreath\filesIncluded\avrdude.exe" />
+                <File Id="driverCopy.bat" Source="F:\Dropbox\FireBreath\filesIncluded\driverCopy.bat" />
+                <File Id="libusb0.dll" Source="F:\Dropbox\FireBreath\filesIncluded\libusb0.dll" />
+                <File Id="Windows.avrdude.conf" Source="F:\Dropbox\FireBreath\filesIncluded\Windows.avrdude.conf" />
+                <File Id="digispark.exe" Source="F:\Dropbox\FireBreath\filesIncluded\digispark.exe" />
               </Component>
               
               <Directory Id="DRIVERDIR" Name="drivers">
@@ -69,29 +69,41 @@
                    Type="string"
                    Value="drivers"
                    KeyPath="yes" />
-                  <File Id="leonardo" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\drivers\Arduino Leonardo.inf" />
-                  <File Id="MEGA2560REV3" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\drivers\Arduino MEGA 2560 REV3.inf" />
-                  <File Id="MEGA2560" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\drivers\Arduino MEGA 2560.inf" />
-                  <File Id="MEGAADKREV3" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\drivers\Arduino Mega ADK REV3.inf" />
-                  <File Id="MEGAADK" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\drivers\Arduino Mega ADK.inf" />
-                  <File Id="MICRO" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\drivers\Arduino Micro.inf" />
-                  <File Id="UNOREV3" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\drivers\Arduino UNO REV3.inf" />
-                  <File Id="UNO" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\drivers\Arduino UNO.inf" />
-                  <File Id="USBSERIAL" Source="C:\Users\amaxilatis\Dropbox\FireBreath\filesIncluded\drivers\Arduino USBSerial.inf" />
-
-
+                  <File Id="arduino.inf" Source="F:\Dropbox\FireBreath\filesIncluded\drivers\arduino.inf" />
+                  <File Id="arduino.cat" Source="F:\Dropbox\FireBreath\filesIncluded\drivers\arduino.cat" />
+                  <File Id="DIGISPARK" Source="F:\Dropbox\FireBreath\filesIncluded\drivers\Digispark_Bootloader.inf" />
                 </Component>
+                <Directory Id="AMD64DIR" Name="amd64">
+                  <Component Id="Amd64DirComp" Guid="{779179a8-47fa-4bdc-8350-75db7ee4c9a4}">
+                    <RemoveFolder Id="RemoveAmd64DriversDir" On="uninstall" />
+                    <RegistryValue
+                     Root="HKCU"
+                     Key="SOFTWARE\codebendercc\Codebendercc\1.5.4.0\drivers\amd64"
+                     Name="Uninstall"
+                     Type="string"
+                     Value="amd64"
+                     KeyPath="yes" />
+                    <File Id="digi.64.libusb0.dll" Source="F:\Dropbox\FireBreath\filesIncluded\drivers\amd64\libusb0.dll" />
+                    <File Id="digi.64.libusb0.sys" Source="F:\Dropbox\FireBreath\filesIncluded\drivers\amd64\libusb0.sys" />
+                    <File Id="digi.64.libusbK.dll" Source="F:\Dropbox\FireBreath\filesIncluded\drivers\amd64\libusbK.dll" />
+                  </Component>
+                </Directory>
+                <Directory Id="X86DIR" Name="x86">
+                  <Component Id="X86DirComp" Guid="{3a52dae6-065b-4aa5-9716-8472434c089c}">
+                    <RemoveFolder Id="RemoveX86DriversDir" On="uninstall" />
+                    <RegistryValue
+                     Root="HKCU"
+                     Key="SOFTWARE\codebendercc\Codebendercc\1.5.4.0\drivers\x86"
+                     Name="Uninstall"
+                     Type="string"
+                     Value="x86"
+                     KeyPath="yes" />
+                    <File Id="digi.86.libusb0_x86.dll" Source="F:\Dropbox\FireBreath\filesIncluded\drivers\x86\libusb0_x86.dll" />
+                    <File Id="digi.86.libusb0.sys" Source="F:\Dropbox\FireBreath\filesIncluded\drivers\x86\libusb0.sys" />
+                    <File Id="digi.86.libusbK_x86.dll" Source="F:\Dropbox\FireBreath\filesIncluded\drivers\x86\libusbK_x86.dll" />
+                  </Component>
+                </Directory>
 
-
-
-                <!-- Put Additional files here: -->
-                <!-- example:
-                            <Component Id="UniqueComponentId" Guid="*">
-                                <File Id="uniqueFileId" KeyPath="yes" Source="SourceDir\filename.ext" />
-                            </Component>
-                            /example -->
-
-                <!--  -->
               </Directory>
             </Directory>
           </Directory>
@@ -100,6 +112,8 @@
     </Directory>
 
     <Feature Id="MainPluginFeature" Title="Codebender.cc" Level="1">
+      <ComponentRef Id="X86DirComp"/>
+      <ComponentRef Id="Amd64DirComp"/>
       <ComponentRef Id="DriverDirComp"/>
       <ComponentRef Id="InstallDirComp"/>
       <ComponentRef Id="PluginNameDirComp"/>
