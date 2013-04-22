@@ -14,8 +14,8 @@
  * @see http://www.firebreath.org/display/documentation/FireBreath+Home
  */
 
-//#define ENABLE_TFTP
-//#define ENABLE_TFTP_AUTO_RESET
+#define ENABLE_TFTP
+#define ENABLE_TFTP_AUTO_RESET
 #define ENABLE_DIGISPARK
 
 #if defined _WIN32 || _WIN64
@@ -26,8 +26,7 @@
 #include <tchar.h>
 #include <Shellapi.h>
 #include <Tchar.h>
-
-
+#include <Iepmapi.h>
 #else
 #include <dirent.h>
 #endif
@@ -88,6 +87,31 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     ///
     ////////////////////////////////////////////////////////////////////////////
+#define MSG_LEONARD_AUTORESET "Trying Arduino Leonardo auto-reset. If it does not reset automatically please reset the Arduino manualy!"
+#define MSG_DIGISPARK_TIMEOUT "Please plug in the device (timeout in 20 seconds)..."
+#define MSG_DIGISPARK_ERROR_WAS_PLUGED "Please unplug your Digispark and try flashing again..."
+#define MSG_DIGISPARK_FLASHED "Digispark Flashed"
+#define MSG_DIGISPARK_ERROR "Flashed Failed. Please Retry..."
+
+#define MSG_DRIVER_INSTALL "Installing Drivers... Please wait, this will take a few minutes."
+#define MSG_DRIVER_INSTALLED "Drivers Installed Successfully."
+#define MSG_DRIVER_ALLOW "Please select <strong>Yes</strong> in the dialog displayed."
+#define MSG_DRIVER_NOT_INSTALLED "There was a problem during the Installation."
+
+#define MSG_DRIVER_ERROR_AUTHORIZE_1 "Error 1: Could not create initial authorization."
+#define MSG_DRIVER_ERROR_AUTHORIZE_2 "Error 2: Could not copy authorization rights."
+#define MSG_DRIVER_ERROR_AUTHORIZE_3 "Error 3: Failed to execute call with privileges."
+#define MSG_DRIVERS_DECOMPRESS "Decompressing Drivers..."
+
+#define MSG_TFTP_STARTING "Starting upload to "
+#define MSG_FILE_UPLOADED "File uploaded."
+#define MSG_TFTP_ERROR_LOCAL_FILE "Error reading local file."
+#define MSG_TFTP_ERROR_TIMEOUT "Connection to Arduino timed out."
+#define MSG_TFTP_ERROR_CONNECTION "Problem connecting to server."
+
+
+#define LOCATION_DRIVERS_ARDUINO_OSX "/System/Library/Extensions/FTDIUSBSerialDriver.kext/"
+
 
     /**
      * Constructor for your JSAPI object.
@@ -106,17 +130,6 @@ public:
         // Retrieve a reference to the DOM Window
         FB::DOM::WindowPtr window = m_host->getDOMWindow();
 
-        // Check if the DOM Window has an alert property
-        //        if (window && window->getJSObject()->HasProperty("window")) {
-        //            // Create a reference to alert
-        //            FB::JSObjectPtr obj = window->getProperty<FB::JSObjectPtr > ("window");
-        //
-        //            // Invoke alert with some text
-        //            grantedPermission = (obj->Invoke("confirm", FB::variant_list_of("Grant permission to Codebender.cc plugin?")).convert_cast<bool>() );
-        //
-        //
-        //        }
-
         //Register all JS callbacks
         registerMethod("probeUSB", make_method(this, &CodebenderccAPI::probeUSB));
         registerMethod("download", make_method(this, &CodebenderccAPI::download));
@@ -128,6 +141,7 @@ public:
         registerMethod("disconnect", make_method(this, &CodebenderccAPI::disconnect));
         registerMethod("setCallback", make_method(this, &CodebenderccAPI::setCallback));
         registerMethod("serialWrite", make_method(this, &CodebenderccAPI::serialWrite));
+		registerMethod("deviceManager", make_method(this,&CodebenderccAPI::deviceManager));
 #ifdef ENABLE_TFTP
         registerMethod("tftpUpload", make_method(this, &CodebenderccAPI::tftpUpload));
 #endif
@@ -301,13 +315,28 @@ public:
      * @param os Identifies to os type. 0 for Windows <=XP, 1 >XP, any for MacOS.
      * @return 0 if installation was started, any other value is an error.
      */
-    FB::variant installDrivers(int os);
+    FB::variant installDrivers(int mode);
     /**
      * Check for the Drivers Installed in the Codebender Directory under Windows.
      * @param driver the name of the driver. So that users can ask for a specific Driver to be installed.
      * @return true/false if the driver is found in the system.
      */
     bool checkForDrivers(const std::string& driver);
+
+    /**
+     * Sends a notification to the default callback.
+     */
+    void tftp_notify(int packet_num) {
+//        char message [10] ;
+//        sprintf(message,"%d,%d",packet_num,packets);
+        tftp_callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(packet_num)(packets));
+    }
+
+	void deviceManager(){
+#if defined _WIN32 || _WIN64
+		runme("devmgmt.msc","");
+#endif
+	}
 
 private:
 
@@ -410,7 +439,7 @@ private:
     /**
      * Sends a notification to the default callback.
      */
-    void notify(const std::string&);
+    void notify(const std::string &message);
 
     /**
      * 
@@ -456,6 +485,7 @@ private:
     int mnum;
 
     FB::JSObjectPtr callback_;
+    FB::JSObjectPtr tftp_callback_;
 
     bool doclose;
     //    SimpleSerial * serial;
@@ -463,6 +493,15 @@ private:
     boost::asio::serial_port * serial;
     boost::array<char, 1 > buf;
     std::string path;
+    int packets;
+
+    void delay(int duration) {
+#if defined _WIN32 || _WIN64
+        Sleep(duration);
+#else
+        usleep(duration * 1000);
+#endif
+    }
 
 #if defined _WIN32 || _WIN64
 

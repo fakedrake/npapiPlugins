@@ -49,6 +49,7 @@ FB::variant CodebenderccAPI::tftpUpload(const FB::JSObjectPtr & cback, const std
     } else {
         passphrase = "";
     }
+    tftp_callback_ = cback;
 
     //    notify("ip:'" + ip + "',port:'" + port1 + "',phrase:'" + passphrase + "',p2:'" + port2 + "'");
     boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doTftpUpload, this, cback, ip, code, port1, passphrase, port2));
@@ -64,7 +65,6 @@ FB::variant CodebenderccAPI::flash(const std::string& device, const std::string&
     if (!validate_number(speed)) return -4;
     if (!validate_charnum(protocol)) return -5;
     if (!validate_charnum(mcu)) return -6;
-    notify("validated");
 
     if (protocol == "digispark") {
 #ifdef ENABLE_DIGISPARK
@@ -217,8 +217,14 @@ FB::variant CodebenderccAPI::checkPermissions(const std::string & port) {
 
         return exec(command.c_str());
     }
-#endif
     return "";
+#else
+    BOOL bIsProtected = false;
+    HRESULT hr = IEIsProtectedModeProcess(&bIsProtected);
+    return bIsProtected;
+#endif
+
+
 }
 #if defined _WIN32 || _WIN64
 
@@ -280,6 +286,7 @@ bool CodebenderccAPI::checkForDrivers(const std::string& driver) {
             result = result && checkForDrivers("Arduino Leonardo.inf");
         }
         result = result && checkForDrivers("Digispark_Bootloader.inf");
+        result = result && checkForDrivers("Digispark_Bootloader.cat");
         result = result && checkForDrivers("x86/libusb0.sys");
         result = result && checkForDrivers("x86/libusb0_x86.dll");
         result = result && checkForDrivers("x86/libusbK_x86.dll");
@@ -293,15 +300,15 @@ bool CodebenderccAPI::checkForDrivers(const std::string& driver) {
     }
 #endif
 #ifdef __APPLE__
-    return fs::exists("/System/Library/Extensions/FTDIUSBSerialDriver.kext/");
+    return fs::exists(LOCATION_DRIVERS_ARDUINO_OSX);
 #endif
 }
 
-FB::variant CodebenderccAPI::installDrivers(int version) {
+FB::variant CodebenderccAPI::installDrivers(int mode) {
 
 #if defined _WIN32||_WIN64
     if (getPlugin().get()->getOS() == "Windows") {
-        notify("Installing Drivers... Please wait, this will take a few minutes.");
+        notify(MSG_DRIVER_INSTALL);
 
         fs::remove(path + "\\adminrun");
 
@@ -312,7 +319,7 @@ FB::variant CodebenderccAPI::installDrivers(int version) {
         myfile << adminVBS;
         myfile.close();
 
-        std::string driverCopyBAT = "xcopy /sy \"" + path + "drivers\" \\Windows\\inf && echo test>\"" + path + "\\adminrun\" ";
+        std::string driverCopyBAT = "xcopy /sy \"" + path + "drivers\" \\Windows\\inf && echo test>\"" + path + "adminrun\" ";
 
         std::ofstream myfile1;
         myfile1.open((path + "driverCopy.bat").c_str(), std::fstream::out);
@@ -320,34 +327,34 @@ FB::variant CodebenderccAPI::installDrivers(int version) {
         myfile1.close();
 
         int retVal = -1;
-        //std::string command = "\"" + path + "admin.vbs\"";
-        if (version == 0) {
-            //command = "\"" + path + "driverCopy.bat\"";
-            retVal = runme("\"" + path + "driverCopy.bat\"", "");
-        } else {
-            retVal = runme("\"" + path + "admin.vbs\"", "\"" + path + "driverCopy.bat\"");
+        std::string command = "\"" + path + "admin.vbs\"";
+        if (mode == 0) {
+            command = "\"" + path + "driverCopy.bat\"";
+            myfile.open(path + "\\adminrun", std::fstream::out);
+            myfile.close();
         }
+        retVal = system(command.c_str());
 
         //command = "\"" + command + "\"";
         //int retVal = system(command.c_str());
 
         bool result = true;
 
-        Sleep(5000);
+        delay(5000);
 
         result = checkForDrivers("");
 
         if (!fs::exists(path + "\\adminrun")) {
-            notify("Please select <strong>Yes</strong> in the dialog displayed.");
+            notify(MSG_DRIVER_ALLOW);
             return result;
         }
 
         if (result) {
-            notify("Drivers Installed Successfully.");
+            notify(MSG_DRIVER_INSTALLED);
         } else {
-            notify("There was a problem during the Installation.");
+            notify(MSG_DRIVER_NOT_INSTALLED);
         }
-
+		
         return result;
     }
 #endif
@@ -368,7 +375,7 @@ FB::variant CodebenderccAPI::installDrivers(int version) {
 #ifdef __APPLE__
 
 void CodebenderccAPI::installDriversMac() {
-    notify("Decompressing Drivers...");
+    notify(MSG_DRIVERS_DECOMPRESS);
 
     std::string command = "unzip \"" + path + "ftdi.zip" + "\" -d \"" + path + "\"";
     int retVal = system(command.c_str());
@@ -385,8 +392,8 @@ void CodebenderccAPI::installDriversMac() {
     // http://developer.apple.com/qa/qa2001/qa1172.html
     status = AuthorizationCreate(NULL, kAuthorizationEmptyEnvironment, kAuthorizationFlagDefaults, &authorizationRef);
     if (status != errAuthorizationSuccess) {
-        notify("Error 1: Could not create initial authorization.");
-        return "Error 1: Could not create initial authorization. " + status;
+        notify(MSG_DRIVER_ERROR_AUTHORIZE_1);
+        return;// "Error 1: Could not create initial authorization. " + status;
     }
 
 
@@ -402,11 +409,11 @@ void CodebenderccAPI::installDriversMac() {
     // Call AuthorizationCopyRights to determine or extend the allowable rights.
     status = AuthorizationCopyRights(authorizationRef, &rights, NULL, flags, NULL);
     if (status != errAuthorizationSuccess) {
-        notify("Error 2: Could not copy authorization rights.");
-        return "Error 2: Could not copy authorization rights. " + status;
+        notify(MSG_DRIVER_ERROR_AUTHORIZE_2);
+        return;// "Error 2: Could not copy authorization rights. " + status;
     }
 
-    notify("Installing Drivers... Please wait, this will take a few minutes.");
+    notify(MSG_DRIVER_INSTALL);
     char buffer[1024];
     int bytesRead;
     std::string output = "";
@@ -428,8 +435,8 @@ void CodebenderccAPI::installDriversMac() {
 
 
     if (status != errAuthorizationSuccess) {
-        notify("Error 3: Failed to execute call with privileges.");
-        return "Error 3: Failed to execute call with privileges." + status;
+        notify(MSG_DRIVER_ERROR_AUTHORIZE_3);
+        return;// "Error 3: Failed to execute call with privileges." + status;
     }
 
     // The only way to guarantee that a credential acquired when you
@@ -440,10 +447,10 @@ void CodebenderccAPI::installDriversMac() {
     status = AuthorizationFree(authorizationRef, kAuthorizationFlagDestroyRights);
     if (checkForDrivers("")) {
         notify("Drivers Installed Successfully.<span style='display:none;'>Output: " + output + "</span>");
-        return "Drivers Installed Successfully.";
+        return;// "Drivers Installed Successfully.";
     } else {
         notify("There was a problem during the Installation.<span style='display:none;'>Output: " + output + "</span>");
-        return "There was a problem during the Installation.";
+        return;// "There was a problem during the Installation.";
     }
 }
 #endif
@@ -470,31 +477,38 @@ void CodebenderccAPI::doTftpUpload(const FB::JSObjectPtr & cback, const std::str
     saveToBin(buffer, size);
 
     //do the upload if nothing has gone sideways
-    char *s2 = new char[ip.size() + 1];
-    strcpy(s2, ip.c_str());
-//    cback->InvokeAsync("", FB::variant_list_of(shared_from_this())("launching client "));
-//    cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(s2));
-    usleep(5000000);
-    notify("Starting upload..");
-    
+    //    char *s2 = new char[ip.size() + 1];
+    //    strcpy(s2, ip.c_str());
+    //    cback->InvokeAsync("", FB::variant_list_of(shared_from_this())("launching client "));
+    //    cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(s2));
+    delay(5000);
+
     //connect with tftp
-    TFTPClient client = TFTPClient(s2, boost::lexical_cast<int>(port2));
+    TFTPClient<CodebenderccAPI> client = TFTPClient<CodebenderccAPI>(ip.c_str(), 69, this);
     int connectionResult = client.connectToServer();
+
+    packets = size / client.packetSize() + 1;
+
     if (connectionResult == 1) {
         //create the filenames
         char remoteFile[9];
         strcpy(remoteFile, "file.bin");
         char *localFile = new char[binFile.size() + 1];
         strcpy(localFile, binFile.c_str());
-        strcpy(localFile, remoteFile);
+        notify(MSG_TFTP_STARTING + ip);
         //actually send the file
-        if (client.sendFile(localFile, remoteFile)) {
-            notify("File uploaded.");
+        int res = client.sendFile(localFile, remoteFile);
+        if (res == 0) {
+            notify(MSG_FILE_UPLOADED);
         } else {
-            notify("File upload failed");
+            if (res == 1) {
+                notify(MSG_TFTP_ERROR_LOCAL_FILE);
+            } else {
+                notify(MSG_TFTP_ERROR_TIMEOUT);
+            }
         }
     } else {
-        notify("Problem connecting to server.");
+        notify(MSG_TFTP_ERROR_CONNECTION);
     }
 }
 
@@ -512,7 +526,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 #endif
 
         if (mcu == "atmega32u4") {
-            notify("Trying Arduino Leonardo auto-reset. If it does not reset automatically please reset the Arduino manualy!");
+            notify(MSG_LEONARD_AUTORESET);
         }
 
         unsigned char buffer [150000];
@@ -526,31 +540,20 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
                 try {
                     boost::asio::serial_port mySerial(io, fdevice);
                     mySerial.set_option(boost::asio::serial_port_base::baud_rate(1200));
-#if !defined  _WIN32 || _WIN64	
-                    usleep(2000000);
-#else
-                    Sleep(2000);
-#endif
+                    delay(2000);
                     mySerial.close();
                 } catch (...) {
                 }
             }
 
-#if !defined  _WIN32 || _WIN64	
-            usleep(500000);
-#else
-            Sleep(500);
-#endif
+            delay(500);
 
             std::string oldPorts = probeUSB();
             perror(oldPorts.c_str());
 
             for (int i = 0; i < 20; i++) {
-#if !defined  _WIN32 || _WIN64	
-                sleep(1);
-#else
-                Sleep(1000);
-#endif
+                delay(1000);
+
                 std::vector<std::string> newPorts;
                 std::string newports = probeUSB();
                 perror(newports.c_str());
@@ -644,7 +647,7 @@ void CodebenderccAPI::doflashDigispark(const std::string& device, const std::str
 
         lastcommand = command;
 
-        notify("Please plug in the device (timeout in 20 seconds)...");
+        notify(MSG_DIGISPARK_TIMEOUT);
         int retVal = -1;
 #if !defined  _WIN32 || _WIN64	
         retVal = system(command.c_str());
@@ -655,11 +658,11 @@ void CodebenderccAPI::doflashDigispark(const std::string& device, const std::str
 #endif
         perror(command.c_str());
         if (retVal == 0) {
-            notify("Digispark Flashed");
+            notify(MSG_DIGISPARK_FLASHED);
         } else if (retVal == 256) {
-            notify("Flashed Failed. Please Retry...");
+            notify(MSG_DIGISPARK_ERROR);
         } else if (retVal == 34304) {
-            notify("Please unplug your Digispark and try flashing again...");
+            notify(MSG_DIGISPARK_ERROR_WAS_PLUGED);
         } else {
             flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
         }
@@ -850,8 +853,7 @@ std::string CodebenderccAPI::exec(const char * cmd) {
     return result;
 }
 
-void CodebenderccAPI::notify(const std::string & message) {
-
+void CodebenderccAPI::notify(const std::string &message) {
     callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
 }
 
