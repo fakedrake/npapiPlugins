@@ -50,10 +50,8 @@
                     Name="Uninstall"
                     Type="string"
                     Value="1.5.4.0"
-                    KeyPath="yes" />
-                <File Id="admin.vbs" Source="F:\Dropbox\FireBreath\filesIncluded\admin.vbs" />
-                <File Id="avrdude.exe" Source="F:\Dropbox\FireBreath\filesIncluded\avrdude.exe" />
-                <File Id="driverCopy.bat" Source="F:\Dropbox\FireBreath\filesIncluded\driverCopy.bat" />
+                    KeyPath="yes" />                
+                <File Id="avrdude.exe" Source="F:\Dropbox\FireBreath\filesIncluded\avrdude.exe" />                
                 <File Id="libusb0.dll" Source="F:\Dropbox\FireBreath\filesIncluded\libusb0.dll" />
                 <File Id="Windows.avrdude.conf" Source="F:\Dropbox\FireBreath\filesIncluded\Windows.avrdude.conf" />
                 <File Id="digispark.exe" Source="F:\Dropbox\FireBreath\filesIncluded\digispark.exe" />
@@ -71,7 +69,8 @@
                    KeyPath="yes" />
                   <File Id="arduino.inf" Source="F:\Dropbox\FireBreath\filesIncluded\drivers\arduino.inf" />
                   <File Id="arduino.cat" Source="F:\Dropbox\FireBreath\filesIncluded\drivers\arduino.cat" />
-                  <File Id="DIGISPARK" Source="F:\Dropbox\FireBreath\filesIncluded\drivers\Digispark_Bootloader.inf" />
+                  <File Id="DIGISPARK.inf" Source="F:\Dropbox\FireBreath\filesIncluded\drivers\Digispark_Bootloader.inf" />
+                  <File Id="DIGISPARK.cat" Source="F:\Dropbox\FireBreath\filesIncluded\drivers\Digispark_Bootloader.cat" />
                 </Component>
                 <Directory Id="AMD64DIR" Name="amd64">
                   <Component Id="Amd64DirComp" Guid="{779179a8-47fa-4bdc-8350-75db7ee4c9a4}">
