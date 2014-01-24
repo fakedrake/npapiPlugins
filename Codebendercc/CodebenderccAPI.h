@@ -16,6 +16,7 @@
 
 
 #if defined _WIN32 || _WIN64
+#define MAX_KEY_LENGTH 255
 #define WIN32_LEAN_AND_MEAN 
 #include <SDKDDKVer.h>
 #include "dirent.h"
@@ -24,6 +25,14 @@
 #include <Shellapi.h>
 #include <Tchar.h>
 #include <Iepmapi.h>
+
+#include <stdio.h>
+#include <iostream>
+#include <string>
+#include <stdlib.h>
+#include <string.h>
+#include <tchar.h>
+
 #else
 #include <dirent.h>
 #endif
@@ -53,8 +62,6 @@ namespace fs = boost::filesystem;
 //#include <sys/types.h>
 
 #include <fcntl.h>
-
-
 
 #include "BrowserHost.h"
 #include "Codebendercc.h"
@@ -201,6 +208,14 @@ public:
      */
     FB::variant flash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr & cback);
 
+	/**
+     * When on Windows OS, finds all available usb ports.
+     * @return a comma separated list of the detected devices.
+     */
+#if defined _WIN32 || _WIN64
+	std::string CodebenderccAPI::QueryKey(HKEY hKey);
+#endif
+	
     /**
      * Checks for all available USB Arduino devices.
      * @return a comma separated list of the detected devices.

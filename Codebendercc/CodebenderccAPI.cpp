@@ -39,34 +39,105 @@ bool CodebenderccAPI::setCallback(const FB::JSObjectPtr &callback) {
 
 #if defined _WIN32||_WIN64
 
+std::string CodebenderccAPI::QueryKey(HKEY hKey) 
+{ 
+    DWORD    cValues;              // number of values for key 
+    DWORD    cchMaxValue;          // longest value name (characters)
+    DWORD    cbMaxValueData;       // longest value data (bytes)
+    
+    DWORD i, retCode; 
+ 
+    TCHAR	achValue[MAX_KEY_LENGTH]; 
+    DWORD	cchValue = MAX_KEY_LENGTH; 
+	
+	std::string ports = "";
+	
+	// Get the registry key value count. 
+	retCode = RegQueryInfoKey(
+        hKey,		             // An open registry key handle.
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL, 
+        NULL,
+        &cValues,                // A pointer to a variable that receives the number of values that are associated with the key.
+        &cchMaxValue,            // A pointer to a variable that receives the size of the key's longest value name, in Unicode characters.  
+        &cbMaxValueData,         // A pointer to a variable that receives the size of the longest data component among the key's values, in bytes.
+        NULL, 
+        NULL);
+
+    
+    // Enumerate the key values. 
+
+	BYTE* buffer = new BYTE[cbMaxValueData];
+
+    if (cValues)				// cValues is the count of values found in the SERIALCOMM subkey
+    {
+		for (i=0, retCode=ERROR_SUCCESS; i<cValues; i++) 
+        { 
+			cchValue = MAX_KEY_LENGTH; 
+            achValue[0] = '\0'; 
+            retCode = RegEnumValue(
+				hKey,			// A handle to an open registry key
+				i,				// The index of the value to be retrieved
+                achValue,		// A pointer to a buffer that receives the name of the value as a null-terminated string
+                &cchValue,		// A pointer to a variable that specifies the size of the buffer pointed to by the achValue parameter, in characters.
+                NULL,			// lpReserved parameter is reserved and must be NULL
+                NULL,			
+                NULL,			
+                NULL);			
+
+            if (retCode == ERROR_SUCCESS ) 
+            { 
+				DWORD lpData = cbMaxValueData;
+				buffer[0] = '\0';
+				
+				LONG dwRes = RegQueryValueEx(hKey, achValue, 0, NULL, (LPBYTE)buffer, &lpData);
+				
+				if (dwRes == ERROR_SUCCESS)
+				{
+					std::string str( reinterpret_cast<char const*>(buffer) , (int) lpData ) ;
+					std::string tmp="";
+					for (int k=0;k<(int)lpData;k++)
+                        {
+							if(buffer[k]!=0)		// Check the buffer for bytes that contain zeros.
+								tmp+=buffer[k];
+	                    }
+					
+					ports.append(tmp);		// Append port to the list of ports.
+					ports.append(",");
+						
+				}
+			} 
+        }
+		
+    }
+	delete [] buffer;
+	return ports;
+}
+
 std::string CodebenderccAPI::probeUSB() {
 
-    HANDLE hCom;
-    std::string ports = "";
+    
+	std::vector<std::string> registryReply;
+	std::string ports ="skata sta moutra mouni ths lasphs,";
+	HKEY hKey;
 
-    for (int i = 1; i < 150; i++) {
-        //std::string port ="COM11";   //"\\\\.\\"
-
-        TCHAR pcCommPort [32]; //  Most systems have a COM1 port
-        swprintf(pcCommPort, L"\\\\.\\COM%d", i);
-        //_tcscpy(pcCommPort ,L(port.c_str()));
-        //  Open a handle to the specified com port.
-        hCom = CreateFile(pcCommPort,
-                GENERIC_READ,
-                0, //  must be opened with exclusive-access
-                NULL, //  default security attributes
-                OPEN_EXISTING, //  must use OPEN_EXISTING
-                0, //  not overlapped I/O
-                NULL); //  hTemplate must be NULL for comm devices
-
-        if (hCom == INVALID_HANDLE_VALUE) {
-        } else {
-            CloseHandle(hCom);
-            ports.append("COM");
-            ports.append(boost::lexical_cast<std::string, int>(i));
-            ports.append(",");
-        }
-    }
+   /*
+    * Open the registry key where serial port key-value pairs are stored.
+	*/
+   if( RegOpenKeyEx( HKEY_LOCAL_MACHINE,		// The name of the registry key handle is always the same.
+        TEXT("HARDWARE\\DEVICEMAP\\SERIALCOMM\\"),	// The same applies to the subkey, since we are looking for serial ports only.
+        0,
+        KEY_READ,								// Set the access rights, before reading the key contents.
+        &hKey) == ERROR_SUCCESS					// Set the variable that revieves the open key handle.
+      )
+   {
+      ports.append(CodebenderccAPI::QueryKey(hKey));  // Call QueryKey function to retrieve the available ports.
+   }
+   
+	RegCloseKey(hKey);	// Need to close the key handle after the task is completed.
 
     return ports;
 }
