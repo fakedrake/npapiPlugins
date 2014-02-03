@@ -28,11 +28,13 @@
 
 #include <stdio.h>
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <stdlib.h>
 #include <string.h>
 #include <tchar.h>
 
+//using namespace std;
 #else
 #include <dirent.h>
 #endif
@@ -48,9 +50,9 @@
 //#include <boost/optional.hpp>
 //#include <boost/weak_ptr.hpp>
 //used to check for the drivers
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
-namespace fs = boost::filesystem;
+//#include <boost/filesystem/operations.hpp>
+//#include <boost/filesystem/path.hpp>
+//namespace fs = boost::filesystem;
 
 #include <fstream>
 #include <vector>
@@ -58,7 +60,10 @@ namespace fs = boost::filesystem;
 //#include <sstream>
 //#include <stdio.h>
 //#include <stdlib.h>
+#include <time.h>
 #include <sys/stat.h>
+#include <algorithm>
+#include <numeric>
 //#include <sys/types.h>
 
 #include <fcntl.h>
@@ -75,6 +80,15 @@ namespace fs = boost::filesystem;
 #include "variant_list.h"
 #include "SimpleSerial.h"
 
+/**
+ * Wjwwod serial library. 
+ * https://github.com/wjwwood/serial
+ **/
+#include "serial/include/serial/serial.h"
+
+using namespace serial;
+
+
 #ifdef __APPLE__
 #import <Security/Security.h>
 #endif
@@ -87,8 +101,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     ///
     ////////////////////////////////////////////////////////////////////////////
-#define MSG_LEONARD_AUTORESET "Trying Arduino Leonardo auto-reset. If it does not reset automatically please reset the Arduino manually!"
-
+#define MSG_LEONARD_AUTORESET "Trying Arduino Leonardo auto-reset. If it does not reset automatically please reset the Arduino manualy!"
 
     /**
      * Constructor for your JSAPI object.
@@ -111,20 +124,25 @@ public:
         registerMethod("probeUSB", make_method(this, &CodebenderccAPI::probeUSB));
         registerMethod("download", make_method(this, &CodebenderccAPI::download));
         registerMethod("flash", make_method(this, &CodebenderccAPI::flash));
-        registerMethod("serialRead", make_method(this, &CodebenderccAPI::serialRead));
+        
+		registerMethod("openPort", make_method(this, &CodebenderccAPI::openPort));
+		registerMethod("serialRead", make_method(this, &CodebenderccAPI::serialRead));
         registerMethod("disconnect", make_method(this, &CodebenderccAPI::disconnect));
         registerMethod("setCallback", make_method(this, &CodebenderccAPI::setCallback));
         registerMethod("serialWrite", make_method(this, &CodebenderccAPI::serialWrite));
+		registerMethod("enableDebug", make_method(this, &CodebenderccAPI::enableDebug));
+		registerMethod("disableDebug", make_method(this, &CodebenderccAPI::disableDebug));
 
         //Register all JS read-only properties
         registerProperty("version", make_property(this, &CodebenderccAPI::get_version));
         registerProperty("command", make_property(this, &CodebenderccAPI::getLastCommand));
         registerProperty("retVal", make_property(this, &CodebenderccAPI::getRetVal));
 
+		debug_ = false;
+
         std::string os = getPlugin().get()->getOS();
         path = getPlugin().get()->getFSPath();
-
-        path = path.substr(0, path.find_last_of("/\\") + 1);
+		path = path.substr(0, path.find_last_of("/\\") + 1);
 
         std::string arch = "32";
 #ifdef __x86_64
@@ -157,8 +175,7 @@ public:
         }
 
         boost::thread t(boost::bind(&boost::asio::io_service::run, &io));
-
-        serial = NULL;
+  
         _retVal = 9999;
     }
 
@@ -208,7 +225,8 @@ public:
      */
     FB::variant flash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr & cback);
 
-	/**
+	
+    /**
      * When on Windows OS, finds all available usb ports.
      * @return a comma separated list of the detected devices.
      */
@@ -264,6 +282,31 @@ public:
      * @return 1 when disconnected. Any other value is an error value. 
      */
     FB::variant disconnect();
+    /**
+     * Checks for the correct permissions under linux.
+     * @param port The port to check for. @see validate_device
+     * @return the group needed (if needed) for the user to be added.
+     */
+    FB::variant checkPermissions(const std::string &port);
+
+	/**
+	 * Creates an instance of the serial library and opens it.
+	 **/
+	void openPort(const std::string &port, const unsigned int &baudrate);
+
+	/**
+	 * Closes the current port connection.
+	 **/
+	void closePort();
+
+	/**
+	 * Functions to check and enable or disable debugging.
+	 **/
+	void enableDebug();
+
+	void disableDebug();
+
+	bool checkDebug();
 
 
 private:
@@ -364,7 +407,14 @@ private:
      */
     void serialReader(const std::string &, const unsigned int &, const FB::JSObjectPtr &);
 
-    int runme(const std::string & cmd, const std::string & args);
+	/**
+	 * Creates a separate process to run the avrdude command when on Windows OS.
+     * Thus, one can get both the output of the command (the output that would originally be printed on a 
+	 * command prompt) and the value returned by the process.
+	 * 
+	 * @return a code (integer) that indicates whether the command was successful or not
+	 */
+    int execAvrdude(const std::string & cmd);
 
     /**
      */
@@ -374,7 +424,7 @@ private:
     FB::BrowserHostPtr m_host;
     /**
      */
-    std::string avrdude, avrdudeConf, binFile, outfile;
+	std::string avrdude, avrdudeConf, binFile, outfile;
     /**
      */
     std::string libusb;
@@ -383,17 +433,27 @@ private:
     std::string lastcommand;
     int _retVal;
     int mnum;
+	/**
+	*/
+	bool debug_;
+	/**
+	*/
+	time_t start;
 
     FB::JSObjectPtr callback_;
     
-    bool doclose;
-    //    SimpleSerial * serial;
+	/**
+	 * Serial library and timeout objects
+	 **/
+	serial::Serial serialPort;
+	Timeout portTimeout;
+	
+    
     boost::asio::io_service io;
-    boost::asio::serial_port * serial;
     boost::array<char, 1 > buf;
     std::string path;
-    int packets;
 
+	
     void delay(int duration) {
 #if defined _WIN32 || _WIN64
         Sleep(duration);

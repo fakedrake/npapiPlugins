@@ -11,14 +11,17 @@
 
 FB::variant CodebenderccAPI::download() {
     return "deprecated";
-}
+}	
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////public//////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
 FB::variant CodebenderccAPI::flash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr &flash_callback) {
-    if (!validate_device(device)) return -1;
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::flash");
+	
+	if (!validate_device(device)) return -1;
     if (!validate_code(code)) return -2;
     if (!validate_number(maxsize)) return -3;
     if (!validate_number(speed)) return -4;
@@ -28,19 +31,85 @@ FB::variant CodebenderccAPI::flash(const std::string& device, const std::string&
     boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doflash,
             this, device, code, maxsize, protocol, speed, mcu, flash_callback));
 
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::flash ended");
     return 0;
 }
 
 bool CodebenderccAPI::setCallback(const FB::JSObjectPtr &callback) {
 
-    callback_ = callback;
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::setCallback");
+	
+	callback_ = callback;
+
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::setCallback ended");
     return true;
+}
+
+void CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudrate) {
+
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::openPort");
+	
+	std::string device;
+	device = port;
+	
+#if defined _WIN32||_WIN64
+	device = "\\\\.\\" + port;
+#endif
+
+	try{
+		if (serialPort.isOpen() == false){
+			// need to set a zero timeout when on Windows
+			#if defined _WIN32||_WIN64
+				portTimeout = Timeout(std::numeric_limits<uint32_t>::max(), 0, 0, 0, 0);
+			#else
+				portTimeout = Timeout(std::numeric_limits<uint32_t>::max(), 1000, 0, 1000, 0);
+			#endif
+			serialPort.setPort(device);				//set port name
+			serialPort.setBaudrate(baudrate);		//set port baudrate
+			serialPort.setTimeout(portTimeout);		//set the read/write timeout of the port
+			
+			serialPort.open();			//open the port
+			serialPort.setDTR(true);	//set Data Transfer signal, needed for Arduino leonardo
+			serialPort.setRTS(false);	//set Request to Send signal to false, needed for Arduino leonardo  
+		}
+	}catch(...){
+		if (CodebenderccAPI::checkDebug())		//debugging
+			m_host->htmlLog("CodebenderccAPI::openPort exception");
+		perror("Error opening port.");
+	}
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::openPort ended");
+
+}
+
+void CodebenderccAPI::closePort() {
+	
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::closePort");
+		
+	try{
+		if(serialPort.isOpen())
+			serialPort.close();
+	}catch(...){
+		if (CodebenderccAPI::checkDebug())		//debugging
+			m_host->htmlLog("CodebenderccAPI::closePort exception");
+	}
+
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::closePort ended");
 }
 
 #if defined _WIN32||_WIN64
 
-std::string CodebenderccAPI::QueryKey(HKEY hKey) 
-{ 
+std::string CodebenderccAPI::QueryKey(HKEY hKey) {
+
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::QueryKey");
+
     DWORD    cValues;              // number of values for key 
     DWORD    cchMaxValue;          // longest value name (characters)
     DWORD    cbMaxValueData;       // longest value data (bytes)
@@ -106,7 +175,8 @@ std::string CodebenderccAPI::QueryKey(HKEY hKey)
 	                    }
 					
 					ports.append(tmp);		// Append port to the list of ports.
-					ports.append(",");
+					if (i != (cValues - 1))
+						ports.append(",");
 						
 				}
 			} 
@@ -114,16 +184,19 @@ std::string CodebenderccAPI::QueryKey(HKEY hKey)
 		
     }
 	delete [] buffer;
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::QueryKey ended");
 	return ports;
 }
 
 std::string CodebenderccAPI::probeUSB() {
 
-    
-	std::vector<std::string> registryReply;
-	std::string ports ="skata sta moutra mouni ths lasphs,";
-	HKEY hKey;
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::probeUSB");
 
+	std::string ports ="";
+	HKEY hKey;
+	
    /*
     * Open the registry key where serial port key-value pairs are stored.
 	*/
@@ -139,15 +212,21 @@ std::string CodebenderccAPI::probeUSB() {
    
 	RegCloseKey(hKey);	// Need to close the key handle after the task is completed.
 
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::probeUSB ended");
+
     return ports;
 }
 #else
 
 std::string CodebenderccAPI::probeUSB() {
+	
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::probeUSB");
 
     DIR *dp;
     std::string dirs = "";
-    struct dirent *ep;
+	struct dirent *ep;
     dp = opendir("/dev/");
     if (dp != NULL) {
         while (ep = readdir(dp)) {
@@ -163,36 +242,75 @@ std::string CodebenderccAPI::probeUSB() {
             }
         }
         (void) closedir(dp);
-    } else
+	} else{
+		if (CodebenderccAPI::checkDebug() && (start - time(0))%10 == 0)		//debugging
+			m_host->htmlLog("CodebenderccAPI::probeUSB could not open directory");
         perror("Couldn't open the directory");
+	}
+	
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::probeUSB ended");
 
     return dirs;
 }
 #endif
 
+void CodebenderccAPI::enableDebug() {
+	if(CodebenderccAPI::checkDebug() == false)
+		debug_ = true;
+}
+
+void CodebenderccAPI::disableDebug() {
+	if(CodebenderccAPI::checkDebug() == true)
+		debug_ = false;
+}
+
+bool CodebenderccAPI::checkDebug() {
+	return debug_;
+}
+
+
 CodebenderccPtr CodebenderccAPI::getPlugin() {
 
-    CodebenderccPtr plugin(m_plugin.lock());
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::getPlugin");
+
+	CodebenderccPtr plugin(m_plugin.lock());
     if (!plugin) {
+		if (CodebenderccAPI::checkDebug())		//debugging
+			m_host->htmlLog("CodebenderccAPI::getPlugin invalid plugin");
         throw FB::script_error("The plugin is invalid");
     }
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::getPlugin ended");
+
     return plugin;
 }
 
 // Read-only property version
 
 std::string CodebenderccAPI::get_version() {
-    return FBSTRING_PLUGIN_VERSION;
+
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::get_version");
+
+	return FBSTRING_PLUGIN_VERSION;
 }
 
 FB::variant CodebenderccAPI::getLastCommand() {
 
-    return lastcommand;
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::getLastCommand");
+
+	return lastcommand;
 }
 
 FB::variant CodebenderccAPI::getFlashResult() {
 
-    FILE *pFile;
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::getFlashResult");
+
+	FILE *pFile;
     pFile = fopen(outfile.c_str(), "r");
     char buffer[128];
     std::string result = "";
@@ -201,73 +319,194 @@ FB::variant CodebenderccAPI::getFlashResult() {
             result += buffer;
     }
     fclose(pFile);
+
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::getFlashResult ended");
     return result;
 }
 
 void CodebenderccAPI::serialWrite(const std::string & message) {
 
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::serialWrite");
+
     std::string mess = message;
-    if (serial != NULL) {
-        perror("writing");
-        boost::asio::write(*serial, boost::asio::buffer(mess.c_str(), mess.size()));
-    } else {
-        perror("null");
-    }
+	size_t bytes_read;
+	try
+	{
+		if(serialPort.isOpen()){
+			
+			bytes_read = serialPort.write(mess);
+			if(bytes_read != 0){
+				perror("Wrote to port");
+				if (CodebenderccAPI::checkDebug())		//debugging
+					m_host->htmlLog("Wrote to port: " + mess);
+			}
+		}
+		else {
+			if (CodebenderccAPI::checkDebug())		//debugging
+				m_host->htmlLog("CodebenderccAPI::serialWrite port not open");
+			perror("null");
+		}
+	}catch(...){
+		if (CodebenderccAPI::checkDebug())		//debugging
+			m_host->htmlLog("CodebenderccAPI::serialWrite open serial port exception");
+		notify("disconnect");
+	}
+	
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::serialWrite ended");
+
 }
 
 FB::variant CodebenderccAPI::disconnect() {
 
-    if (serial == NULL)return 1;
-    try {
-        doclose = true;
-        serial->close();
-        serial = NULL;
-    } catch (...) {
-    }
-    return 1;
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::disconnect");
+
+	if(!(serialPort.isOpen()))
+		return 1;
+	try{
+			CodebenderccAPI::closePort();
+		}catch(...){
+			if (CodebenderccAPI::checkDebug())		//debugging
+				m_host->htmlLog("CodebenderccAPI::disconnect close port exception");
+		}
+
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::disconnect ended");
+
+	return 1;
+	
 }
+
 
 #if defined _WIN32 || _WIN64
 
-int CodebenderccAPI::runme(const std::string & command, const std::string & arguments) {
+int CodebenderccAPI::execAvrdude(const std::string & command) {
 
-    DWORD dwExitCode = -1;
-    std::wstring stemp = s2ws(command);
-    LPCWSTR params = stemp.c_str();
-    std::wstring sargs = s2ws(arguments);
-    LPCWSTR args = sargs.c_str();
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::execAvrdude");
 
-    SHELLEXECUTEINFO ShExecInfo = {0};
-    ShExecInfo.cbSize = sizeof (SHELLEXECUTEINFO);
-    ShExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
-    ShExecInfo.hwnd = NULL;
-    ShExecInfo.lpVerb = L"open";
-    ShExecInfo.lpFile = params;
-    ShExecInfo.lpParameters = args;
-    ShExecInfo.lpDirectory = NULL;
-    ShExecInfo.nShow = SW_HIDE;
-    ShExecInfo.hInstApp = NULL;
-    ShellExecuteEx(&ShExecInfo);
+	DWORD dwExitCode = -1;
+	
+	std::wstring sargs = s2ws(command);
+   
+	std::string strResult; // Contains the result of the child process created below.
 
-    WaitForSingleObject(ShExecInfo.hProcess, INFINITE);
+	// Create HANDLES used to get the child process stdout.
+	HANDLE hChildStdoutRd; 
+	HANDLE hChildStdoutWr; 
 
-    GetExitCodeProcess(ShExecInfo.hProcess, &dwExitCode);
-    return dwExitCode;
+	BOOL success;
+
+	// Create security attributes to create pipe.
+	SECURITY_ATTRIBUTES sa = {sizeof(SECURITY_ATTRIBUTES)} ;
+	sa.bInheritHandle       = TRUE; // Set the bInheritHandle flag so pipe handles are inherited by child process. Required.
+	sa.lpSecurityDescriptor = NULL;
+
+	// Create a pipe to get results from child's stdout.
+	if ( !CreatePipe(&hChildStdoutRd, &hChildStdoutWr, &sa, 0) )
+	{
+		perror("Avrdude execution preparation.");
+		return -7;
+	}
+
+	STARTUPINFO si = { sizeof(STARTUPINFO) }; // Specify the necessary parameters for child process.
+
+	si.dwFlags     = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES; // STARTF_USESTDHANDLES is required.
+	si.hStdOutput  = hChildStdoutWr; // Requires STARTF_USESTDHANDLES in dwFlags.
+	si.hStdError   = hChildStdoutWr; // Requires STARTF_USESTDHANDLES in dwFlags.
+	// si.hStdInput not needed so it remains null.
+	si.wShowWindow = SW_HIDE; // Prevent cmd window from flashing. Requires STARTF_USESHOWWINDOW in dwFlags.
+
+	PROCESS_INFORMATION pi  = { 0 };
+
+	// Create the child process.
+	success = CreateProcess(
+		NULL,
+		(LPWSTR)sargs.c_str(),     // command line
+		NULL,               // process security attributes
+		NULL,               // primary thread security attributes
+		TRUE,               // Inherit pipe handles from parent process
+		CREATE_NEW_CONSOLE, // creation flags
+		NULL,               // use parent's environment
+		NULL,               // use parent's current directory
+		&si,                // __in, STARTUPINFO pointer
+		&pi);               // __out, receives PROCESS_INFORMATION
+
+	if (! success)
+	{
+		perror("Failed to create child process.");
+		return -8;
+	}
+ 
+	// Wait until child processes exit. Don't wait forever.
+	WaitForSingleObject( pi.hProcess, INFINITE );
+	GetExitCodeProcess(pi.hProcess, &dwExitCode);
+	TerminateProcess( pi.hProcess, 0 ); // Kill process if it is still running
+ 
+	// Close the write end of the pipe before reading from the read end of the pipe.
+	if (!CloseHandle(hChildStdoutWr))
+	{
+		perror("Cannot read avrdude output.");
+		return -9;
+	}
+ 
+	// Read output from the child process.
+	for (;;)
+	{
+		DWORD dwRead;
+		CHAR chBuf[128];
+ 
+		// Read from pipe that is the standard output for child process.
+		bool done = !ReadFile( hChildStdoutRd, chBuf, 128, &dwRead, NULL) || dwRead == 0;
+		if( done )
+		{
+			break;
+		}
+ 
+		// Append result to string.
+		strResult.append(chBuf, dwRead);
+	}
+	if (CodebenderccAPI::checkDebug())
+		m_host->htmlLog(strResult);
+	//Manually write avrdude output to the output file.
+	std::ofstream output(outfile.c_str());
+	output << strResult;
+	output.close();
+	 
+	// Close process and thread handles.
+	CloseHandle( hChildStdoutRd );
+	 
+	// CreateProcess docs specify that these must be closed. 
+	CloseHandle( pi.hProcess );
+	CloseHandle( pi.hThread );	
+
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::execAvrdude ended");
+	
+	return dwExitCode;
+
 }
 #endif
 
 bool CodebenderccAPI::serialRead(const std::string &port, const std::string &baudrate, const FB::JSObjectPtr &callback) {
 
-    std::string message = "connecting at ";
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::serialRead");
+
+	std::string message = "connecting at ";
     message += baudrate;
 
     callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(message));
 
     unsigned int brate = boost::lexical_cast<unsigned int, std::string > (baudrate);
-    doclose = false;
 
     boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::serialReader, this, port, brate, callback));
-    return true; // the thread is started
+    if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::serialRead ended");
+	return true; // the thread is started
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -275,12 +514,17 @@ bool CodebenderccAPI::serialRead(const std::string &port, const std::string &bau
 ////////////////////////////////////////////////////////////////////////////////
 
 void CodebenderccAPI::doflash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr & flash_callback) {
-    try {
+    
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::doflash");
+
+	std::string os = getPlugin().get()->getOS();
+
+	try {
 #if !defined  _WIN32 || _WIN64	
         chmod(avrdude.c_str(), S_IRWXU);
 #endif
-
-        if (mcu == "atmega32u4") {
+		if (mcu == "atmega32u4") {
             notify(MSG_LEONARD_AUTORESET);
         }
 
@@ -289,26 +533,42 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
         saveToBin(buffer, size);
 
         std::string fdevice = device;
-
+		
         if (mcu == "atmega32u4") {
-            {
-                try {
-                    boost::asio::serial_port mySerial(io, fdevice);
-                    mySerial.set_option(boost::asio::serial_port_base::baud_rate(1200));
-                    delay(2000);
-                    mySerial.close();
-                } catch (...) {
-                }
+
+			try {	
+				// set the "magic" baudrate to force leonardo reset
+				CodebenderccAPI::openPort(fdevice, 1200);
+				delay(2000);
+				CodebenderccAPI::closePort();
+				// delay for 300 ms so that the reset is complete
+				if ((os == "Windows") || (os == "X11"))
+					delay(300);
+			}catch (...) {
+				if (CodebenderccAPI::checkDebug())		//debugging
+					m_host->htmlLog("CodebenderccAPI::doflash exception thrown while opening serial port");
+				perror("Error opening leonardo port");
             }
 
-            delay(500);
+			// get the list of ports before resetting the leonardo board
+			std::string oldports = probeUSB();
+			perror(oldports.c_str());
+			std::istringstream oldStream(oldports);
+			std::string token;
+			std::vector<std::string> oldPorts;
 
-            std::string oldPorts = probeUSB();
-            perror(oldPorts.c_str());
-
-            for (int i = 0; i < 20; i++) {
-                delay(1000);
-
+			while(std::getline(oldStream, token, ',')) {
+				oldPorts.push_back(token);
+			}
+			if (CodebenderccAPI::checkDebug()){
+				m_host->htmlLog("Listing serial port changes..");
+				m_host->htmlLog("Ports : {" + oldports + "}");
+			}
+            
+			// Get the list of ports until the port 
+			int elapsed_time = 0;
+			bool found = false;
+            while(elapsed_time <= 10000){
                 std::vector<std::string> newPorts;
                 std::string newports = probeUSB();
                 perror(newports.c_str());
@@ -318,15 +578,36 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
                     newPorts.push_back(item);
                 }
 
+				if (CodebenderccAPI::checkDebug())
+					m_host->htmlLog("Ports : {" + newports + "}");
+
+				// Check if the new list of ports contains a port that did not exist in the previous list.
                 for (std::vector<std::string>::iterator it = newPorts.begin(); it != newPorts.end(); ++it) {
-                    if (oldPorts.find(*it) == std::string::npos) {
-                        fdevice = *it;
-                        i = 20;
-                        break;
-                    }
+					if (std::find(oldPorts.begin(), oldPorts.end(), *it) == oldPorts.end()){
+						fdevice = *it;
+						found = true;
+						break;
+					}
                 }
-                
-                if (i == 19) {
+
+				if (found){		// The new leonardo port appeared in the list. Save it and go on..
+					if (CodebenderccAPI::checkDebug())
+						m_host->htmlLog("Found leonardo device on " + fdevice + " port");
+					break;
+				}
+
+				oldPorts = newPorts;
+				delay(250);
+				elapsed_time += 250;
+
+				// If a certain ammount of time has gone by, and the initial port is in the lost of ports, upload using this port
+				if(((os == "Widnows" && elapsed_time >= 500) || elapsed_time >=5000) && (std::find(oldPorts.begin(), oldPorts.end(), fdevice) != oldPorts.end()) ){
+					if (CodebenderccAPI::checkDebug())
+						m_host->htmlLog("Uploading using selected port: " + fdevice);
+					break;
+				}
+
+                if (elapsed_time == 10000) {
                     notify("Could not auto-reset or detect a manual reset!");
                     flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-1));
                     return;
@@ -334,20 +615,22 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
             }
         }
 
+		std::string avrdudeDevice = fdevice;
+		#if defined _WIN32||_WIN64
+			avrdudeDevice = "\\\\.\\" + fdevice;
+		#endif
         std::string command = "\"" + avrdude + "\""
                 + " -C\"" + avrdudeConf + "\""
-                + " -P" + fdevice
+				+ " -P" + avrdudeDevice
                 + " -p" + mcu
                 + " -u -D -U flash:w:\"" + binFile + "\":a"
                 + " -c" + protocol
                 + " -b" + speed
-                + " -F 2> "
-                + "\"" + outfile + "\"";
-
-        if (getPlugin().get()->getOS() == "Windows") {
-
-            command = "\"" + command + "\"";
-        }
+                + " -F";
+		// On Windows OS avrdude output cannot be redirected directly from the command itself.
+		#if !defined _WIN32||_WIN64
+			command = command + " 2> " + "\"" + outfile + "\"";
+		#endif
 
         lastcommand = command;
 
@@ -356,24 +639,42 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 #if !defined  _WIN32 || _WIN64	 
         retVal = system(command.c_str());
 #else
-
-        command = " -C\"" + avrdudeConf + "\""
-                + " -P" + fdevice
-                + " -p" + mcu
-                + " -u -D -U flash:w:\"" + binFile + "\":a"
-                + " -c" + protocol
-                + " -b" + speed
-                + " -F ";
-        retVal = runme(avrdude, command);
+		retVal = execAvrdude(command);
 
 #endif
 
         _retVal = retVal;
-        perror(command.c_str());
-        flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
+		perror(command.c_str());
+		// If the current board is leonardo, wait for a few seconds until the sketch actually takes control of the port
+		if (mcu == "atmega32u4"){
+			delay(500);
+			int timer = 0;
+			while(timer < 2000){
+				std::vector<std::string> portVector;
+				std::string ports = probeUSB();
+				std::stringstream chk(ports);
+                std::string tok;
+                while (std::getline(chk, tok, ',')) {
+                    portVector.push_back(tok);
+                }
+				// check if the bootloader has finished and the sketch has taken control of the port
+				if (std::find(portVector.begin(), portVector.end(), fdevice) != portVector.end()){
+					delay(100);
+					timer += 100;
+					break;
+				}
+				delay(100);
+				timer += 100;
+			}
+		}
+		flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
     } catch (...) {
+		if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::doflash exception");
         flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(9001));
     }
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::doflash ended");
 }
 
 /**
@@ -381,13 +682,19 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
  */
 void CodebenderccAPI::saveToBin(unsigned char * data, size_t size) {
 
-    std::ofstream myfile;
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::saveToBin");
+	
+	std::ofstream myfile;
     myfile.open(binFile.c_str(), std::fstream::binary);
     for (size_t i = 0; i < size; i++) {
 
         myfile << data[i];
     }
     myfile.close();
+
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::saveToBin ended");
 }
 
 /**
@@ -399,7 +706,8 @@ void CodebenderccAPI::saveToBin(unsigned char * data, size_t size) {
  * @return length of converted data on success, -1 otherwise
  */
 size_t CodebenderccAPI::base64_decode(const char *source, unsigned char *target, size_t targetlen) {
-    char *src, *tmpptr;
+    
+	char *src, *tmpptr;
     char quadruple[4];
     unsigned char tmpresult[3];
     int i;
@@ -453,7 +761,8 @@ size_t CodebenderccAPI::base64_decode(const char *source, unsigned char *target,
  * @return the value in case of success (0-63), -1 on failure
  */
 int CodebenderccAPI::_base64_char_value(char base64char) {
-    if (base64char >= 'A' && base64char <= 'Z')
+
+	if (base64char >= 'A' && base64char <= 'Z')
         return base64char - 'A';
     if (base64char >= 'a' && base64char <= 'z')
         return base64char - 'a' + 26;
@@ -475,7 +784,8 @@ int CodebenderccAPI::_base64_char_value(char base64char) {
  * @return lenth of the result (1, 2 or 3), 0 on failure
  */
 int CodebenderccAPI::_base64_decode_triple(char quadruple[4], unsigned char *result) {
-    int i, triple_value, bytes_to_decode = 3, only_equals_yet = 1;
+
+	int i, triple_value, bytes_to_decode = 3, only_equals_yet = 1;
     int char_value[4];
 
     for (i = 0; i < 4; i++)
@@ -523,27 +833,43 @@ int CodebenderccAPI::_base64_decode_triple(char quadruple[4], unsigned char *res
 }
 
 void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &baudrate, const FB::JSObjectPtr & callback) {
-    try {
-        serial = new boost::asio::serial_port(io, port);
-        serial->set_option(boost::asio::serial_port_base::baud_rate(baudrate));
-        char c;
-        int d;
+	
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::serialReader");
+		
+	try {
+		CodebenderccAPI::openPort(port, baudrate);
 
-        for (;;) {
-            if (serial == NULL) break;
-            boost::asio::read(*serial, boost::asio::buffer(&c, 1));
-            d = (int) c;
-            callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(d));
-        }
+		int d;
+		std::string rcvd;
+		
+		for (;;) {
+			if(serialPort.isOpen())
+				rcvd = "";	
+
+				rcvd = serialPort.read((size_t) 1);
+				if(rcvd != ""){
+					d = (int) rcvd[0];
+					if (CodebenderccAPI::checkDebug())		//debugging
+						m_host->htmlLog("Received character: " + rcvd[0]);
+					callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(d));
+				}
+		}
     } catch (...) {
-
-        serial = NULL;
+		if (CodebenderccAPI::checkDebug())		//debugging
+			m_host->htmlLog("CodebenderccAPI::serialReader loop interrupted");
         notify("disconnect");
     }
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::serialReader ended");
 }
 
 std::string CodebenderccAPI::exec(const char * cmd) {
-    std::string result = "";
+
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::exec");
+
+	std::string result = "";
 #if !defined  _WIN32 || _WIN64	
     FILE* pipe = popen(cmd, "r");
     if (!pipe) return "ERROR";
@@ -554,11 +880,17 @@ std::string CodebenderccAPI::exec(const char * cmd) {
     }
     pclose(pipe);
 #endif
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::exec ended");
     return result;
 }
 
 void CodebenderccAPI::notify(const std::string &message) {
-    callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
+
+	if (CodebenderccAPI::checkDebug())		//debugging
+		m_host->htmlLog("CodebenderccAPI::notify");
+
+	callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
 }
 
 
@@ -567,7 +899,8 @@ void CodebenderccAPI::notify(const std::string &message) {
 ////////////////////////////////////////////////////////////////////////////////
 
 bool CodebenderccAPI::validate_number(const std::string & input) {
-    try {
+
+	try {
         boost::lexical_cast<double>(input);
         return true;
     } catch (boost::bad_lexical_cast &) {
@@ -577,7 +910,8 @@ bool CodebenderccAPI::validate_number(const std::string & input) {
 }
 
 bool CodebenderccAPI::validate_device(const std::string & input) {
-    static const boost::regex acm("\\/dev\\/ttyACM[[:digit:]]+");
+	
+	static const boost::regex acm("\\/dev\\/ttyACM[[:digit:]]+");
     static const boost::regex usb("\\/dev\\/ttyUSB[[:digit:]]+");
     static const boost::regex com("COM[[:digit:]]+");
     static const boost::regex cu("\\/dev\\/cu.[0-9a-zA-Z\\-]+");
@@ -590,12 +924,14 @@ bool CodebenderccAPI::validate_device(const std::string & input) {
 }
 
 bool CodebenderccAPI::validate_code(const std::string & input) {
-    static const boost::regex base64("[0-9a-zA-Z+\\/=\n]+");
+
+	static const boost::regex base64("[0-9a-zA-Z+\\/=\n]+");
 
     return boost::regex_match(input, base64);
 }
 
 bool CodebenderccAPI::validate_charnum(const std::string & input) {
-    static const boost::regex charnum("[0-9a-zA-Z]*");
+
+	static const boost::regex charnum("[0-9a-zA-Z]*");
     return boost::regex_match(input, charnum);
 }

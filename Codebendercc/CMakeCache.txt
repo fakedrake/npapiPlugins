@@ -23,7 +23,7 @@ CMAKE_USE_RELATIVE_PATHS:BOOL=OFF
 ########################
 
 //This is the directory where this CMakeCache.txt was created
-CMAKE_CACHEFILE_DIR:INTERNAL=/home/amaxilatis/tools/firebreath-1.6/projects/Codebendercc
+CMAKE_CACHEFILE_DIR:INTERNAL=/Users/fpapadopou/firebreath-dev/examples/Codebendercc
 //Major version of cmake used to create the current loaded cache
 CMAKE_CACHE_MAJOR_VERSION:INTERNAL=2
 //Minor version of cmake used to create the current loaded cache
@@ -40,7 +40,7 @@ CMAKE_CTEST_COMMAND:INTERNAL=/usr/bin/ctest
 CMAKE_EDIT_COMMAND:INTERNAL=/usr/bin/ccmake
 //Start directory with the top level CMakeLists.txt file for this
 // project
-CMAKE_HOME_DIRECTORY:INTERNAL=/home/amaxilatis/tools/firebreath-1.6/projects/Codebendercc
+CMAKE_HOME_DIRECTORY:INTERNAL=Users/fpapadopou/firebreath-dev/examples/Codebendercc
 //number of local generators
 CMAKE_NUMBER_OF_LOCAL_GENERATORS:INTERNAL=1
 //Path to CMake installation.
