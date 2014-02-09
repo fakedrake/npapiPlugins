@@ -14,6 +14,7 @@ file (GLOB PLATFORM RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
 SOURCE_GROUP(X11 FILES ${PLATFORM})
+find_library( rt_lib rt )
 
 # use this to add preprocessor definitions
 add_definitions(
@@ -31,6 +32,9 @@ add_x11_plugin(${PROJECT_NAME} SOURCES)
 # add library dependencies here; leave ${PLUGIN_INTERNAL_DEPS} there unless you know what you're doing!
 target_link_libraries(${PROJECT_NAME}
     ${PLUGIN_INTERNAL_DEPS}
+    )
+target_link_libraries(${PROJECT_NAME}
+    rt
     )
 
 

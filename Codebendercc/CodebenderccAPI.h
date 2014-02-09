@@ -14,11 +14,9 @@
  * @see http://www.firebreath.org/display/documentation/FireBreath+Home
  */
 
-#define ENABLE_TFTP
-#define ENABLE_TFTP_AUTO_RESET
-#define ENABLE_DIGISPARK
 
 #if defined _WIN32 || _WIN64
+#define MAX_KEY_LENGTH 255
 #define WIN32_LEAN_AND_MEAN 
 #include <SDKDDKVer.h>
 #include "dirent.h"
@@ -27,6 +25,16 @@
 #include <Shellapi.h>
 #include <Tchar.h>
 #include <Iepmapi.h>
+
+#include <stdio.h>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <stdlib.h>
+#include <string.h>
+#include <tchar.h>
+
+//using namespace std;
 #else
 #include <dirent.h>
 #endif
@@ -42,9 +50,9 @@
 //#include <boost/optional.hpp>
 //#include <boost/weak_ptr.hpp>
 //used to check for the drivers
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
-namespace fs = boost::filesystem;
+//#include <boost/filesystem/operations.hpp>
+//#include <boost/filesystem/path.hpp>
+//namespace fs = boost::filesystem;
 
 #include <fstream>
 #include <vector>
@@ -52,16 +60,13 @@ namespace fs = boost::filesystem;
 //#include <sstream>
 //#include <stdio.h>
 //#include <stdlib.h>
+#include <time.h>
 #include <sys/stat.h>
+#include <algorithm>
+#include <numeric>
 //#include <sys/types.h>
 
 #include <fcntl.h>
-
-#ifdef ENABLE_TFTP
-#include "tftp_client.h"
-#endif
-
-
 
 #include "BrowserHost.h"
 #include "Codebendercc.h"
@@ -74,6 +79,15 @@ namespace fs = boost::filesystem;
 #include "SimpleStreamHelper.h"
 #include "variant_list.h"
 #include "SimpleSerial.h"
+
+/**
+ * Wjwwod serial library. 
+ * https://github.com/wjwwood/serial
+ **/
+#include "serial/include/serial/serial.h"
+
+using namespace serial;
+
 
 #ifdef __APPLE__
 #import <Security/Security.h>
@@ -88,30 +102,6 @@ public:
     ///
     ////////////////////////////////////////////////////////////////////////////
 #define MSG_LEONARD_AUTORESET "Trying Arduino Leonardo auto-reset. If it does not reset automatically please reset the Arduino manualy!"
-#define MSG_DIGISPARK_TIMEOUT "Please plug in the device (timeout in 20 seconds)..."
-#define MSG_DIGISPARK_ERROR_WAS_PLUGED "Please unplug your Digispark and try flashing again..."
-#define MSG_DIGISPARK_FLASHED "Digispark Flashed"
-#define MSG_DIGISPARK_ERROR "Flashed Failed. Please Retry..."
-
-#define MSG_DRIVER_INSTALL "Installing Drivers... Please wait, this will take a few minutes."
-#define MSG_DRIVER_INSTALLED "Drivers Installed Successfully."
-#define MSG_DRIVER_ALLOW "Please select <strong>Yes</strong> in the dialog displayed."
-#define MSG_DRIVER_NOT_INSTALLED "There was a problem during the Installation."
-
-#define MSG_DRIVER_ERROR_AUTHORIZE_1 "Error 1: Could not create initial authorization."
-#define MSG_DRIVER_ERROR_AUTHORIZE_2 "Error 2: Could not copy authorization rights."
-#define MSG_DRIVER_ERROR_AUTHORIZE_3 "Error 3: Failed to execute call with privileges."
-#define MSG_DRIVERS_DECOMPRESS "Decompressing Drivers..."
-
-#define MSG_TFTP_STARTING "Starting upload to "
-#define MSG_FILE_UPLOADED "File uploaded."
-#define MSG_TFTP_ERROR_LOCAL_FILE "Error reading local file."
-#define MSG_TFTP_ERROR_TIMEOUT "Connection to Arduino timed out."
-#define MSG_TFTP_ERROR_CONNECTION "Problem connecting to server."
-
-
-#define LOCATION_DRIVERS_ARDUINO_OSX "/System/Library/Extensions/FTDIUSBSerialDriver.kext/"
-
 
     /**
      * Constructor for your JSAPI object.
@@ -134,26 +124,25 @@ public:
         registerMethod("probeUSB", make_method(this, &CodebenderccAPI::probeUSB));
         registerMethod("download", make_method(this, &CodebenderccAPI::download));
         registerMethod("flash", make_method(this, &CodebenderccAPI::flash));
-        registerMethod("installDrivers", make_method(this, &CodebenderccAPI::installDrivers));
-        registerMethod("checkPermissions", make_method(this, &CodebenderccAPI::checkPermissions));
-        registerMethod("checkForDrivers", make_method(this, &CodebenderccAPI::checkForDrivers));
-        registerMethod("serialRead", make_method(this, &CodebenderccAPI::serialRead));
+        
+		registerMethod("openPort", make_method(this, &CodebenderccAPI::openPort));
+		registerMethod("serialRead", make_method(this, &CodebenderccAPI::serialRead));
         registerMethod("disconnect", make_method(this, &CodebenderccAPI::disconnect));
         registerMethod("setCallback", make_method(this, &CodebenderccAPI::setCallback));
         registerMethod("serialWrite", make_method(this, &CodebenderccAPI::serialWrite));
-		registerMethod("deviceManager", make_method(this,&CodebenderccAPI::deviceManager));
-#ifdef ENABLE_TFTP
-        registerMethod("tftpUpload", make_method(this, &CodebenderccAPI::tftpUpload));
-#endif
+		registerMethod("enableDebug", make_method(this, &CodebenderccAPI::enableDebug));
+		registerMethod("disableDebug", make_method(this, &CodebenderccAPI::disableDebug));
+
         //Register all JS read-only properties
         registerProperty("version", make_property(this, &CodebenderccAPI::get_version));
         registerProperty("command", make_property(this, &CodebenderccAPI::getLastCommand));
         registerProperty("retVal", make_property(this, &CodebenderccAPI::getRetVal));
 
+		debug_ = false;
+
         std::string os = getPlugin().get()->getOS();
         path = getPlugin().get()->getFSPath();
-
-        path = path.substr(0, path.find_last_of("/\\") + 1);
+		path = path.substr(0, path.find_last_of("/\\") + 1);
 
         std::string arch = "32";
 #ifdef __x86_64
@@ -162,7 +151,6 @@ public:
 
         //paths to files
         avrdude = path + os + ".avrdude";
-        digispark = path + os + ".digispark";
         avrdudeConf = path + os + ".avrdude.conf";
         binFile = path + "file.bin";
         outfile = path + "out";
@@ -173,25 +161,21 @@ public:
             libusb = path + "libusb0.dll";
             //.exe for windows
             avrdude = path + "avrdude.exe";
-            digispark = path + "digispark.exe";
         } else if (os == "X11") {
             //LINUX
             avrdude = path + os + "." + arch + ".avrdude";
             avrdudeConf = path + os + "." + arch + ".avrdude.conf";
-            digispark = path + os + "." + arch + ".digispark";
         } else {
             //MAC
             path = path + "../../";
             avrdude = path + os + ".avrdude";
-            digispark = path + os + ".digispark";
             avrdudeConf = path + os + ".avrdude.conf";
             binFile = path + "file.bin";
             outfile = path + "out";
         }
 
         boost::thread t(boost::bind(&boost::asio::io_service::run, &io));
-
-        serial = NULL;
+  
         _retVal = 9999;
     }
 
@@ -241,20 +225,15 @@ public:
      */
     FB::variant flash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr & cback);
 
-#ifdef ENABLE_TFTP
+	
     /**
-     * Used to initiate a tftpUpload to a specified IP address.
-     * @param cback callback for status notifications
-     * @param ip the destination ip
-     * @param code the base64 encoded binary file
-     * @param port1 the destination port
-     * @param passphrase the passphrase for auto reset
-     * @param port2 the auto reset port to use
-     * @return 0 if the flash process is started. Anything else is an error value.
+     * When on Windows OS, finds all available usb ports.
+     * @return a comma separated list of the detected devices.
      */
-    FB::variant tftpUpload(const FB::JSObjectPtr & cback, const std::string& ip, const std::string& code);
+#if defined _WIN32 || _WIN64
+	std::string CodebenderccAPI::QueryKey(HKEY hKey);
 #endif
-
+	
     /**
      * Checks for all available USB Arduino devices.
      * @return a comma separated list of the detected devices.
@@ -310,33 +289,25 @@ public:
      */
     FB::variant checkPermissions(const std::string &port);
 
-    /**
-     * Attempts to install the Drivers for all Arduino devices.
-     * @param os Identifies to os type. 0 for Windows <=XP, 1 >XP, any for MacOS.
-     * @return 0 if installation was started, any other value is an error.
-     */
-    FB::variant installDrivers(int mode);
-    /**
-     * Check for the Drivers Installed in the Codebender Directory under Windows.
-     * @param driver the name of the driver. So that users can ask for a specific Driver to be installed.
-     * @return true/false if the driver is found in the system.
-     */
-    bool checkForDrivers(const std::string& driver);
+	/**
+	 * Creates an instance of the serial library and opens it.
+	 **/
+	void openPort(const std::string &port, const unsigned int &baudrate);
 
-    /**
-     * Sends a notification to the default callback.
-     */
-    void tftp_notify(int packet_num) {
-//        char message [10] ;
-//        sprintf(message,"%d,%d",packet_num,packets);
-        tftp_callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(packet_num)(packets));
-    }
+	/**
+	 * Closes the current port connection.
+	 **/
+	void closePort();
 
-	void deviceManager(){
-#if defined _WIN32 || _WIN64
-		runme("devmgmt.msc","");
-#endif
-	}
+	/**
+	 * Functions to check and enable or disable debugging.
+	 **/
+	void enableDebug();
+
+	void disableDebug();
+
+	bool checkDebug();
+
 
 private:
 
@@ -350,32 +321,7 @@ private:
      * @return true if valid, false else.
      */
     bool validate_device(const std::string &input);
-#ifdef ENABLE_TFTP
-    /**
-     * Implements the tftp upload to the arduino device.
-     * 
-     * @param cback JS callback to send notification
-     * @param ip the target arduino ip
-     * @param code base64 encoded code to send to the arduino
-     * @param port1 tftp initialization port
-     * @param passphrase passphrase for auto reset, "" if no auto reset
-     * @param port2 port to trigger auto reset, "" if no auto reset
-     */
-    void doTftpUpload(const FB::JSObjectPtr & cback, const std::string& ip, const std::string& code, const std::string& port1, const std::string& passphrase, const std::string& port2);
-    /**
-     * Callback for incoming url connections.
-     * 
-     * @param success true if the get was a success.
-     * @param headers 
-     * @param data
-     * @param size
-     */
-    void getURLCallback(bool success, const FB::HeaderMap& headers, const boost::shared_array<uint8_t>& data, const size_t size);
-#endif
-    /**
-     * Called to install all MacOS Drivers.
-     */
-    void installDriversMac();
+
     /**
      * Exec system command.
      * @param filename
@@ -452,9 +398,6 @@ private:
      * @param 
      */
     void doflash(const std::string&, const std::string&, const std::string&, const std::string&, const std::string&, const std::string&, const FB::JSObjectPtr &);
-#ifdef ENABLE_DIGISPARK
-    void doflashDigispark(const std::string&, const std::string&, const std::string&, const std::string&, const std::string&, const std::string&, const FB::JSObjectPtr &);
-#endif
 
     /**
      * 
@@ -464,7 +407,14 @@ private:
      */
     void serialReader(const std::string &, const unsigned int &, const FB::JSObjectPtr &);
 
-    int runme(const std::string & cmd, const std::string & args);
+	/**
+	 * Creates a separate process to run the avrdude command when on Windows OS.
+     * Thus, one can get both the output of the command (the output that would originally be printed on a 
+	 * command prompt) and the value returned by the process.
+	 * 
+	 * @return a code (integer) that indicates whether the command was successful or not
+	 */
+    int execAvrdude(const std::string & cmd);
 
     /**
      */
@@ -474,7 +424,7 @@ private:
     FB::BrowserHostPtr m_host;
     /**
      */
-    std::string avrdude, digispark, avrdudeConf, binFile, outfile;
+	std::string avrdude, avrdudeConf, binFile, outfile;
     /**
      */
     std::string libusb;
@@ -483,18 +433,27 @@ private:
     std::string lastcommand;
     int _retVal;
     int mnum;
+	/**
+	*/
+	bool debug_;
+	/**
+	*/
+	time_t start;
 
     FB::JSObjectPtr callback_;
-    FB::JSObjectPtr tftp_callback_;
-
-    bool doclose;
-    //    SimpleSerial * serial;
+    
+	/**
+	 * Serial library and timeout objects
+	 **/
+	serial::Serial serialPort;
+	Timeout portTimeout;
+	
+    
     boost::asio::io_service io;
-    boost::asio::serial_port * serial;
     boost::array<char, 1 > buf;
     std::string path;
-    int packets;
 
+	
     void delay(int duration) {
 #if defined _WIN32 || _WIN64
         Sleep(duration);
