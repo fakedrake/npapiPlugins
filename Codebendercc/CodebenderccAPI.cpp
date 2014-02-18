@@ -56,9 +56,9 @@ void CodebenderccAPI::openPort(const std::string &port, const unsigned int &baud
 	std::string device;
 	device = port;
 	
-#if defined _WIN32||_WIN64
-	device = "\\\\.\\" + port;
-#endif
+	#if defined _WIN32||_WIN64
+		device = "\\\\.\\" + port;
+	#endif
 
 	try{
 		if (serialPort.isOpen() == false){
@@ -243,7 +243,7 @@ std::string CodebenderccAPI::probeUSB() {
         }
         (void) closedir(dp);
 	} else{
-		if (CodebenderccAPI::checkDebug() && (start - time(0))%10 == 0)		//debugging
+		if (CodebenderccAPI::checkDebug())		//debugging
 			m_host->htmlLog("CodebenderccAPI::probeUSB could not open directory");
         perror("Couldn't open the directory");
 	}
@@ -311,7 +311,12 @@ FB::variant CodebenderccAPI::getFlashResult() {
 		m_host->htmlLog("CodebenderccAPI::getFlashResult");
 
 	FILE *pFile;
-    pFile = fopen(outfile.c_str(), "r");
+	#if defined _WIN32 || _WIN64
+		std::string filename = FB::wstring_to_utf8(outfile);
+		pFile = fopen(filename.c_str(), "r");
+	#else
+		pFile = fopen(outfile.c_str(), "r");
+	#endif
     char buffer[128];
     std::string result = "";
     while (!feof(pFile)) {
@@ -383,55 +388,51 @@ FB::variant CodebenderccAPI::disconnect() {
 
 #if defined _WIN32 || _WIN64
 
-int CodebenderccAPI::execAvrdude(const std::string & command) {
+int CodebenderccAPI::execAvrdude(const std::wstring & command) {
 
 	if (CodebenderccAPI::checkDebug())		//debugging
 		m_host->htmlLog("CodebenderccAPI::execAvrdude");
 
 	DWORD dwExitCode = -1;
-	
-	std::wstring sargs = s2ws(command);
    
 	std::string strResult; // Contains the result of the child process created below.
-
-	// Create HANDLES used to get the child process stdout.
-	HANDLE hChildStdoutRd; 
-	HANDLE hChildStdoutWr; 
 
 	BOOL success;
 
 	// Create security attributes to create pipe.
 	SECURITY_ATTRIBUTES sa = {sizeof(SECURITY_ATTRIBUTES)} ;
 	sa.bInheritHandle       = TRUE; // Set the bInheritHandle flag so pipe handles are inherited by child process. Required.
-	sa.lpSecurityDescriptor = NULL;
-
-	// Create a pipe to get results from child's stdout.
-	if ( !CreatePipe(&hChildStdoutRd, &hChildStdoutWr, &sa, 0) )
-	{
-		perror("Avrdude execution preparation.");
-		return -7;
-	}
+	sa.lpSecurityDescriptor = NULL; // Specify a security descriptor. Required.
 
 	STARTUPINFO si = { sizeof(STARTUPINFO) }; // Specify the necessary parameters for child process.
-
 	si.dwFlags     = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES; // STARTF_USESTDHANDLES is required.
-	si.hStdOutput  = hChildStdoutWr; // Requires STARTF_USESTDHANDLES in dwFlags.
-	si.hStdError   = hChildStdoutWr; // Requires STARTF_USESTDHANDLES in dwFlags.
-	// si.hStdInput not needed so it remains null.
 	si.wShowWindow = SW_HIDE; // Prevent cmd window from flashing. Requires STARTF_USESHOWWINDOW in dwFlags.
 
-	PROCESS_INFORMATION pi  = { 0 };
+	PROCESS_INFORMATION pi  = { 0 }; // Create an empty process information struct. Needed to get the return value of the command.
 
-	// Create the child process.
+	HANDLE fh = CreateFile(		// Create a file handle pointing to the output file, in order to capture the output.
+		&outfile[0], 
+		GENERIC_WRITE,
+		FILE_SHARE_READ|FILE_SHARE_WRITE, 
+		&sa,
+		OPEN_ALWAYS, 
+		FILE_FLAG_SEQUENTIAL_SCAN, 
+		0);
+	// Bind the stdinput, stdoutput and stderror to the output file in order to capture all the output of the command.
+	si.hStdOutput = fh;
+	si.hStdError = fh; 
+	si.hStdInput = fh; 
+
+	// Create the child process. The command simply executes the contents of the batch file, which is the actual command.
 	success = CreateProcess(
 		NULL,
-		(LPWSTR)sargs.c_str(),     // command line
+		(LPWSTR)command.c_str(),     // command line
 		NULL,               // process security attributes
 		NULL,               // primary thread security attributes
 		TRUE,               // Inherit pipe handles from parent process
 		CREATE_NEW_CONSOLE, // creation flags
 		NULL,               // use parent's environment
-		NULL,               // use parent's current directory
+		current_dir,        // use the plugin's directory
 		&si,                // __in, STARTUPINFO pointer
 		&pi);               // __out, receives PROCESS_INFORMATION
 
@@ -445,40 +446,7 @@ int CodebenderccAPI::execAvrdude(const std::string & command) {
 	WaitForSingleObject( pi.hProcess, INFINITE );
 	GetExitCodeProcess(pi.hProcess, &dwExitCode);
 	TerminateProcess( pi.hProcess, 0 ); // Kill process if it is still running
- 
-	// Close the write end of the pipe before reading from the read end of the pipe.
-	if (!CloseHandle(hChildStdoutWr))
-	{
-		perror("Cannot read avrdude output.");
-		return -9;
-	}
- 
-	// Read output from the child process.
-	for (;;)
-	{
-		DWORD dwRead;
-		CHAR chBuf[128];
- 
-		// Read from pipe that is the standard output for child process.
-		bool done = !ReadFile( hChildStdoutRd, chBuf, 128, &dwRead, NULL) || dwRead == 0;
-		if( done )
-		{
-			break;
-		}
- 
-		// Append result to string.
-		strResult.append(chBuf, dwRead);
-	}
-	if (CodebenderccAPI::checkDebug())
-		m_host->htmlLog(strResult);
-	//Manually write avrdude output to the output file.
-	std::ofstream output(outfile.c_str());
-	output << strResult;
-	output.close();
-	 
-	// Close process and thread handles.
-	CloseHandle( hChildStdoutRd );
-	 
+
 	// CreateProcess docs specify that these must be closed. 
 	CloseHandle( pi.hProcess );
 	CloseHandle( pi.hThread );	
@@ -523,6 +491,8 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 	try {
 #if !defined  _WIN32 || _WIN64	
         chmod(avrdude.c_str(), S_IRWXU);
+#else		
+		std::ofstream batchFd; // if on Windows, create the file descriptor for the batch file.
 #endif
 		if (mcu == "atmega32u4") {
             notify(MSG_LEONARD_AUTORESET);
@@ -615,36 +585,53 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
             }
         }
 
-		std::string avrdudeDevice = fdevice;
-		#if defined _WIN32||_WIN64
-			avrdudeDevice = "\\\\.\\" + fdevice;
-		#endif
-        std::string command = "\"" + avrdude + "\""
+        int retVal = 1;
+
+#if !defined  _WIN32 || _WIN64	 
+		std::string command = "\"" + avrdude + "\""
                 + " -C\"" + avrdudeConf + "\""
-				+ " -P" + avrdudeDevice
+				+ " -P" + fdevice
                 + " -p" + mcu
                 + " -u -D -U flash:w:\"" + binFile + "\":a"
                 + " -c" + protocol
                 + " -b" + speed
-                + " -F";
-		// On Windows OS avrdude output cannot be redirected directly from the command itself.
-		#if !defined _WIN32||_WIN64
-			command = command + " 2> " + "\"" + outfile + "\"";
-		#endif
+                + " -F 2> " + "\"" + outfile + "\"";
 
-        lastcommand = command;
+		lastcommand = command;
 
-        int retVal = 1;
-
-#if !defined  _WIN32 || _WIN64	 
         retVal = system(command.c_str());
 #else
-		retVal = execAvrdude(command);
+
+		/** 
+		  *In order to avoid messing with non-ascii characters in Windows paths, prepare the command and save it 
+		  * to a batch file. The command components need not specify the full path of the file, only the file name.
+		  **/
+		std::string batchFileContent = avrdude 
+			+ " -C" + avrdudeConf
+			+ " -P\\\\.\\"+ fdevice
+			+ " -p" + mcu
+			+ " -u -D -U flash:w:file.bin:a -c" 
+			+ protocol
+			+ " -b" + speed
+			+ " -F";
+		
+		try{
+			batchFd.open(batchFile.c_str());
+			batchFd << batchFileContent;
+			batchFd.close();
+		}catch(...){
+			if (CodebenderccAPI::checkDebug())
+				m_host->htmlLog("Failed to write command to batch file!");
+		}	
+
+		lastcommand = batchFileContent;
+		
+		retVal = execAvrdude(batchFile);
 
 #endif
 
         _retVal = retVal;
-		perror(command.c_str());
+		perror(lastcommand.c_str());
 		// If the current board is leonardo, wait for a few seconds until the sketch actually takes control of the port
 		if (mcu == "atmega32u4"){
 			delay(500);

@@ -144,35 +144,52 @@ public:
         path = getPlugin().get()->getFSPath();
 		path = path.substr(0, path.find_last_of("/\\") + 1);
 
-        std::string arch = "32";
-#ifdef __x86_64
-        arch = "64";
-#endif
+		std::string arch = "32";
+		#ifdef __x86_64
+				arch = "64";
+		#endif
 
-        //paths to files
-        avrdude = path + os + ".avrdude";
-        avrdudeConf = path + os + ".avrdude.conf";
-        binFile = path + "file.bin";
-        outfile = path + "out";
+        // paths to files
+        
+        #if defined _WIN32||_WIN64
+			current_dir = getShortPaths(path);
+			std::wstring wchdir(current_dir);
+			if (current_dir == L"")
+				return;
+			if (os == "Windows"){	
+				// WINDOWS
+				// .exe for windows 
+				// no path is appended to avrdude.exe or its config file, since both are used in a batch file
+				// that executes the avrdude command
+				avrdude = "avrdude.exe";
+				avrdudeConf = os + ".avrdude.conf";
+				
+				batchFile = wchdir + L"command.bat";
+				binFile = wchdir + L"file.bin";
+				outfile = wchdir + L"out";
+			}
+		#else
+			
+			binFile = path + "file.bin";
+			outfile = path + "out";
+		
 
-        if (os == "Windows") {
-            //WINDOWS
-            //libusb for windows
-            libusb = path + "libusb0.dll";
-            //.exe for windows
-            avrdude = path + "avrdude.exe";
-        } else if (os == "X11") {
-            //LINUX
-            avrdude = path + os + "." + arch + ".avrdude";
-            avrdudeConf = path + os + "." + arch + ".avrdude.conf";
-        } else {
-            //MAC
-            path = path + "../../";
-            avrdude = path + os + ".avrdude";
-            avrdudeConf = path + os + ".avrdude.conf";
-            binFile = path + "file.bin";
-            outfile = path + "out";
-        }
+
+			if (os == "X11") {
+				// LINUX
+				avrdude = path + os + "." + arch + ".avrdude";
+				avrdudeConf = path + os + "." + arch + ".avrdude.conf";
+			} else {
+				// MAC
+				path = path + "../../";
+				avrdude = path + os + ".avrdude";
+				avrdudeConf = path + os + ".avrdude.conf";
+				#ifdef __APPLE__		//added to avoid messing up compilation process
+					binFile = path + "file.bin";
+					outfile = path + "out";
+				#endif
+			}
+		#endif
 
         boost::thread t(boost::bind(&boost::asio::io_service::run, &io));
   
@@ -414,7 +431,7 @@ private:
 	 * 
 	 * @return a code (integer) that indicates whether the command was successful or not
 	 */
-    int execAvrdude(const std::string & cmd);
+    int execAvrdude(const std::wstring & cmd);
 
     /**
      */
@@ -424,21 +441,20 @@ private:
     FB::BrowserHostPtr m_host;
     /**
      */
-	std::string avrdude, avrdudeConf, binFile, outfile;
-    /**
-     */
-    std::string libusb;
+	
+	#if defined _WIN32||_WIN64
+		std::string avrdude, avrdudeConf;
+		std::wstring binFile, outfile, batchFile;
+		const wchar_t * current_dir;
+	#else
+		std::string avrdude, avrdudeConf, binFile, outfile;
+	#endif
     /**
      */
     std::string lastcommand;
     int _retVal;
-    int mnum;
-	/**
-	*/
+	
 	bool debug_;
-	/**
-	*/
-	time_t start;
 
     FB::JSObjectPtr callback_;
     
@@ -464,16 +480,24 @@ private:
 
 #if defined _WIN32 || _WIN64
 
-    std::wstring s2ws(const std::string& s) {
-        int len;
-        int slength = (int) s.length() + 1;
-        len = MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, 0, 0);
-        wchar_t* buf = new wchar_t[len];
-        MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, buf, len);
-        std::wstring r(buf);
-        delete[] buf;
-        return r;
-    }
+	const wchar_t * getShortPaths(std::string  &longpath) {
+
+		std::wstring wstrpath = FB::utf8_to_wstring(longpath);
+		long length = 0;
+		LPCWSTR szlongpath = wstrpath.c_str();
+		TCHAR* buffer = NULL;
+
+		length = GetShortPathName(szlongpath, NULL, 0);
+		 
+		if (length != 0) {
+			buffer = new TCHAR[length];
+			length = GetShortPathName(szlongpath, buffer, length);
+			if (length != 0){
+				return buffer;
+			}
+		}
+		return L"";
+	}
 #endif
 };
 
