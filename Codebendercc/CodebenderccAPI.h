@@ -139,6 +139,8 @@ public:
         registerProperty("retVal", make_property(this, &CodebenderccAPI::getRetVal));
 
 		debug_ = false;
+		lastPortCount=0;
+		probeFlag=false;
 
         std::string os = getPlugin().get()->getOS();
         path = getPlugin().get()->getFSPath();
@@ -154,6 +156,7 @@ public:
         avrdudeConf = path + os + ".avrdude.conf";
         binFile = path + "file.bin";
         outfile = path + "out";
+		debugFilename=path + "debugging.txt";
 
         if (os == "Windows") {
             //WINDOWS
@@ -302,12 +305,28 @@ public:
 	/**
 	 * Functions to check and enable or disable debugging.
 	 **/
-	void enableDebug();
+	void enableDebug(int debugLevel);
 
 	void disableDebug();
 
 	bool checkDebug();
+	
+	/**
+	 * Functions that print debugging messages depending on the level.
+	 **/
+	void debugMessage(const char * messageDebug, int minimumLevel); 
 
+	void debugMessageProbe(const char * messageDebug, int minimumLevel);
+	
+	/**
+	 * Debugging variables.
+	 **/
+	std::ofstream debugFile;
+	std::string debugFilename;
+	int lastPortCount;
+	bool probeFlag;
+	bool debug_;
+	int currentLevel;
 
 private:
 
@@ -432,13 +451,11 @@ private:
      */
     std::string lastcommand;
     int _retVal;
-    int mnum;
 	/**
 	*/
-	bool debug_;
+
 	/**
 	*/
-	time_t start;
 
     FB::JSObjectPtr callback_;
     
