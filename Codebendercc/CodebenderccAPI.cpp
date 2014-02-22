@@ -590,8 +590,14 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 			avrdudeDevice = "\\\\.\\" + fdevice;
 		#endif
         std::string command = "\"" + avrdude + "\""
-                + " -C\"" + avrdudeConf + "\""
-				+ " -P" + avrdudeDevice
+                + " -C\"" + avrdudeConf + "\"";
+		if (CodebenderccAPI::checkDebug()){
+			command += " -v -v -v -v";
+		}else{
+			command += " -V";
+		}
+		
+		command += " -P" + avrdudeDevice
                 + " -p" + mcu
                 + " -u -D -U flash:w:\"" + binFile + "\":a"
                 + " -c" + protocol
