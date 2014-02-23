@@ -151,7 +151,6 @@ public:
 				arch = "64";
 		#endif
 
-<<<<<<< HEAD
         // paths to files
         
 #if defined _WIN32||_WIN64
@@ -193,8 +192,6 @@ public:
 #endif
 			}
 #endif
-=======
->>>>>>> Windows-usernames
 
         boost::thread t(boost::bind(&boost::asio::io_service::run, &io));
   
@@ -478,11 +475,8 @@ private:
      */
     std::string lastcommand;
     int _retVal;
-<<<<<<< HEAD
 	/**
 	*/
-=======
->>>>>>> Windows-usernames
 
     FB::JSObjectPtr callback_;
     

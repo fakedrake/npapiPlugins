@@ -210,10 +210,7 @@ std::string CodebenderccAPI::probeUSB() {
         }
         (void) closedir(dp);
 	} else{
-<<<<<<< HEAD
 		CodebenderccAPI::debugMessage("CodebenderccAPI::probeUSB could not open directory",2);
-=======
->>>>>>> Windows-usernames
         perror("Couldn't open the directory");
 	}	
 	if(lastPortCount!=dirs.length()){
@@ -377,11 +374,9 @@ FB::variant CodebenderccAPI::disconnect() {
 
 #if defined _WIN32 || _WIN64
 
-<<<<<<< HEAD
 int CodebenderccAPI::execAvrdude(const std::wstring & command) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::execAvrdude",3);
-=======
->>>>>>> Windows-usernames
+
 	DWORD dwExitCode = -1;
    
 	std::string strResult; // Contains the result of the child process created below.
@@ -435,7 +430,6 @@ int CodebenderccAPI::execAvrdude(const std::wstring & command) {
 	WaitForSingleObject( pi.hProcess, INFINITE );
 	GetExitCodeProcess(pi.hProcess, &dwExitCode);
 	TerminateProcess( pi.hProcess, 0 ); // Kill process if it is still running
-<<<<<<< HEAD
 
 	// Print the content of the output file, if debugging is on
 	if (CodebenderccAPI::checkDebug()){
@@ -445,8 +439,6 @@ int CodebenderccAPI::execAvrdude(const std::wstring & command) {
 		CodebenderccAPI::debugMessage(content.c_str(),1);
 		}
 	 
-=======
->>>>>>> Windows-usernames
 	// CreateProcess docs specify that these must be closed. 
 	CloseHandle( pi.hProcess );
 	CloseHandle( pi.hThread );	
@@ -573,7 +565,6 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
             }
         }
 
-<<<<<<< HEAD
 		int retVal = 1;
 		
 #if defined  _WIN32 || _WIN64
@@ -600,13 +591,10 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 #if !defined  _WIN32 || _WIN64
 		command += " 2> " + "\"" + outfile + "\"";
 #endif
-=======
->>>>>>> Windows-usernames
-<<<<<<< HEAD
+
         lastcommand = command;
 		CodebenderccAPI::debugMessage(lastcommand.c_str(),1);
-=======
->>>>>>> Windows-usernames
+
 #if !defined  _WIN32 || _WIN64
         retVal = system(command.c_str());
 #else
