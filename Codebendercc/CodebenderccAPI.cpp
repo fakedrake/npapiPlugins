@@ -32,6 +32,44 @@ FB::variant CodebenderccAPI::flash(const std::string& device, const std::string&
     return 0;
 }
 
+FB::variant CodebenderccAPI::flashWithProgrammer(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& programmerProtocol, const std::string& programmerCommunication, const std::string& programmerSpeed, const std::string& programmerForce, const std::string& programmerDelay, const std::string& mcu, const FB::JSObjectPtr &flash_programmer_callback) {
+	CodebenderccAPI::debugMessage("CodebenderccAPI::flashWithProgrammer",3);
+	
+	/**
+	  *  Input validation. The error codes returned correspond to 
+	  *	 messages printed by the javascript of the website
+	  **/
+    if (!validate_code(code)) return -2;
+    if (!validate_number(maxsize)) return -3;
+	if (!validate_number(programmerSpeed)) return -4;
+    if (!validate_charnum(programmerProtocol)) return -5;
+	if (!validate_charnum(mcu)) return -6;
+	if (programmerProtocol != "usbtiny" && programmerProtocol != "dapa"){
+		if (!validate_charnum(programmerCommunication)) return -7;
+		if (programmerCommunication == "serial")
+			if (!validate_device(device)) return -1;
+	}
+	if (!validate_charnum(programmerForce)) return -8;
+	if (!validate_number(programmerDelay)) return -9;
+
+	/**
+	  * Pass the programmer parameters to doflashWithProgrammer using a map, since boost::bind
+	  * does not allow more than 9 arguments
+	  **/
+	std::map<std::string, std::string> programmerData;
+	programmerData["protocol"] = programmerProtocol.c_str();
+	programmerData["communication"] = programmerCommunication.c_str();
+	programmerData["speed"] = programmerSpeed.c_str();
+	programmerData["force"] = programmerForce.c_str();
+	programmerData["delay"] = programmerDelay.c_str();
+
+	boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doflashWithProgrammer,
+		this, device, code, maxsize, programmerData, mcu, flash_programmer_callback));
+	
+	CodebenderccAPI::debugMessage("CodebenderccAPI::flashWithProgrammer ended",3);
+    return 0;
+}
+
 bool CodebenderccAPI::setCallback(const FB::JSObjectPtr &callback) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::setCallback",3);	
 	callback_ = callback;
@@ -423,7 +461,7 @@ int CodebenderccAPI::execAvrdude(const std::wstring & command) {
 	if (! success)
 	{
 		perror("Failed to create child process.");
-		return -8;
+		return -10;
 	}
  
 	// Wait until child processes exit. Don't wait forever.
@@ -640,6 +678,78 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
         flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(9001));
     }
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflash ended",3);
+}
+
+void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std::string& code, const std::string& maxsize, std::map<std::string, std::string>& programmerData, const std::string& mcu, const FB::JSObjectPtr & flash_callback) {
+	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashWithProgrammer",3);
+
+	std::string os = getPlugin().get()->getOS();
+
+	try {
+#if !defined  _WIN32 || _WIN64	
+		chmod(avrdude.c_str(), S_IRWXU);
+#else		
+		std::ofstream batchFd; // if on Windows, create the file descriptor for the batch file.
+#endif
+
+		unsigned char buffer [150000];
+        size_t size = base64_decode(code.c_str(), buffer, 150000);
+        saveToBin(buffer, size);
+
+        std::string fdevice = device;
+
+		int retVal = 1;
+
+#if defined  _WIN32 || _WIN64
+		std::string command = "\"" + avrdude + "\"" + " -C\"" + avrdudeConf + "\"";
+#else
+		std::string command = avrdude + " -C" + avrdudeConf;
+#endif
+		command += " -p" + mcu
+				+ " -c" + programmerData["protocol"];
+		if (programmerData["communication"] == "usb"){
+			command += " -Pusb";
+		}else if (programmerData["communication"] == "serial"){
+			command += " -P" + (os == "Windows") ? "\\\\.\\" : "";
+			command += fdevice;
+			if (programmerData["speed"] != "0"){
+				command += " -b" + programmerData["speed"];
+			}
+		}
+		if (programmerData["force"] == "true")
+			command += " -F";
+		if (programmerData["delay"] != "0")
+			command += " -i" + programmerData["delay"];
+#if defined  _WIN32 || _WIN64
+		command += " -Uflash:w:file.bin:a";
+#else
+		command += " -Uflash:w:\"" + binFile + "\":a";
+        command += " 2> " + "\"" + outfile + "\"";
+#endif
+
+		lastcommand = command;
+		
+#if defined  _WIN32 || _WIN64
+			try{
+				batchFd.open(batchFile.c_str());
+				batchFd << command;
+				batchFd.close();
+			}catch(...){
+				CodebenderccAPI::debugMessage("Failed to write command to batch file!",1);
+			}	
+			
+			retVal = execAvrdude(batchFile);
+
+#else
+		retVal = system(command.c_str());
+#endif
+
+		flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
+	}catch(...){
+		CodebenderccAPI::debugMessage("CodebenderccAPI::dofldoflashWithProgrammerash exception",2);
+        flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(9001));
+    }
+	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashWithProgrammer ended",3);
 }
 
 /**

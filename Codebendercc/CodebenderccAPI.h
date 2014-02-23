@@ -124,6 +124,7 @@ public:
         registerMethod("probeUSB", make_method(this, &CodebenderccAPI::probeUSB));
         registerMethod("download", make_method(this, &CodebenderccAPI::download));
         registerMethod("flash", make_method(this, &CodebenderccAPI::flash));
+		registerMethod("flashWithProgrammer", make_method(this, &CodebenderccAPI::flashWithProgrammer));
         
 		registerMethod("openPort", make_method(this, &CodebenderccAPI::openPort));
 		registerMethod("serialRead", make_method(this, &CodebenderccAPI::serialRead));
@@ -243,6 +244,23 @@ public:
      * @return 0 if the flash process is started. Anything else is an error value.
      */
     FB::variant flash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr & cback);
+
+	/**
+     * Alternative flash function. Used to flash a binary using a programmer.
+     * The flash operation is initiated in a new @b thread
+     * @param device The port of the device as a string. @see validate_device
+     * @param code A base64 encoded string of the binary file to be flashed to the device connected to the programmer. 
+     * @param maxsize The maximum size of a binary file that can be flashed to the specific device.
+     * @param programmerProtocol The protocol to be used for Avrdude.
+	 * @param programmerCommunication The communication method used when programming the device. 
+     * @param programmerSpeed The baudrate to be used with Avrdude, when the programmer imlements serial communication.
+	 * @param programmerForce Specifies whether or not -F flag should be used for Avrdude.
+	 * @param programmerDelay The delay applied when using parallel programmer.
+     * @param mcu The mcu to be used with Avrdude.
+     * @param cback A callback used to report the flash result.
+     * @return 0 if the flash process is started. Anything else is an error value.
+     */
+	FB::variant flashWithProgrammer(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& programmerProtocol, const std::string& programmerCommunication, const std::string& programmerSpeed, const std::string& programmerForce, const std::string& programmerDelay, const std::string& mcu, const FB::JSObjectPtr & cback);
 
 	
     /**
@@ -437,6 +455,17 @@ private:
      * @param 
      */
     void doflash(const std::string&, const std::string&, const std::string&, const std::string&, const std::string&, const std::string&, const FB::JSObjectPtr &);
+
+	/**
+     * 
+     * @param 
+     * @param 
+     * @param 
+     * @param 
+     * @param 
+     * @param 
+     */
+	void doflashWithProgrammer(const std::string&, const std::string&, const std::string&, std::map<std::string, std::string>&, const std::string&, const FB::JSObjectPtr &);
 
     /**
      * 
