@@ -705,6 +705,13 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 #else
 		std::string command = avrdude + " -C" + avrdudeConf;
 #endif
+
+		if (CodebenderccAPI::checkDebug() && currentLevel >= 2){
+			command += " -v -v -v -v";
+		}else{
+			command += " -V";
+		}
+		
 		command += " -p" + mcu
 				+ " -c" + programmerData["protocol"];
 		if (programmerData["communication"] == "usb"){
