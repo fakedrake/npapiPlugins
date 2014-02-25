@@ -751,6 +751,8 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 		retVal = system(command.c_str());
 #endif
 
+		_retVal = retVal;
+
 		flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
 	}catch(...){
 		CodebenderccAPI::debugMessage("CodebenderccAPI::dofldoflashWithProgrammerash exception",2);
