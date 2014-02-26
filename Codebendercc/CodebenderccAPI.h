@@ -125,6 +125,8 @@ public:
         registerMethod("download", make_method(this, &CodebenderccAPI::download));
         registerMethod("flash", make_method(this, &CodebenderccAPI::flash));
 		registerMethod("flashWithProgrammer", make_method(this, &CodebenderccAPI::flashWithProgrammer));
+		registerMethod("flashBootloader", make_method(this, &CodebenderccAPI::flashBootloader));
+		registerMethod("saveToHex", make_method(this, &CodebenderccAPI::saveToHex));
         
 		registerMethod("openPort", make_method(this, &CodebenderccAPI::openPort));
 		registerMethod("serialRead", make_method(this, &CodebenderccAPI::serialRead));
@@ -169,12 +171,14 @@ public:
 				
 				batchFile = wchdir + L"command.bat";
 				binFile = wchdir + L"file.bin";
+				hexFile = wchdir + L"bootloader.hex";
 				outfile = wchdir + L"out";
 				debugFilename = wchdir + L"debugging.txt";
 			}
 #else
 			
 			binFile = path + "file.bin";
+			hexFile = path + "bootloader.hex";
 			outfile = path + "out";
 			debugFilename = path + "debugging.txt";
 
@@ -243,7 +247,13 @@ public:
      * @param cback A callback used to report the flash result.
      * @return 0 if the flash process is started. Anything else is an error value.
      */
-    FB::variant flash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr & cback);
+    FB::variant flash(const std::string& device, 
+		const std::string& code, 
+		const std::string& maxsize, 
+		const std::string& protocol, 
+		const std::string& speed, 
+		const std::string& mcu, 
+		const FB::JSObjectPtr & cback);
 
 	/**
      * Alternative flash function. Used to flash a binary using a programmer.
@@ -260,7 +270,49 @@ public:
      * @param cback A callback used to report the flash result.
      * @return 0 if the flash process is started. Anything else is an error value.
      */
-	FB::variant flashWithProgrammer(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& programmerProtocol, const std::string& programmerCommunication, const std::string& programmerSpeed, const std::string& programmerForce, const std::string& programmerDelay, const std::string& mcu, const FB::JSObjectPtr & cback);
+	FB::variant flashWithProgrammer(const std::string& device, 
+		const std::string& code, 
+		const std::string& maxsize, 
+		const std::string& programmerProtocol, 
+		const std::string& programmerCommunication, 
+		const std::string& programmerSpeed, 
+		const std::string& programmerForce, 
+		const std::string& programmerDelay, 
+		const std::string& mcu, 
+		const FB::JSObjectPtr & cback);
+
+	/**
+     * Bootloader burn function. Used to burn a hex bootloader file to the device.
+     * The burn operation is initiated in a new @b thread
+	 * @param hexContent the content of the hex bootloader file
+     * @param device The port of the device as a string.
+     * @param programmerProtocol The protocol to be used for Avrdude.
+	 * @param programmerCommunication The communication method used when programming the device. 
+     * @param programmerSpeed The baudrate to be used with Avrdude, when the programmer imlements serial communication.
+	 * @param programmerForce Specifies whether or not -F flag should be used for Avrdude.
+	 * @param programmerDelay The delay applied when using parallel programmer.
+	 * @param bootloaderHighFuses bootloader parameter used to erase the device.
+	 * @param bootloaderLowFuses bootloader parameter used to erase the device.
+	 * @param bootloaderExtendedFuses bootloader parameter used to erase the device.
+	 * @param bootloaderUnlockBits bootloader parameter used to erase the device.
+	 * @param bootloaderLockBits bootloader parameter used to upload the bootloader.
+     * @param mcu The mcu to be used with Avrdude.
+     * @param cback A callback used to report the flash result.
+     * @return 0 if the flash process is started. Anything else is an error value.
+     */
+	 FB::variant flashBootloader(const std::string& device,  
+		 const std::string& programmerProtocol, 
+		 const std::string& programmerCommunication, 
+		 const std::string& programmerSpeed, 
+		 const std::string& programmerForce, 
+		 const std::string& programmerDelay, 
+		 const std::string& bootloaderHighFuses, 
+		 const std::string& bootloaderLowFuses, 
+		 const std::string& bootloaderExtendedFuses, 
+		 const std::string& bootloaderUnlockBits, 
+		 const std::string& bootloaderLockBits, 
+		 const std::string& mcu, 
+		 const FB::JSObjectPtr & cback);
 
 	
     /**
@@ -420,6 +472,19 @@ private:
      */
     void saveToBin(unsigned char *, size_t);
 
+	/**
+     * Saves a bootloader hex file to disk.
+     * @param bootloaderContent the contents of the hex file to write.
+     */
+	void saveToHex(const std::string& bootloaderContent);
+
+	/**
+	  * Validate hex string number.
+	  * @param input the string hex number to validate
+	  * $return true if the string is a hex value, false else.
+	  **/
+	bool validate_hex(const std::string &);
+
     /**
      * Validate a number string.
      * @param input the string to validate.
@@ -444,7 +509,60 @@ private:
      */
     void notify(const std::string &message);
 
-    /**
+	/**
+	  * Validates the input and creates a map with the parameters of the programmer.
+	  * Returns zero upon success. All other return codes represent validation errors.
+	  * @param device port to be used when uploading with programmer or burning bootloader.
+	  * @param programmerProtocol the protocol used by the selected programmer.
+	  * @param programmerSpeed the speed specified by the programmer protocol to be used with avrdude. 
+	  * @param programmerCommunication the communication method specified by the programmer protocol.
+	  * @param programmerForce the flage specifying whether or not to used -F flag with avrdude
+	  * @param programmerDelay the delay applied when writing data to the device.
+	  * @param mcu the device microcontroller unit.
+	  * @param programmerData a map containing the programmer parameters.
+	  **/
+	int programmerPrefs(const std::string& port, 
+		const std::string& programmerProtocol, 
+		const std::string& programmerSpeed, 
+		const std::string& programmerCommunication, 
+		const std::string& programmerForce, 
+		const std::string& programmerDelay, 
+		const std::string& mcu, 
+		std::map<std::string, std::string>& programmerData);
+
+	/**
+	  * Validates the bootloader parameters and creates a map containing them.
+	  * Returns zero upon success. All other return codes represent validation errors.
+	  * @param lowFuses
+	  * @param highFuses
+	  * @param extendedFuses
+	  * @param unLockBits
+	  * @param lockBits
+	  * @param bootloaderData
+	  **/
+	int bootloaderPrefs(const std::string& lowFuses, 
+		const std::string& highFuses, 
+		const std::string& extendedFuses, 
+		const std::string& unLockBits, 
+		const std::string& lockBits, 
+		std::map<std::string, std::string>& bootloaderData);
+    
+	/**
+	  * Creates the first part of the avrdude command for uploading with
+	  * a programmer or flashing a bootloader. 
+	  * @param programmerData a map including the settings of the selected programmer.
+	  */
+	const std::string setProgrammerCommand(std::map<std::string, std::string>& data);
+
+	/**
+	  * Executes a command with avrdude.
+	  * When on Widnows, the functions creates a batch file and then 
+	  * calls CodebenderccAPI::execAvrdude function to execute the batch file,
+	  * else performs a Unix system call.
+	  */
+	int runAvrdude(const std::string& command);
+
+	/**
      * 
      * @param 
      * @param 
@@ -454,7 +572,13 @@ private:
      * @param 
      * @param 
      */
-    void doflash(const std::string&, const std::string&, const std::string&, const std::string&, const std::string&, const std::string&, const FB::JSObjectPtr &);
+    void doflash(const std::string&, 
+		const std::string&, 
+		const std::string&, 
+		const std::string&, 
+		const std::string&, 
+		const std::string&, 
+		const FB::JSObjectPtr &);
 
 	/**
      * 
@@ -465,7 +589,26 @@ private:
      * @param 
      * @param 
      */
-	void doflashWithProgrammer(const std::string&, const std::string&, const std::string&, std::map<std::string, std::string>&, const std::string&, const FB::JSObjectPtr &);
+	void doflashWithProgrammer(const std::string&, 
+		const std::string&, 
+		const std::string&, 
+		std::map<std::string, std::string>&, 
+		const std::string&, 
+		const FB::JSObjectPtr &);
+
+	/**
+	  *
+	  * @param
+	  * @param
+	  * @param
+	  * @param
+	  * @param
+	  */
+	void doflashBootloader(const std::string&,  
+		std::map<std::string, std::string>&, 
+		std::map<std::string, std::string>&, 
+		const std::string&, 
+		const FB::JSObjectPtr &);
 
     /**
      * 
@@ -482,7 +625,7 @@ private:
 	 * 
 	 * @return a code (integer) that indicates whether the command was successful or not
 	 */
-    int execAvrdude(const std::wstring & cmd);
+    int winExecAvrdude(const std::wstring & cmd);
 
     /**
      */
@@ -495,10 +638,10 @@ private:
 	
 	#if defined _WIN32||_WIN64
 		std::string avrdude, avrdudeConf;
-		std::wstring binFile, outfile, batchFile;
+		std::wstring binFile, hexFile, outfile, batchFile;
 		const wchar_t * current_dir;
 	#else
-		std::string avrdude, avrdudeConf, binFile, outfile;
+		std::string avrdude, avrdudeConf, binFile, hexFile, outfile;
 	#endif
     /**
      */

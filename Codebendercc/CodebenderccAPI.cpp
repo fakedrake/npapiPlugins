@@ -32,7 +32,7 @@ FB::variant CodebenderccAPI::flash(const std::string& device, const std::string&
     return 0;
 }
 
-FB::variant CodebenderccAPI::flashWithProgrammer(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& programmerProtocol, const std::string& programmerCommunication, const std::string& programmerSpeed, const std::string& programmerForce, const std::string& programmerDelay, const std::string& mcu, const FB::JSObjectPtr &flash_programmer_callback) {
+FB::variant CodebenderccAPI::flashWithProgrammer(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& programmerProtocol, const std::string& programmerCommunication, const std::string& programmerSpeed, const std::string& programmerForce, const std::string& programmerDelay, const std::string& mcu, const FB::JSObjectPtr & cback) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::flashWithProgrammer",3);
 	
 	/**
@@ -41,33 +41,46 @@ FB::variant CodebenderccAPI::flashWithProgrammer(const std::string& device, cons
 	  **/
     if (!validate_code(code)) return -2;
     if (!validate_number(maxsize)) return -3;
-	if (!validate_number(programmerSpeed)) return -4;
-    if (!validate_charnum(programmerProtocol)) return -5;
-	if (!validate_charnum(mcu)) return -6;
-	if (programmerProtocol != "usbtiny" && programmerProtocol != "dapa"){
-		if (!validate_charnum(programmerCommunication)) return -7;
-		if (programmerCommunication == "serial")
-			if (!validate_device(device)) return -1;
-	}
-	if (!validate_charnum(programmerForce)) return -8;
-	if (!validate_number(programmerDelay)) return -9;
-
-	/**
-	  * Pass the programmer parameters to doflashWithProgrammer using a map, since boost::bind
-	  * does not allow more than 9 arguments
-	  **/
 	std::map<std::string, std::string> programmerData;
-	programmerData["protocol"] = programmerProtocol.c_str();
-	programmerData["communication"] = programmerCommunication.c_str();
-	programmerData["speed"] = programmerSpeed.c_str();
-	programmerData["force"] = programmerForce.c_str();
-	programmerData["delay"] = programmerDelay.c_str();
+	int progValidation = programmerPrefs(device, programmerProtocol, programmerSpeed, programmerCommunication, programmerForce, programmerDelay, mcu, programmerData);
+	if (progValidation != 0)
+		return progValidation;
+	/**
+	  * Validation end
+	  **/
 
 	boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doflashWithProgrammer,
-		this, device, code, maxsize, programmerData, mcu, flash_programmer_callback));
+		this, device, code, maxsize, programmerData, mcu, cback));
 	
 	CodebenderccAPI::debugMessage("CodebenderccAPI::flashWithProgrammer ended",3);
     return 0;
+}
+
+FB::variant CodebenderccAPI::flashBootloader(const std::string& device, const std::string& programmerProtocol, const std::string& programmerCommunication, const std::string& programmerSpeed, const std::string& programmerForce, const std::string& programmerDelay, const std::string& highFuses, const std::string& lowFuses, const std::string& extendedFuses, const std::string& unlockBits, const std::string& lockBits, const std::string& mcu, const FB::JSObjectPtr & cback) {
+	CodebenderccAPI::debugMessage("CodebenderccAPI::flashBootloader",3);
+
+	/**
+	  *  Input validation. The error codes returned correspond to 
+	  *	 messages printed by the javascript of the website
+	  **/
+	std::map<std::string, std::string> programmerData;
+	int progValidation = programmerPrefs(device, programmerProtocol, programmerSpeed, programmerCommunication, programmerForce, programmerDelay, mcu, programmerData);
+	if (progValidation != 0)
+		return progValidation;
+
+	std::map<std::string, std::string> bootloaderData;
+	int bootValidation = bootloaderPrefs(lowFuses, highFuses, extendedFuses, unlockBits, lockBits, bootloaderData);
+	if (bootValidation != 0)
+		return bootValidation;
+	/**
+	  * Validation end
+	  **/
+
+	boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doflashBootloader,
+		this, device, programmerData, bootloaderData, mcu, cback));
+
+	CodebenderccAPI::debugMessage("CodebenderccAPI::flashBootloader ended",3);
+	return 0;
 }
 
 bool CodebenderccAPI::setCallback(const FB::JSObjectPtr &callback) {
@@ -412,8 +425,8 @@ FB::variant CodebenderccAPI::disconnect() {
 
 #if defined _WIN32 || _WIN64
 
-int CodebenderccAPI::execAvrdude(const std::wstring & command) {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::execAvrdude",3);
+int CodebenderccAPI::winExecAvrdude(const std::wstring & command) {
+	CodebenderccAPI::debugMessage("CodebenderccAPI::winExecAvrdude",3);
 
 	DWORD dwExitCode = -1;
    
@@ -480,7 +493,7 @@ int CodebenderccAPI::execAvrdude(const std::wstring & command) {
 	// CreateProcess docs specify that these must be closed. 
 	CloseHandle( pi.hProcess );
 	CloseHandle( pi.hThread );	
-	CodebenderccAPI::debugMessage("CodebenderccAPI::execAvrdude ended",3);
+	CodebenderccAPI::debugMessage("CodebenderccAPI::winExecAvrdude ended",3);
 	return dwExitCode;
 }
 #endif
@@ -512,8 +525,6 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 	try {
 #if !defined  _WIN32 || _WIN64	
         chmod(avrdude.c_str(), S_IRWXU);
-#else		
-		std::ofstream batchFd; // if on Windows, create the file descriptor for the batch file.
 #endif
 		if (mcu == "atmega32u4") {
             notify(MSG_LEONARD_AUTORESET);
@@ -605,7 +616,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 
 		int retVal = 1;
 		
-#if defined  _WIN32 || _WIN64
+#if !defined  _WIN32 || _WIN64
 		std::string command = "\"" + avrdude + "\"" + " -C\"" + avrdudeConf + "\"";
 #else
 		std::string command = avrdude + " -C" + avrdudeConf;
@@ -615,40 +626,22 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 		}else{
 			command += " -V";
 		}
-		command += " -P" + (os == "Windows") ? "\\\\.\\" : "";
-		command += fdevice;
-		+ " -p" + mcu
+		command += " -P";
+		command += (os == "Windows") ? "\\\\.\\" : "";
+		command += fdevice
+			+ " -p" + mcu;
+
 #if defined  _WIN32 || _WIN64
-		+ " -u -D -U flash:w:file.bin:a" 
+		command += " -u -D -U flash:w:file.bin:a";
 #else
-		+ " -u -D -U flash:w:\"" + binFile + "\":a"
+		command += " -u -D -U flash:w:\"" + binFile + "\":a";
 #endif
-		+ " -c" + protocol
+		command += " -c" + protocol
 		+ " -b" + speed
 		+ " -F";
-#if !defined  _WIN32 || _WIN64
-		command += " 2> " + "\"" + outfile + "\"";
-#endif
 
-        lastcommand = command;
-		CodebenderccAPI::debugMessage(lastcommand.c_str(),1);
-
-#if !defined  _WIN32 || _WIN64
-        retVal = system(command.c_str());
-#else
-		try{
-			batchFd.open(batchFile.c_str());
-			batchFd << command;
-			batchFd.close();
-		}catch(...){
-			CodebenderccAPI::debugMessage("Failed to write command to batch file!", 1);
-		}
-		
-		retVal = execAvrdude(batchFile);
-#endif
-
+		retVal = CodebenderccAPI::runAvrdude(command);
         _retVal = retVal;
-		perror(lastcommand.c_str());
 		
 		// If the current board is leonardo, wait for a few seconds until the sketch actually takes control of the port
 		if (mcu == "atmega32u4"){
@@ -688,8 +681,6 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 	try {
 #if !defined  _WIN32 || _WIN64	
 		chmod(avrdude.c_str(), S_IRWXU);
-#else		
-		std::ofstream batchFd; // if on Windows, create the file descriptor for the batch file.
 #endif
 
 		unsigned char buffer [150000];
@@ -700,26 +691,131 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 
 		int retVal = 1;
 
+		// Create the first part of the command, which includes the programmer settings.
+		programmerData["mcu"] = mcu.c_str();
+		programmerData["device"] = fdevice.c_str();
+		std::string command = setProgrammerCommand(programmerData);
+
 #if defined  _WIN32 || _WIN64
+		command += " -Uflash:w:file.bin:a";
+#else
+		command += " -Uflash:w:\"" + binFile + "\":a";
+#endif
+
+		// Execute the upload command.
+		retVal = CodebenderccAPI::runAvrdude(command);
+		_retVal = retVal;
+
+		flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
+	}catch(...){
+		CodebenderccAPI::debugMessage("CodebenderccAPI::doflashWithProgrammer exception",2);
+        flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(9001));
+    }
+	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashWithProgrammer ended",3);
+}
+
+void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std::string, std::string>& programmerData, std::map<std::string, std::string>& bootloaderData, const std::string& mcu, const FB::JSObjectPtr & flash_callback) {
+
+	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader",3);
+
+	std::string os = getPlugin().get()->getOS();
+
+	try {
+#if !defined  _WIN32 || _WIN64	
+		chmod(avrdude.c_str(), S_IRWXU);
+#endif		
+		
+		std::string fdevice = device;
+		int retVal = 1;
+
+		// Create the first part of the command, which includes the programmer settings.
+		programmerData["mcu"] = mcu.c_str();
+		programmerData["device"] = fdevice.c_str();
+		std::string programmerCommand = setProgrammerCommand(programmerData);
+
+		// The first part of the command is very likely to be used again when flashing the hex file.
+		std::string command = programmerCommand;
+
+		/**
+		  * Erase the chip, applying the proper values to the unlock bits and high/low/extended fuses.
+		  * Note: Values for high and low fuses MUST exist. The other values are optional, depending on the chip.
+		  */
+		command += " -e";
+		command += (bootloaderData["ulbits"] != "") ? " -Ulock:w:" + bootloaderData["ulbits"] + ":m" : "";
+		command += (bootloaderData["efuses"] != "") ? " -Uefuse:w:" + bootloaderData["efuses"] + ":m" : "";
+		command += " -Uhfuse:w:" + bootloaderData["hfuses"] + ":m"
+				+ " -Ulfuse:w:" + bootloaderData["lfuses"] + ":m";
+		
+		retVal = CodebenderccAPI::runAvrdude(command);
+		_retVal = retVal;
+
+		// If avrdude failed return the error code, else continue.
+		if (retVal == 0){
+
+			// Apply a delay of one second.
+			delay(1000);
+	
+			// Check if hex bootloader wsa sent from the server. If no bootloader exists,
+			// an empty file is created.
+			std::ifstream file (hexFile.c_str(), std::ifstream::binary);
+			if (file.is_open()){
+				file.seekg (0, file.end);
+				int length = file.tellg();
+
+				if (length == 0){
+					file.close();
+				}else{
+					command = programmerCommand;
+#if defined  _WIN32 || _WIN64
+					command += " -Uflash:w:bootloader.hex:i";
+#else
+					command += " -Uflash:w:\"" + hexFile + "\":i";
+#endif
+					command += (bootloaderData["lbits"] != "") ? " -Ulock:w:" + bootloaderData["lbits"] + ":m" : "";
+
+					retVal = CodebenderccAPI::runAvrdude(command);
+					_retVal = retVal;
+				}
+			}
+		}
+	}catch(...){
+		CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader exception",2);
+        flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(9001));
+	}
+
+	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader ended",3);
+}
+
+const std::string CodebenderccAPI::setProgrammerCommand(std::map<std::string, std::string>& programmerData) {
+	
+	CodebenderccAPI::debugMessage("CodebenderccAPI::setProgrammerCommand",3);
+
+	std::string os = getPlugin().get()->getOS();
+
+#if !defined  _WIN32 || _WIN64
 		std::string command = "\"" + avrdude + "\"" + " -C\"" + avrdudeConf + "\"";
 #else
 		std::string command = avrdude + " -C" + avrdudeConf;
 #endif
-
+		
+		/**
+		  * Check if debugging is set to true. If the debug verbosity level is greater than 1,
+		  * add verbosity flags to the avrdude command.
+		  */
 		if (CodebenderccAPI::checkDebug() && currentLevel >= 2){
 			command += " -v -v -v -v";
 		}else{
 			command += " -V";
 		}
 		
-		command += " -p" + mcu
+		command += " -p" + programmerData["mcu"]
 				+ " -c" + programmerData["protocol"];
 		if (programmerData["communication"] == "usb"){
 			command += " -Pusb";
 		}else if (programmerData["communication"] == "serial"){
 			command += " -P";
 			command += (os == "Windows") ? "\\\\.\\" : "";
-			command += fdevice;
+			command += programmerData["device"];
 			if (programmerData["speed"] != "0"){
 				command += " -b" + programmerData["speed"];
 			}
@@ -728,39 +824,44 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 			command += " -F";
 		if (programmerData["delay"] != "0")
 			command += " -i" + programmerData["delay"];
+
+	CodebenderccAPI::debugMessage("CodebenderccAPI::setProgrammerCommand ended",3);
+	return command;
+}
+
+int CodebenderccAPI::runAvrdude(const std::string& command) {
+
+	CodebenderccAPI::debugMessage("CodebenderccAPI::avrdude",3);
+	
+	int retval = 1;
 #if defined  _WIN32 || _WIN64
-		command += " -Uflash:w:file.bin:a";
-#else
-		command += " -Uflash:w:\"" + binFile + "\":a";
-        command += " 2> " + "\"" + outfile + "\"";
-#endif
-
-		lastcommand = command;
-		CodebenderccAPI::debugMessage(lastcommand.c_str(),1);
-		
-#if defined  _WIN32 || _WIN64
-			try{
-				batchFd.open(batchFile.c_str());
-				batchFd << command;
-				batchFd.close();
-			}catch(...){
-				CodebenderccAPI::debugMessage("Failed to write command to batch file!",1);
-			}	
-			
-			retVal = execAvrdude(batchFile);
-
-#else
-		retVal = system(command.c_str());
-#endif
-
-		_retVal = retVal;
-
-		flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
+	// if on Windows, create a batch file and save the command in that file.
+	std::ofstream batchFd; 
+	try{
+		batchFd.open(batchFile.c_str());
+		batchFd << command;
+		batchFd.close();
 	}catch(...){
-		CodebenderccAPI::debugMessage("CodebenderccAPI::dofldoflashWithProgrammerash exception",2);
-        flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(9001));
-    }
-	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashWithProgrammer ended",3);
+		CodebenderccAPI::debugMessage("Failed to write command to batch file!",1);
+	}	
+	
+	lastcommand = command;
+	// Call winExecAvrdude, which creates a new process, runs the batch file and gets all the ouput.
+	retval = winExecAvrdude(batchFile);
+
+#else
+	/**
+	  * If on Unix-like system, simply make a system call, using the command as content and redirect
+	  * the output to the output file.
+	  */
+	command += " 2> " + "\"" + outfile + "\"";
+	lastcommand = command;
+	retval = system(command.c_str());
+#endif
+	CodebenderccAPI::debugMessage(lastcommand.c_str(),1);
+
+	CodebenderccAPI::debugMessage("CodebenderccAPI::avrdude ended",3);
+	return retval;
 }
 
 /**
@@ -777,6 +878,22 @@ void CodebenderccAPI::saveToBin(unsigned char * data, size_t size) {
     }
     myfile.close();
 	CodebenderccAPI::debugMessage("CodebenderccAPI::saveToBin ended",3);
+}
+
+/**
+ * Save the hex data of the bootloader file to the hex file specified in the constructor.
+ */
+void CodebenderccAPI::saveToHex(const std::string& hexContent) {
+	CodebenderccAPI::debugMessage("CodebenderccAPI::saveToHex",3);
+
+	// Save the content of the bootloader to a local hex file.
+	std::ofstream myfile;
+    myfile.open(hexFile.c_str(), std::fstream::binary);
+
+	myfile << hexContent;
+	myfile.close();
+
+	CodebenderccAPI::debugMessage("CodebenderccAPI::saveToHex",3);
 }
 
 /**
@@ -964,10 +1081,74 @@ void CodebenderccAPI::notify(const std::string &message) {
 	callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
 }
 
+int CodebenderccAPI::programmerPrefs(const std::string& port, const std::string& programmerProtocol, const std::string&  programmerSpeed, const std::string& programmerCommunication, const std::string& programmerForce, const std::string& programmerDelay, const std::string& mcu, std::map<std::string, std::string>& programmerData) {
+	
+	CodebenderccAPI::debugMessage("CodebenderccAPI::programmerPrefs",3);
+
+	/**
+	  * Validate the programmer parameters
+	  **/
+	if (!validate_number(programmerSpeed)) return -4;
+    if (!validate_charnum(programmerProtocol)) return -5;
+	if (!validate_charnum(mcu)) return -6;
+	if (programmerProtocol != "usbtiny" && programmerProtocol != "dapa"){
+		if (!validate_charnum(programmerCommunication)) return -7;
+		if (programmerCommunication == "serial")
+			if (!validate_device(port)) return -1;
+	}
+	if (!validate_charnum(programmerForce)) return -8;
+	if (!validate_number(programmerDelay)) return -9;
+
+	/**
+	  * Pass the programmer parameters to a map.
+	  **/
+	programmerData["protocol"] = programmerProtocol.c_str();
+	programmerData["communication"] = programmerCommunication.c_str();
+	programmerData["speed"] = programmerSpeed.c_str();
+	programmerData["force"] = programmerForce.c_str();
+	programmerData["delay"] = programmerDelay.c_str();
+
+	CodebenderccAPI::debugMessage("CodebenderccAPI::programmerPrefs ended",3);
+
+	return 0;
+}
+
+int CodebenderccAPI::bootloaderPrefs(const std::string& lFuses, const std::string& hFuses, const std::string& eFuses, const std::string& ulBits, const std::string& lBits, std::map<std::string, std::string>& data) {
+
+	CodebenderccAPI::debugMessage("CodebenderccAPI::bootloaderPrefs",3);
+
+	/**
+	  * Validate the bootloader parameters
+	  **/
+	if (lFuses == "" || !validate_hex(lFuses)) return -11;
+	if (hFuses == "" || !validate_hex(hFuses)) return -12;
+	if (eFuses != "" && !validate_hex(eFuses)) return -13;
+	if (ulBits != "" && !validate_hex(ulBits)) return -14;
+	if (lBits != "" && !validate_hex(lBits)) return -15;
+	
+	/**
+	  * Pass the programmer parameters to a map.
+	  **/
+	data["hfuses"] = hFuses.c_str();
+	data["lfuses"] = lFuses.c_str();
+	data["efuses"] = eFuses.c_str();
+	data["ulbits"] = ulBits.c_str();
+	data["lbits"] = lBits.c_str();
+
+	CodebenderccAPI::debugMessage("CodebenderccAPI::bootloaderPrefs ended",3);
+
+	return 0;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////validations//////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
+
+bool CodebenderccAPI::validate_hex(const std::string & input) {
+  return (input.compare(0, 2, "0x") == 0
+      && input.size() > 2 && input.size() <= 4
+      && input.find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos);
+}
 
 bool CodebenderccAPI::validate_number(const std::string & input) {
 
