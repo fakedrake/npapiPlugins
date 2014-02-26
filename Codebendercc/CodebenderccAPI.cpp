@@ -717,7 +717,8 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 		if (programmerData["communication"] == "usb"){
 			command += " -Pusb";
 		}else if (programmerData["communication"] == "serial"){
-			command += " -P" + (os == "Windows") ? "\\\\.\\" : "";
+			command += " -P";
+			command += (os == "Windows") ? "\\\\.\\" : "";
 			command += fdevice;
 			if (programmerData["speed"] != "0"){
 				command += " -b" + programmerData["speed"];
@@ -735,6 +736,7 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 #endif
 
 		lastcommand = command;
+		CodebenderccAPI::debugMessage(lastcommand.c_str(),1);
 		
 #if defined  _WIN32 || _WIN64
 			try{
