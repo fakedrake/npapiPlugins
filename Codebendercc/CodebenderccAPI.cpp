@@ -232,7 +232,7 @@ std::string CodebenderccAPI::probeUSB() {
    
 	if(lastPortCount!=ports.length()){
 		lastPortCount=ports.length();
-		CodebenderccAPI::debugMessage("CodebenderccAPI::QueryKey number of ports changed",3);
+		CodebenderccAPI::detectNewPort(ports);
 									}
 	RegCloseKey(hKey);	// Need to close the key handle after the task is completed.	
     return ports;
@@ -262,11 +262,10 @@ std::string CodebenderccAPI::probeUSB() {
         (void) closedir(dp);
 	} else{
 		CodebenderccAPI::debugMessage("CodebenderccAPI::probeUSB could not open directory",2);
-        perror("Couldn't open the directory");
 	}	
 	if(lastPortCount!=dirs.length()){
 		lastPortCount=dirs.length();
-		CodebenderccAPI::debugMessage("CodebenderccAPI::QueryKey number of ports changed",3);
+		CodebenderccAPI::detectNewPort(dirs);
 									}
     return dirs;
 }
@@ -473,7 +472,7 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command) {
 
 	if (! success)
 	{
-		perror("Failed to create child process.");
+		CodebenderccAPI::debugMessage("Failed to create child process.", 1);
 		return -10;
 	}
  
@@ -481,15 +480,8 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command) {
 	WaitForSingleObject( pi.hProcess, INFINITE );
 	GetExitCodeProcess(pi.hProcess, &dwExitCode);
 	TerminateProcess( pi.hProcess, 0 ); // Kill process if it is still running
-
-	// Print the content of the output file, if debugging is on
-	if (CodebenderccAPI::checkDebug()){
-		std::ifstream ifs(outfile.c_str());
-		std::string content( (std::istreambuf_iterator<char>(ifs) ),
-						   (std::istreambuf_iterator<char>()    ) );
-		CodebenderccAPI::debugMessage(content.c_str(),1);
-		}
 	 
+	CloseHandle(fh);
 	// CreateProcess docs specify that these must be closed. 
 	CloseHandle( pi.hProcess );
 	CloseHandle( pi.hThread );	
@@ -831,7 +823,7 @@ const std::string CodebenderccAPI::setProgrammerCommand(std::map<std::string, st
 
 int CodebenderccAPI::runAvrdude(const std::string& command) {
 
-	CodebenderccAPI::debugMessage("CodebenderccAPI::avrdude",3);
+	CodebenderccAPI::debugMessage("CodebenderccAPI::runAvrdude",3);
 	
 	int retval = 1;
 #if defined  _WIN32 || _WIN64
@@ -854,13 +846,21 @@ int CodebenderccAPI::runAvrdude(const std::string& command) {
 	  * If on Unix-like system, simply make a system call, using the command as content and redirect
 	  * the output to the output file.
 	  */
-	command += " 2> " + "\"" + outfile + "\"";
-	lastcommand = command;
-	retval = system(command.c_str());
+	std::string avrcommand = command;
+	avrcommand += " 2> \"" + outfile + "\"";
+	lastcommand = avrcommand;
+	retval = system(avrcommand.c_str());
 #endif
+	// Print the content of the output file, if debugging is on
+	if (CodebenderccAPI::checkDebug()){
+		std::ifstream ifs(outfile.c_str());
+		std::string content( (std::istreambuf_iterator<char>(ifs) ),
+							(std::istreambuf_iterator<char>()    ) );
+		CodebenderccAPI::debugMessage(content.c_str(),1);
+	}
 	CodebenderccAPI::debugMessage(lastcommand.c_str(),1);
 
-	CodebenderccAPI::debugMessage("CodebenderccAPI::avrdude ended",3);
+	CodebenderccAPI::debugMessage("CodebenderccAPI::runAvrdude ended",3);
 	return retval;
 }
 
@@ -893,7 +893,40 @@ void CodebenderccAPI::saveToHex(const std::string& hexContent) {
 	myfile << hexContent;
 	myfile.close();
 
-	CodebenderccAPI::debugMessage("CodebenderccAPI::saveToHex",3);
+	CodebenderccAPI::debugMessage("CodebenderccAPI::saveToHex ended",3);
+}
+
+void CodebenderccAPI::detectNewPort(const std::string& portString) {
+	
+	std::vector<std::string> portVector;
+	std::vector< std::string >::iterator externalIterator = portsList.begin();
+
+	std::string mess;
+
+	std::stringstream chk(portString);
+	std::string tok;
+	while (std::getline(chk, tok, ',')) {
+		portVector.push_back(tok);
+	}
+	
+	std::vector< std::string >::iterator internalIterator = portVector.begin();
+	
+	while (externalIterator != portsList.end()){
+		if (std::find(portVector.begin(), portVector.end(), *externalIterator) == portVector.end()){
+			mess = "Device removed from port : " + *externalIterator;
+			CodebenderccAPI::debugMessage(mess.c_str(),1);
+		}
+		externalIterator++;
+	}
+	while (internalIterator != portVector.end()){
+		if (std::find(portsList.begin(), portsList.end(), *internalIterator) == portsList.end()){
+			mess = "Device added to port : " + *internalIterator;
+			CodebenderccAPI::debugMessage(mess.c_str(),1);
+		}
+		internalIterator++;
+	}
+	
+	portsList = portVector;
 }
 
 /**

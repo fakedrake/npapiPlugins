@@ -135,7 +135,8 @@ public:
         registerMethod("serialWrite", make_method(this, &CodebenderccAPI::serialWrite));
 		registerMethod("enableDebug", make_method(this, &CodebenderccAPI::enableDebug));
 		registerMethod("disableDebug", make_method(this, &CodebenderccAPI::disableDebug));
-
+		registerMethod("getFlashResult", make_method(this, &CodebenderccAPI::getFlashResult));
+		
         //Register all JS read-only properties
         registerProperty("version", make_property(this, &CodebenderccAPI::get_version));
         registerProperty("command", make_property(this, &CodebenderccAPI::getLastCommand));
@@ -477,6 +478,11 @@ private:
      * @param bootloaderContent the contents of the hex file to write.
      */
 	void saveToHex(const std::string& bootloaderContent);
+	
+	/**
+	  * Detects which port was added or removed.
+	  */
+	void detectNewPort(const std::string& portString);
 
 	/**
 	  * Validate hex string number.
@@ -635,6 +641,9 @@ private:
     FB::BrowserHostPtr m_host;
     /**
      */
+	std::vector<std::string> portsList;
+	/**
+	 */
 	
 	#if defined _WIN32||_WIN64
 		std::string avrdude, avrdudeConf;
