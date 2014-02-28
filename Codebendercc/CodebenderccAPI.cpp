@@ -22,16 +22,21 @@ FB::variant CodebenderccAPI::flash(const std::string& device, const std::string&
 
 #if defined _WIN32||_WIN64	// Check if finding the short path of the plugin failed.
 	if (current_dir == L""){
-		flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-16));
+		flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-2));
         return 0;
 	}
 #endif
-	if (!validate_device(device)) return -1;
-    if (!validate_code(code)) return -2;
-    if (!validate_number(maxsize)) return -3;
-    if (!validate_number(speed)) return -4;
-    if (!validate_charnum(protocol)) return -5;
-    if (!validate_charnum(mcu)) return -6;
+	int error_code = 0;
+	if (!validate_device(device)) error_code = -4;
+    if (!validate_code(code)) error_code = -5;
+    if (!validate_number(maxsize)) error_code = -6;
+    if (!validate_number(speed)) error_code = -7;
+    if (!validate_charnum(protocol)) error_code = -8;
+    if (!validate_charnum(mcu)) error_code = -9;
+	if (error_code != 0){
+		flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(error_code));
+        return 0;
+	}
 
     boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doflash,
             this, device, code, maxsize, protocol, speed, mcu, flash_callback));
@@ -44,7 +49,7 @@ FB::variant CodebenderccAPI::flashWithProgrammer(const std::string& device, cons
 	
 #if defined _WIN32||_WIN64	// Check if finding the short path of the plugin failed.
 	if (current_dir == L""){
-		cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-16));
+		cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-2));
         return 0;
 	}
 #endif
@@ -56,8 +61,10 @@ FB::variant CodebenderccAPI::flashWithProgrammer(const std::string& device, cons
     if (!validate_number(maxsize)) return -3;
 	std::map<std::string, std::string> programmerData;
 	int progValidation = programmerPrefs(device, programmerProtocol, programmerSpeed, programmerCommunication, programmerForce, programmerDelay, mcu, programmerData);
-	if (progValidation != 0)
-		return progValidation;
+	if (progValidation != 0){
+		cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(progValidation));
+        return 0;
+	}
 	/**
 	  * Validation end
 	  **/
@@ -74,7 +81,7 @@ FB::variant CodebenderccAPI::flashBootloader(const std::string& device, const st
 
 #if defined _WIN32||_WIN64	// Check if finding the short path of the plugin failed.
 	if (current_dir == L""){
-		cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-16));
+		cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-2));
         return 0;
 	}
 #endif
@@ -84,13 +91,17 @@ FB::variant CodebenderccAPI::flashBootloader(const std::string& device, const st
 	  **/
 	std::map<std::string, std::string> programmerData;
 	int progValidation = programmerPrefs(device, programmerProtocol, programmerSpeed, programmerCommunication, programmerForce, programmerDelay, mcu, programmerData);
-	if (progValidation != 0)
-		return progValidation;
+	if (progValidation != 0){
+		cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(progValidation));
+        return 0;
+	}
 
 	std::map<std::string, std::string> bootloaderData;
 	int bootValidation = bootloaderPrefs(lowFuses, highFuses, extendedFuses, unlockBits, lockBits, bootloaderData);
-	if (bootValidation != 0)
-		return bootValidation;
+	if (bootValidation != 0){
+		cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(bootValidation));
+        return 0;
+	}
 	/**
 	  * Validation end
 	  **/
@@ -492,7 +503,7 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command) {
 	if (! success)
 	{
 		CodebenderccAPI::debugMessage("Failed to create child process.", 1);
-		return -10;
+		return -3;
 	}
  
 	// Wait until child processes exit. Don't wait forever.
@@ -1140,16 +1151,16 @@ int CodebenderccAPI::programmerPrefs(const std::string& port, const std::string&
 	/**
 	  * Validate the programmer parameters
 	  **/
-	if (!validate_number(programmerSpeed)) return -4;
-    if (!validate_charnum(programmerProtocol)) return -5;
-	if (!validate_charnum(mcu)) return -6;
+	if (!validate_number(programmerSpeed)) return -10;
+    if (!validate_charnum(programmerProtocol)) return -11;
+	if (!validate_charnum(mcu)) return -12;
 	if (programmerProtocol != "usbtiny" && programmerProtocol != "dapa"){
-		if (!validate_charnum(programmerCommunication)) return -7;
+		if (!validate_charnum(programmerCommunication)) return -13;
 		if (programmerCommunication == "serial")
-			if (!validate_device(port)) return -1;
+			if (!validate_device(port)) return -14;
 	}
-	if (!validate_charnum(programmerForce)) return -8;
-	if (!validate_number(programmerDelay)) return -9;
+	if (!validate_charnum(programmerForce)) return -15;
+	if (!validate_number(programmerDelay)) return -16;
 
 	/**
 	  * Pass the programmer parameters to a map.
@@ -1172,11 +1183,11 @@ int CodebenderccAPI::bootloaderPrefs(const std::string& lFuses, const std::strin
 	/**
 	  * Validate the bootloader parameters
 	  **/
-	if (lFuses == "" || !validate_hex(lFuses)) return -11;
-	if (hFuses == "" || !validate_hex(hFuses)) return -12;
-	if (eFuses != "" && !validate_hex(eFuses)) return -13;
-	if (ulBits != "" && !validate_hex(ulBits)) return -14;
-	if (lBits != "" && !validate_hex(lBits)) return -15;
+	if (lFuses == "" || !validate_hex(lFuses)) return -17;
+	if (hFuses == "" || !validate_hex(hFuses)) return -18;
+	if (eFuses != "" && !validate_hex(eFuses)) return -19;
+	if (ulBits != "" && !validate_hex(ulBits)) return -20;
+	if (lBits != "" && !validate_hex(lBits)) return -21;
 	
 	/**
 	  * Pass the programmer parameters to a map.
