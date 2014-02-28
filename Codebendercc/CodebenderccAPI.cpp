@@ -19,6 +19,13 @@ FB::variant CodebenderccAPI::download() {
 
 FB::variant CodebenderccAPI::flash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr &flash_callback) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::flash",3);	
+
+#if defined _WIN32||_WIN64	// Check if finding the short path of the plugin failed.
+	if (current_dir == L""){
+		flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-16));
+        return 0;
+	}
+#endif
 	if (!validate_device(device)) return -1;
     if (!validate_code(code)) return -2;
     if (!validate_number(maxsize)) return -3;
@@ -35,6 +42,12 @@ FB::variant CodebenderccAPI::flash(const std::string& device, const std::string&
 FB::variant CodebenderccAPI::flashWithProgrammer(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& programmerProtocol, const std::string& programmerCommunication, const std::string& programmerSpeed, const std::string& programmerForce, const std::string& programmerDelay, const std::string& mcu, const FB::JSObjectPtr & cback) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::flashWithProgrammer",3);
 	
+#if defined _WIN32||_WIN64	// Check if finding the short path of the plugin failed.
+	if (current_dir == L""){
+		cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-16));
+        return 0;
+	}
+#endif
 	/**
 	  *  Input validation. The error codes returned correspond to 
 	  *	 messages printed by the javascript of the website
@@ -59,6 +72,12 @@ FB::variant CodebenderccAPI::flashWithProgrammer(const std::string& device, cons
 FB::variant CodebenderccAPI::flashBootloader(const std::string& device, const std::string& programmerProtocol, const std::string& programmerCommunication, const std::string& programmerSpeed, const std::string& programmerForce, const std::string& programmerDelay, const std::string& highFuses, const std::string& lowFuses, const std::string& extendedFuses, const std::string& unlockBits, const std::string& lockBits, const std::string& mcu, const FB::JSObjectPtr & cback) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::flashBootloader",3);
 
+#if defined _WIN32||_WIN64	// Check if finding the short path of the plugin failed.
+	if (current_dir == L""){
+		cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-16));
+        return 0;
+	}
+#endif
 	/**
 	  *  Input validation. The error codes returned correspond to 
 	  *	 messages printed by the javascript of the website

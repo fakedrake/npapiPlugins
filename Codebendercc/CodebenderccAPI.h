@@ -160,9 +160,8 @@ public:
 #if defined _WIN32||_WIN64
 			current_dir = getShortPaths(path);
 			std::wstring wchdir(current_dir);
-			if (current_dir == L"")
-				return;
-			if (os == "Windows"){	
+
+			if (os == "Windows"){
 				// WINDOWS
 				// .exe for windows 
 				// no path is appended to avrdude.exe or its config file, since both are used in a batch file
