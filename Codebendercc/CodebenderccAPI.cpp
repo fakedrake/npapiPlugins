@@ -454,10 +454,20 @@ FB::variant CodebenderccAPI::disconnect() {
 
 #if defined _WIN32 || _WIN64
 
-int CodebenderccAPI::winExecAvrdude(const std::wstring & command) {
+int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFlag) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::winExecAvrdude",3);
 
 	DWORD dwExitCode = -1;
+	DWORD APPEND;
+	DWORD CREATE;
+	if (appendFlag){
+		APPEND = FILE_APPEND_DATA;
+		CREATE = OPEN_ALWAYS;
+	}
+	else{
+		APPEND = GENERIC_WRITE;
+		CREATE = CREATE_ALWAYS;
+	}
    
 	std::string strResult; // Contains the result of the child process created below.
 
@@ -476,10 +486,10 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command) {
 
 	HANDLE fh = CreateFile(		// Create a file handle pointing to the output file, in order to capture the output.
 		&outfile[0], 
-		GENERIC_WRITE,
+		APPEND,
 		FILE_SHARE_READ|FILE_SHARE_WRITE, 
 		&sa,
-		OPEN_ALWAYS, 
+		CREATE, 
 		FILE_FLAG_SEQUENTIAL_SCAN, 
 		0);
 	// Bind the stdinput, stdoutput and stderror to the output file in order to capture all the output of the command.
@@ -662,7 +672,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 		+ " -b" + speed
 		+ " -F";
 
-		retVal = CodebenderccAPI::runAvrdude(command);
+		retVal = CodebenderccAPI::runAvrdude(command, false);
         _retVal = retVal;
 		
 		// If the current board is leonardo, wait for a few seconds until the sketch actually takes control of the port
@@ -725,7 +735,7 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 #endif
 
 		// Execute the upload command.
-		retVal = CodebenderccAPI::runAvrdude(command);
+		retVal = CodebenderccAPI::runAvrdude(command, false);
 		_retVal = retVal;
 
 		flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
@@ -768,7 +778,7 @@ void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std
 		command += " -Uhfuse:w:" + bootloaderData["hfuses"] + ":m"
 				+ " -Ulfuse:w:" + bootloaderData["lfuses"] + ":m";
 		
-		retVal = CodebenderccAPI::runAvrdude(command);
+		retVal = CodebenderccAPI::runAvrdude(command, false);
 		_retVal = retVal;
 
 		// If avrdude failed return the error code, else continue.
@@ -795,7 +805,7 @@ void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std
 #endif
 					command += (bootloaderData["lbits"] != "") ? " -Ulock:w:" + bootloaderData["lbits"] + ":m" : "";
 
-					retVal = CodebenderccAPI::runAvrdude(command);
+					retVal = CodebenderccAPI::runAvrdude(command, true);
 					_retVal = retVal;
 				}
 			}
@@ -852,7 +862,7 @@ const std::string CodebenderccAPI::setProgrammerCommand(std::map<std::string, st
 	return command;
 }
 
-int CodebenderccAPI::runAvrdude(const std::string& command) {
+int CodebenderccAPI::runAvrdude(const std::string& command, bool append) {
 
 	CodebenderccAPI::debugMessage("CodebenderccAPI::runAvrdude",3);
 	
@@ -870,7 +880,7 @@ int CodebenderccAPI::runAvrdude(const std::string& command) {
 	
 	lastcommand = command;
 	// Call winExecAvrdude, which creates a new process, runs the batch file and gets all the ouput.
-	retval = winExecAvrdude(batchFile);
+		retval = winExecAvrdude(batchFile, append);
 
 #else
 	/**
@@ -878,7 +888,10 @@ int CodebenderccAPI::runAvrdude(const std::string& command) {
 	  * the output to the output file.
 	  */
 	std::string avrcommand = command;
-	avrcommand += " 2> \"" + outfile + "\"";
+	if (append)
+		avrcommand += " 2>> \"" + outfile + "\"";
+	else
+		avrcommand += " 2> \"" + outfile + "\"";
 	lastcommand = avrcommand;
 	retval = system(avrcommand.c_str());
 #endif

@@ -564,8 +564,9 @@ private:
 	  * When on Widnows, the functions creates a batch file and then 
 	  * calls CodebenderccAPI::execAvrdude function to execute the batch file,
 	  * else performs a Unix system call.
+	  * If appendFlag is true append the output of the avrdude command to the output file, if one exists.
 	  */
-	int runAvrdude(const std::string& command);
+	int runAvrdude(const std::string& command, bool appendFlag);
 
 	/**
      * 
@@ -627,10 +628,10 @@ private:
 	 * Creates a separate process to run the avrdude command when on Windows OS.
      * Thus, one can get both the output of the command (the output that would originally be printed on a 
 	 * command prompt) and the value returned by the process.
-	 * 
+	 * If appendFlag is true, append the output to the existing output file.
 	 * @return a code (integer) that indicates whether the command was successful or not
 	 */
-    int winExecAvrdude(const std::wstring & cmd);
+    int winExecAvrdude(const std::wstring & cmd, bool appendFlag);
 
     /**
      */
