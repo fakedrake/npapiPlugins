@@ -800,6 +800,7 @@ void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std
 				}
 			}
 		}
+		flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
 	}catch(...){
 		CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader exception",2);
         flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(9001));
