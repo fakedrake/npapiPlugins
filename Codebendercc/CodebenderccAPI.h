@@ -64,7 +64,8 @@
 #include <sys/stat.h>
 #include <algorithm>
 #include <numeric>
-//#include <sys/types.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include <fcntl.h>
 
@@ -405,6 +406,12 @@ public:
 	void debugMessageProbe(const char * messageDebug, int minimumLevel);
 	
 	/**
+	 * Function that print process and thread ids in Unix.
+	 **/
+	
+	void getThreadId(const char * pidMessage,const char * threadMessage); 
+	
+	/**
 	 * Debugging variables.
 	 **/
 	std::ofstream debugFile;
@@ -417,6 +424,12 @@ public:
 	bool probeFlag;
 	bool debug_;
 	int currentLevel;
+
+	/**
+	 * Process and thread variables in Unix.
+	 **/
+	pid_t pid;
+	pthread_t thread_id;
 
 private:
 

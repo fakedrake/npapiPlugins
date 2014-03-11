@@ -368,6 +368,15 @@ void CodebenderccAPI::debugMessage(const char * messageDebug, int minimumLevel) 
 							}
 }
 
+	void CodebenderccAPI::getThreadId(const char * pidMessage,const char * threadMessage) {
+		pid=getpid();
+		thread_id=pthread_self();
+		m_host->htmlLog(pidMessage);
+		m_host->htmlLog(boost::lexical_cast<std::string>(pid));
+		m_host->htmlLog(threadMessage);
+		m_host->htmlLog(boost::lexical_cast<std::string>(thread_id));
+	}
+
 CodebenderccPtr CodebenderccAPI::getPlugin() {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::getPlugin",3);
 	CodebenderccPtr plugin(m_plugin.lock());
@@ -553,7 +562,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
     CodebenderccAPI::debugMessage("CodebenderccAPI::doflash",3);
 	
 	std::string os = getPlugin().get()->getOS();
-
+	CodebenderccAPI::getThreadId("Current process id in doflash:","Current thread id in doflash:"); 
 	try {
 #if !defined  _WIN32 || _WIN64	
         chmod(avrdude.c_str(), S_IRWXU);
@@ -707,9 +716,9 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 
 void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std::string& code, const std::string& maxsize, std::map<std::string, std::string>& programmerData, const std::string& mcu, const FB::JSObjectPtr & flash_callback) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashWithProgrammer",3);
-
 	std::string os = getPlugin().get()->getOS();
-
+	CodebenderccAPI::getThreadId("Current process id in doflashWithProgrammer:","Current thread id in doflashWithProgrammer:"); 
+	
 	try {
 #if !defined  _WIN32 || _WIN64	
 		chmod(avrdude.c_str(), S_IRWXU);
@@ -749,6 +758,7 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std::string, std::string>& programmerData, std::map<std::string, std::string>& bootloaderData, const std::string& mcu, const FB::JSObjectPtr & flash_callback) {
 
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader",3);
+	CodebenderccAPI::getThreadId("Current process id in doflashBootloader:","Current thread id in doflashBootloader:"); 
 
 	std::string os = getPlugin().get()->getOS();
 
