@@ -199,7 +199,6 @@ public:
 			}
 #endif
 
-        boost::thread t(boost::bind(&boost::asio::io_service::run, &io));
   
         _retVal = 9999;
     }
