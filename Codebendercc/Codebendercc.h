@@ -14,7 +14,17 @@
 #include "PluginEvents/AttachedEvent.h"
 
 #include "PluginCore.h"
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+using namespace std;
 
+extern vector <string> vectorPortsInUseList;
+extern vector< string >::const_iterator iter;
+void AddtoPortList(string port);
+void RemovePortFromList(string port);
+bool CanBeUsed(string port);
 
 FB_FORWARD_PTR(Codebendercc)
 class Codebendercc : public FB::PluginCore

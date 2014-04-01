@@ -37,6 +37,8 @@
 //using namespace std;
 #else
 #include <dirent.h>
+#include <sys/file.h>
+
 #endif
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/regex.hpp>
@@ -65,6 +67,7 @@
 #include <algorithm>
 #include <numeric>
 #include <sys/types.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 
 #include <fcntl.h>
@@ -146,6 +149,7 @@ public:
 		debug_ = false;
 		lastPortCount=0;
 		probeFlag=false;
+		usedPort="";
 
         std::string os = getPlugin().get()->getOS();
         path = getPlugin().get()->getFSPath();
@@ -423,12 +427,19 @@ public:
 	bool probeFlag;
 	bool debug_;
 	int currentLevel;
+	std::string usedPort;
 
 	/**
 	 * Process and thread variables in Unix.
 	 **/
-	pid_t pid;
-	pthread_t thread_id;
+
+	#if defined _WIN32||_WIN64
+		int pid;
+		long tid;
+	#else	
+		pid_t pid;
+		long tid;
+	#endif
 
 private:
 

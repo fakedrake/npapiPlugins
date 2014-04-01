@@ -10,6 +10,12 @@
 #include "CodebenderccAPI.h"
 
 #include "Codebendercc.h"
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+using namespace std;
+
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn Codebendercc::StaticInitialize()
@@ -121,4 +127,36 @@ bool Codebendercc::onWindowDetached(FB::DetachedEvent *evt, FB::PluginWindow *)
     // The window is about to be detached; act appropriately
     return false;
 }
+
+vector <string> vectorPortsInUseList;
+vector< string >::const_iterator iter;
+bool CanBeUsed(string port)
+{
+	if (vectorPortsInUseList.empty())
+		{ 
+		return true;
+		}
+	else
+		{
+			if (std::find(vectorPortsInUseList.begin(), vectorPortsInUseList.end(), port) != vectorPortsInUseList.end())
+				{
+				return false;
+				}
+			else    
+				{
+				return true;
+				}
+		 }
+}
+
+void AddtoPortList(string port)
+{
+	vectorPortsInUseList.push_back(port);
+}
+
+void RemovePortFromList(string port)
+{
+vectorPortsInUseList.erase(std::remove(vectorPortsInUseList.begin(), vectorPortsInUseList.end(), port));
+}
+
 
