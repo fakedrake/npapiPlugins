@@ -13,7 +13,8 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include <algorithm>
+#include <algorithm> 
+ 
 using namespace std;
 
 
@@ -130,6 +131,8 @@ bool Codebendercc::onWindowDetached(FB::DetachedEvent *evt, FB::PluginWindow *)
 
 vector <string> vectorPortsInUseList;
 vector< string >::const_iterator iter;
+boost::mutex mtxPort;
+
 bool CanBeUsed(string port)
 {
 	if (vectorPortsInUseList.empty())
@@ -149,9 +152,29 @@ bool CanBeUsed(string port)
 		 }
 }
 
-void AddtoPortList(string port)
+bool AddtoPortList(string port)
 {
-	vectorPortsInUseList.push_back(port);
+	if (vectorPortsInUseList.empty())
+		{ 
+		mtxPort.lock();
+		vectorPortsInUseList.push_back(port);
+		mtxPort.unlock();
+		return true;
+		}
+	else
+		{
+			if (std::find(vectorPortsInUseList.begin(), vectorPortsInUseList.end(), port) != vectorPortsInUseList.end())
+				{
+				return false;
+				}
+			else    
+				{
+				mtxPort.lock();
+				vectorPortsInUseList.push_back(port);
+				mtxPort.unlock();
+				return true;
+				}
+		 }
 }
 
 void RemovePortFromList(string port)

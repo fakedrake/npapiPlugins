@@ -18,17 +18,20 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+
 using namespace std;
 
 extern vector <string> vectorPortsInUseList;
 extern vector< string >::const_iterator iter;
-void AddtoPortList(string port);
+extern boost::mutex mtxPort;
+bool AddtoPortList(string port);
 void RemovePortFromList(string port);
 bool CanBeUsed(string port);
 
 FB_FORWARD_PTR(Codebendercc)
 class Codebendercc : public FB::PluginCore
 {
+
 public:
     static void StaticInitialize();
     static void StaticDeinitialize();
@@ -63,7 +66,9 @@ public:
     virtual bool onWindowAttached(FB::AttachedEvent *evt, FB::PluginWindow *);
     virtual bool onWindowDetached(FB::DetachedEvent *evt, FB::PluginWindow *);
     /** END EVENTDEF -- DON'T CHANGE THIS LINE **/
+
 };
+
 
 
 #endif
