@@ -1,11 +1,9 @@
-/**********************************************************\
-
-  Auto-generated Codebendercc.h
-
-  This file contains the auto-generated main plugin object
-  implementation for the Codebender.cc project
-
-\**********************************************************/
+/**
+ * Auto-generated Codebendercc.h
+ *
+ * This file contains the auto-generated main plugin object
+ * implementation for the Codebender.cc project
+*/
 #ifndef H_CodebenderccPLUGIN
 #define H_CodebenderccPLUGIN
 
@@ -15,8 +13,8 @@
 
 #include "PluginCore.h"
 
-
 FB_FORWARD_PTR(Codebendercc)
+
 class Codebendercc : public FB::PluginCore
 {
 public:
@@ -31,10 +29,13 @@ public:
     void onPluginReady();
     void shutdown();
     virtual FB::JSAPIPtr createJSAPI();
-    // If you want your plugin to always be windowless, set this to true
-    // If you want your plugin to be optionally windowless based on the
-    // value of the "windowless" param tag, remove this method or return
-    // FB::PluginCore::isWindowless()
+
+    /**
+     * If you want your plugin to always be windowless, set this to true
+     * If you want your plugin to be optionally windowless based on the
+     * value of the "windowless" param tag, remove this method or return
+     * FB::PluginCore::isWindowless()
+    */
     virtual bool isWindowless() { return false; }
 
     BEGIN_PLUGIN_EVENT_MAP()
@@ -55,6 +56,4 @@ public:
     /** END EVENTDEF -- DON'T CHANGE THIS LINE **/
 };
 
-
 #endif
-
