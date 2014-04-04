@@ -121,6 +121,7 @@ void CodebenderccAPI::openPort(const std::string &port, const unsigned int &baud
 	#endif
 
 	try{
+	throw 12;
 		if (serialPort.isOpen() == false){
 			// need to set a zero timeout when on Windows
 			#if defined _WIN32||_WIN64
@@ -148,8 +149,20 @@ void CodebenderccAPI::closePort() {
 	try{
 		if(serialPort.isOpen())
 			serialPort.close();
+			RemovePortFromList(usedPort);
+			CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use:",3);
+			for (iter = vectorPortsInUseList.begin(); iter != vectorPortsInUseList.end(); ++iter)
+				{
+				CodebenderccAPI::debugMessage((*iter).c_str(),3);
+				}
 	}catch(...){
 	CodebenderccAPI::debugMessage("CodebenderccAPI::closePort exception",2);
+	RemovePortFromList(usedPort);
+			CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use:",3);
+			for (iter = vectorPortsInUseList.begin(); iter != vectorPortsInUseList.end(); ++iter)
+				{
+				CodebenderccAPI::debugMessage((*iter).c_str(),3);
+				}
 	}
 	CodebenderccAPI::debugMessage("CodebenderccAPI::closePort ended",3);
 }
@@ -448,12 +461,6 @@ FB::variant CodebenderccAPI::disconnect() {
 		return 1;
 	try{
 			CodebenderccAPI::closePort();
-			RemovePortFromList(usedPort);
-			CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use:",3);
-			for (iter = vectorPortsInUseList.begin(); iter != vectorPortsInUseList.end(); ++iter)
-				{
-				CodebenderccAPI::debugMessage((*iter).c_str(),3);
-				}
 		}catch(...){
 		CodebenderccAPI::debugMessage("CodebenderccAPI::disconnect close port exception",2);
 		}
@@ -738,7 +745,7 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 	std::string os = getPlugin().get()->getOS();
 	CodebenderccAPI::getThreadId("Current process id in doflashWithProgrammer:","Current thread id in doflashWithProgrammer:"); 
 	try {
-			if(AddtoPortList(device))
+			if((programmerData["communication"] == "usb")||(programmerData["communication"] == "")||(AddtoPortList(device)))
 			{
 				CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use:",3);		
 					for (iter = vectorPortsInUseList.begin(); iter != vectorPortsInUseList.end(); ++iter)
@@ -800,7 +807,7 @@ void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std
 	CodebenderccAPI::getThreadId("Current process id in doflashBootloader:","Current thread id in doflashBootloader:"); 
 	std::string os = getPlugin().get()->getOS();
 	try {
-		if(AddtoPortList(device))
+		if((programmerData["communication"] == "usb")||(programmerData["communication"] == "")||(AddtoPortList(device)))
 		{
 			#if !defined  _WIN32 || _WIN64	
 				chmod(avrdude.c_str(), S_IRWXU);
@@ -1234,6 +1241,11 @@ void CodebenderccAPI::notify(const std::string &message) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::notify",3);	
 	callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
 }
+
+/*to be removed*/
+//void CodebenderccAPI::Mynotify(const std::string &message) {
+	//callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
+//}
 
 int CodebenderccAPI::programmerPrefs(const std::string& port, const std::string& programmerProtocol, const std::string&  programmerSpeed, const std::string& programmerCommunication, const std::string& programmerForce, const std::string& programmerDelay, const std::string& mcu, std::map<std::string, std::string>& programmerData) {
 	
