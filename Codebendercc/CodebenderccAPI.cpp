@@ -119,29 +119,36 @@ void CodebenderccAPI::openPort(const std::string &port, const unsigned int &baud
 	#if defined _WIN32||_WIN64
 		device = "\\\\.\\" + port;
 	#endif
-
 	try{
-	throw 12;
-		if (serialPort.isOpen() == false){
-			// need to set a zero timeout when on Windows
-			#if defined _WIN32||_WIN64
-				portTimeout = Timeout(std::numeric_limits<uint32_t>::max(), 0, 0, 0, 0);
-			#else
-				portTimeout = Timeout(std::numeric_limits<uint32_t>::max(), 1000, 0, 1000, 0);
-			#endif
-			serialPort.setPort(device);				//set port name
-			serialPort.setBaudrate(baudrate);		//set port baudrate
-			serialPort.setTimeout(portTimeout);		//set the read/write timeout of the port
-			
-			serialPort.open();			//open the port
-			serialPort.setDTR(true);	//set Data Transfer signal, needed for Arduino leonardo
-			serialPort.setRTS(false);	//set Request to Send signal to false, needed for Arduino leonardo  
+		if(AddtoPortList(device))
+			{
+			usedPort=device;		
+				if (serialPort.isOpen() == false){
+					// need to set a zero timeout when on Windows
+					#if defined _WIN32||_WIN64
+						portTimeout = Timeout(std::numeric_limits<uint32_t>::max(), 0, 0, 0, 0);
+					#else
+						portTimeout = Timeout(std::numeric_limits<uint32_t>::max(), 1000, 0, 1000, 0);
+					#endif
+					serialPort.setPort(device);				//set port name
+					serialPort.setBaudrate(baudrate);		//set port baudrate
+					serialPort.setTimeout(portTimeout);		//set the read/write timeout of the port
+					
+					serialPort.open();			//open the port
+					serialPort.setDTR(true);	//set Data Transfer signal, needed for Arduino leonardo
+					serialPort.setRTS(false);	//set Request to Send signal to false, needed for Arduino leonardo  
+				}
+			}	
+		else
+			{
+			callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())("-22"));
+			CodebenderccAPI::debugMessage("CodebenderccAPI::Port is already in use.",3);
+			}	
+		}catch(...){
+			CodebenderccAPI::debugMessage("CodebenderccAPI::openPort exception",2);
+			perror("Error opening port.");
 		}
-	}catch(...){
-		CodebenderccAPI::debugMessage("CodebenderccAPI::openPort exception",2);
-		perror("Error opening port.");
-	}
-	CodebenderccAPI::debugMessage("CodebenderccAPI::openPort ended",3);
+		CodebenderccAPI::debugMessage("CodebenderccAPI::openPort ended",3);
 }
 
 void CodebenderccAPI::closePort() {
@@ -150,19 +157,9 @@ void CodebenderccAPI::closePort() {
 		if(serialPort.isOpen())
 			serialPort.close();
 			RemovePortFromList(usedPort);
-			CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use:",3);
-			for (iter = vectorPortsInUseList.begin(); iter != vectorPortsInUseList.end(); ++iter)
-				{
-				CodebenderccAPI::debugMessage((*iter).c_str(),3);
-				}
 	}catch(...){
 	CodebenderccAPI::debugMessage("CodebenderccAPI::closePort exception",2);
 	RemovePortFromList(usedPort);
-			CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use:",3);
-			for (iter = vectorPortsInUseList.begin(); iter != vectorPortsInUseList.end(); ++iter)
-				{
-				CodebenderccAPI::debugMessage((*iter).c_str(),3);
-				}
 	}
 	CodebenderccAPI::debugMessage("CodebenderccAPI::closePort ended",3);
 }
@@ -568,7 +565,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 	std::string os = getPlugin().get()->getOS();
 	CodebenderccAPI::getThreadId("Current process id in doflash:","Current thread id in doflash:"); 
 	try {
-		if(AddtoPortList(device))
+		if(mcu == "atmega32u4" || AddtoPortList(device))
 			{
 				CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use:",3);
 				for (iter = vectorPortsInUseList.begin(); iter != vectorPortsInUseList.end(); ++iter)
@@ -597,6 +594,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 					}catch (...) {
 					CodebenderccAPI::debugMessage("CodebenderccAPI::doflash exception thrown while opening serial port",2);
 						perror("Error opening leonardo port");
+					RemovePortFromList(fdevice);
 					}
 
 					// get the list of ports before resetting the leonardo board
@@ -636,7 +634,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 								break;
 							}
 						}
-
+						AddtoPortList(fdevice);
 						if (found){		// The new leonardo port appeared in the list. Save it and go on..
 								std::string leonardoDeviceMessage = "Found leonardo device on " + fdevice + " port";
 								CodebenderccAPI::debugMessage(leonardoDeviceMessage.c_str(),2);
@@ -657,6 +655,12 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 						if (elapsed_time == 10000) {
 							notify("Could not auto-reset or detect a manual reset!");
 							flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-1));
+							RemovePortFromList(fdevice);
+							CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use:",3);
+								for (iter = vectorPortsInUseList.begin(); iter != vectorPortsInUseList.end(); ++iter)
+									{
+									CodebenderccAPI::debugMessage((*iter).c_str(),3);
+									}
 							return;
 						}
 					}
@@ -1184,20 +1188,12 @@ int CodebenderccAPI::_base64_decode_triple(char quadruple[4], unsigned char *res
 void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &baudrate, const FB::JSObjectPtr & callback) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader",3);		
 	try {
-	if(AddtoPortList(port))
-		{
-		usedPort=port;	
-		CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use:",3);
-			for (iter = vectorPortsInUseList.begin(); iter != vectorPortsInUseList.end(); ++iter)
-				{
-				CodebenderccAPI::debugMessage((*iter).c_str(),3);
-				}		CodebenderccAPI::openPort(port, baudrate);
+			CodebenderccAPI::openPort(port, baudrate);
 			int d;
 			std::string rcvd;		
 			for (;;) {
 				if(serialPort.isOpen())
 					rcvd = "";	
-
 					rcvd = serialPort.read((size_t) 1);
 					if(rcvd != ""){
 						d = (int) rcvd[0];
@@ -1208,12 +1204,7 @@ void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &
 					}
 			}
 		}	
-	else
-		{
-			callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-22));
-			CodebenderccAPI::debugMessage("CodebenderccAPI::Port is already in use.",3);
-		}	
-    } catch (...) {
+    catch (...) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader loop interrupted",1);
         notify("disconnect");
     }
