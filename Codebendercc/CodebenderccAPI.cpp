@@ -111,7 +111,7 @@ bool CodebenderccAPI::setCallback(const FB::JSObjectPtr &callback) {
     return true;
 }
 
-void CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudrate) {
+bool CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudrate) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::openPort",3);
 	std::string device;
 	device = port;
@@ -119,8 +119,8 @@ void CodebenderccAPI::openPort(const std::string &port, const unsigned int &baud
 	#if defined _WIN32||_WIN64
 		device = "\\\\.\\" + port;
 	#endif
-	try{
-		if(AddtoPortList(device))
+	if(AddtoPortList(device)){
+		try
 			{
 			usedPort=device;		
 				if (serialPort.isOpen() == false){
@@ -138,17 +138,19 @@ void CodebenderccAPI::openPort(const std::string &port, const unsigned int &baud
 					serialPort.setDTR(true);	//set Data Transfer signal, needed for Arduino leonardo
 					serialPort.setRTS(false);	//set Request to Send signal to false, needed for Arduino leonardo  
 				}
+			}catch(...){
+			CodebenderccAPI::debugMessage("CodebenderccAPI::openPort exception",2);
+			perror("Error opening port.");
+			return false;
+						}
 			}	
 		else
 			{
-			callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())("-22"));
 			CodebenderccAPI::debugMessage("CodebenderccAPI::Port is already in use.",3);
+			return false;
 			}	
-		}catch(...){
-			CodebenderccAPI::debugMessage("CodebenderccAPI::openPort exception",2);
-			perror("Error opening port.");
-		}
 		CodebenderccAPI::debugMessage("CodebenderccAPI::openPort ended",3);
+		return true;
 }
 
 void CodebenderccAPI::closePort() {
@@ -585,7 +587,11 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 				if (mcu == "atmega32u4") {
 					try {	
 						// set the "magic" baudrate to force leonardo reset
-						CodebenderccAPI::openPort(fdevice, 1200);
+						if(!CodebenderccAPI::openPort(fdevice, 1200))
+						{
+						flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-22));
+						return;
+						}
 						delay(2000);
 						CodebenderccAPI::closePort();
 						// delay for 300 ms so that the reset is complete
@@ -1186,15 +1192,19 @@ int CodebenderccAPI::_base64_decode_triple(char quadruple[4], unsigned char *res
 }
 
 void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &baudrate, const FB::JSObjectPtr & callback) {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader",3);		
+	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader",3);	
+	if(!CodebenderccAPI::openPort(port, baudrate))
+		{
+		notify("disconnect");
+		return;
+		}
 	try {
-			CodebenderccAPI::openPort(port, baudrate);
-			int d;
-			std::string rcvd;		
-			for (;;) {
-				if(serialPort.isOpen())
-					rcvd = "";	
-					rcvd = serialPort.read((size_t) 1);
+		int d;
+		std::string rcvd;		
+		for (;;) {
+			if(serialPort.isOpen())
+				rcvd = "";	
+				rcvd = serialPort.read((size_t) 1);
 					if(rcvd != ""){
 						d = (int) rcvd[0];
 						std::string characterMessage="Received character:";
@@ -1206,6 +1216,7 @@ void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &
 		}	
     catch (...) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader loop interrupted",1);
+		closePort();
         notify("disconnect");
     }
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader ended",3);

@@ -385,7 +385,7 @@ public:
 	/**
 	 * Creates an instance of the serial library and opens it.
 	 **/
-	void openPort(const std::string &port, const unsigned int &baudrate);
+	bool openPort(const std::string &port, const unsigned int &baudrate);
 
 	/**
 	 * Closes the current port connection.
