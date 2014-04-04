@@ -751,6 +751,7 @@ void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &
     catch (...) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader loop interrupted",1);
 		closePort();
+		/*Port is already closed from closePort() and notify("disconnect") closes the port for second time*/
         notify("disconnect");
     }
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader ended",3);
