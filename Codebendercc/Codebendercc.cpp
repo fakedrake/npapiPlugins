@@ -179,7 +179,10 @@ bool AddtoPortList(string port)
 
 void RemovePortFromList(string port)
 {
+mtxPort.lock();
+if (std::find(vectorPortsInUseList.begin(), vectorPortsInUseList.end(), port) != vectorPortsInUseList.end())
 vectorPortsInUseList.erase(std::remove(vectorPortsInUseList.begin(), vectorPortsInUseList.end(), port));
+mtxPort.unlock();
 }
 
 
