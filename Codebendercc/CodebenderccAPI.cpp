@@ -428,36 +428,30 @@ CodebenderccAPI::probeUSB()
     std::string dirs = "";
     struct dirent *ep;
 
-    dp = opendir("/dev/");
-    if (dp != NULL)
-    {
-        while (ep = readdir(dp))
-        {
-            //UNIX ARDUINO PORTS
-            if (boost::contains(ep->d_name, "ttyACM") ||
-                boost::contains(ep->d_name, "ttyUSB"))
-            {
-                dirs += "/dev/";
-                dirs += ep->d_name;
-                dirs += ",";
-            }
-            else if (boost::contains(ep->d_name, "cu."))
-            {
-                dirs += "/dev/";
-                dirs += ep->d_name;
-                dirs += ",";
-            }
-        }
+    dp = CodebenderccAPI::opendir("/dev/");
+    if (dp == NULL)
+        return dirs;
 
-        (void) closedir(dp);
+    while (ep = CodebenderccAPI::readdir(dp))
+    {
+        //UNIX ARDUINO PORTS
+        if (boost::contains(ep->d_name, "ttyACM") ||
+            boost::contains(ep->d_name, "ttyUSB") ||
+            boost::contains(ep->d_name, "cu."))
+        {
+            dirs += "/dev/";
+            dirs += ep->d_name;
+            dirs += ",";
+        }
     }
-    else
-        CodebenderccAPI::debugMessage("CodebenderccAPI::probeUSB could not open directory", 2);
+
+    CodebenderccAPI::closedir(dp);
 
     if (lastPortCount != dirs.length()) {
         lastPortCount = dirs.length();
         CodebenderccAPI::detectNewPort(dirs);
     }
+
     return dirs;
 }
 #endif
@@ -1687,4 +1681,92 @@ CodebenderccAPI::validate_charnum(const std::string &input)
 	static const boost::regex charnum("[0-9a-zA-Z]*");
 
     return boost::regex_match(input, charnum);
+}
+
+DIR *
+CodebenderccAPI::opendir(const char *name)
+{
+    DIR *dp;
+
+    dp = ::opendir(name);
+    if (dp)
+        return dp;
+
+    std::string err_msg = "CodebenderccAPI::opendir() - ";
+
+    switch (errno) {
+        case EACCES:
+            err_msg += "EACCES: Permission denied.";
+            break;
+        case EMFILE:
+            err_msg += "EMFILE: Too many file descriptors in use by process.";
+            break;
+        case ENFILE:
+            err_msg += "ENFILE: Too many files are currently open in the system.";
+            break;
+        case ENOENT:
+            err_msg += "ENOENT: Directory does not exist, or name is an empty string.";
+            break;
+        case ENOMEM:
+            err_msg += "ENOMEM: Insufficient memory to complete the operation.";
+            break;
+        case ENOTDIR:
+            err_msg += "ENOTDIR: name is not a directory.";
+            break;
+
+        default:
+            err_msg += "Unknown error!";
+    }
+
+    CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
+    return NULL;
+}
+
+struct dirent *
+CodebenderccAPI::readdir(DIR *dirp)
+{
+    struct dirent *dent;
+
+    errno = 0;
+    dent = ::readdir(dirp);
+
+    if (errno == 0)
+        return dent;
+
+    std::string err_msg = "CodebenderccAPI::readdir() - ";
+
+    switch (errno) {
+        case EBADF:
+            err_msg += "EBADF: Invalid directory stream descriptor dirp.";
+            break;
+
+        default:
+            err_msg += "Unknown error!";
+    }
+
+    CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
+    return NULL;
+}
+
+void
+CodebenderccAPI::closedir(DIR *dirp)
+{
+    int rc;
+
+    rc = ::closedir(dirp);
+    if (rc == 0)
+        return;
+
+    std::string err_msg = "CodebenderccAPI::closedir() - ";
+
+    switch (errno) {
+        case EBADF:
+            err_msg += "EBADF: Invalid directory stream descriptor dirp.";
+            break;
+
+        default:
+            err_msg += "Unknown error!";
+    }
+
+    CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
 }

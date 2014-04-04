@@ -811,6 +811,12 @@ private:
         return L"";
     }
 #endif
+
+    DIR *opendir(const char *name);
+
+    struct dirent *readdir(DIR *dirp);
+
+    void closedir(DIR *dirp);
 };
 
 #endif /* H_CodebenderccAPI */
