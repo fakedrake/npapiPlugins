@@ -17,109 +17,14 @@ FB::variant CodebenderccAPI::download() {
 ////////////////////////////////////public//////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-FB::variant CodebenderccAPI::flash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr &flash_callback) {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::flash",3);	
-		#if defined _WIN32||_WIN64	// Check if finding the short path of the plugin failed.
-			if (current_dir == L""){
-				flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-2));
-				return 0;
-			}
-		#endif
-			int error_code = 0;
-			if (!validate_device(device)) error_code = -4;
-			if (!validate_code(code)) error_code = -5;
-			if (!validate_number(maxsize)) error_code = -6;
-			if (!validate_number(speed)) error_code = -7;
-			if (!validate_charnum(protocol)) error_code = -8;
-			if (!validate_charnum(mcu)) error_code = -9;
-			if (error_code != 0){
-				flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(error_code));
-				return 0;
-			}	
-		boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doflash, this, device, code, maxsize, protocol, speed, mcu, flash_callback));
-	CodebenderccAPI::debugMessage("CodebenderccAPI::flash ended",3);		
-	return 0;
-}
-
-FB::variant CodebenderccAPI::flashWithProgrammer(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& programmerProtocol, const std::string& programmerCommunication, const std::string& programmerSpeed, const std::string& programmerForce, const std::string& programmerDelay, const std::string& mcu, const FB::JSObjectPtr & cback) {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::flashWithProgrammer",3);
-		#if defined _WIN32||_WIN64	// Check if finding the short path of the plugin failed.
-			if (current_dir == L""){
-				cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-2));
-				return 0;
-			}
-		#endif
-		/**
-		  *  Input validation. The error codes returned correspond to 
-		  *	 messages printed by the javascript of the website
-		  **/
-		if (!validate_code(code)) return -2;
-		if (!validate_number(maxsize)) return -3;
-		std::map<std::string, std::string> programmerData;
-		int progValidation = programmerPrefs(device, programmerProtocol, programmerSpeed, programmerCommunication, programmerForce, programmerDelay, mcu, programmerData);
-		if (progValidation != 0){
-			cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(progValidation));
-			return 0;
-		}
-		/**
-		  * Validation end
-		  **/		
-		boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doflashWithProgrammer,
-		this, device, code, maxsize, programmerData, mcu, cback));	
-	CodebenderccAPI::debugMessage("CodebenderccAPI::flashWithProgrammer ended",3);
-    return 0;
-}
-
-FB::variant CodebenderccAPI::flashBootloader(const std::string& device, const std::string& programmerProtocol, const std::string& programmerCommunication, const std::string& programmerSpeed, const std::string& programmerForce, const std::string& programmerDelay, const std::string& highFuses, const std::string& lowFuses, const std::string& extendedFuses, const std::string& unlockBits, const std::string& lockBits, const std::string& mcu, const FB::JSObjectPtr & cback) {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::flashBootloader",3);
-	#if defined _WIN32||_WIN64	// Check if finding the short path of the plugin failed.
-		if (current_dir == L""){
-			cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-2));
-			return 0;
-		}
-	#endif
-	/**
-	  *  Input validation. The error codes returned correspond to 
-	  *	 messages printed by the javascript of the website
-	  **/
-	std::map<std::string, std::string> programmerData;
-	int progValidation = programmerPrefs(device, programmerProtocol, programmerSpeed, programmerCommunication, programmerForce, programmerDelay, mcu, programmerData);
-	if (progValidation != 0){
-		cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(progValidation));
-        return 0;
-	}
-
-	std::map<std::string, std::string> bootloaderData;
-	int bootValidation = bootloaderPrefs(lowFuses, highFuses, extendedFuses, unlockBits, lockBits, bootloaderData);
-	if (bootValidation != 0){
-		cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(bootValidation));
-        return 0;
-	}
-	/**
-	  * Validation end
-	  **/
-	boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doflashBootloader,
-		this, device, programmerData, bootloaderData, mcu, cback));
-	CodebenderccAPI::debugMessage("CodebenderccAPI::flashBootloader ended",3);
-	return 0;
-}
-
-bool CodebenderccAPI::setCallback(const FB::JSObjectPtr &callback) {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::setCallback",3);	
-	callback_ = callback;
-	CodebenderccAPI::debugMessage("CodebenderccAPI::setCallback ended",3);
-    return true;
-}
-
 bool CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudrate) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::openPort",3);
 	std::string device;
 	device = port;
-	
 	#if defined _WIN32||_WIN64
 		device = "\\\\.\\" + port;
 	#endif
-	if(AddtoPortList(device)){
+	if(AddtoPortList(device)){ //Check if device is used by someone else
 		try
 			{
 			usedPort=device;		
@@ -143,14 +48,13 @@ bool CodebenderccAPI::openPort(const std::string &port, const unsigned int &baud
 			perror("Error opening port.");
 			return false;
 						}
-			}	
-		else
-			{
-			CodebenderccAPI::debugMessage("CodebenderccAPI::Port is already in use.",3);
-			return false;
-			}	
-		CodebenderccAPI::debugMessage("CodebenderccAPI::openPort ended",3);
-		return true;
+							}	
+	else{
+		CodebenderccAPI::debugMessage("CodebenderccAPI::Port is already in use.",3);
+		return false;
+		}	
+	CodebenderccAPI::debugMessage("CodebenderccAPI::openPort ended",3);
+	return true;
 }
 
 void CodebenderccAPI::closePort() {
@@ -167,89 +71,10 @@ void CodebenderccAPI::closePort() {
 }
 
 #if defined _WIN32||_WIN64
-
-std::string CodebenderccAPI::QueryKey(HKEY hKey) {
-
-    DWORD    cValues;              // number of values for key 
-    DWORD    cchMaxValue;          // longest value name (characters)
-    DWORD    cbMaxValueData;       // longest value data (bytes)
-    
-    DWORD i, retCode; 
- 
-    TCHAR	achValue[MAX_KEY_LENGTH]; 
-    DWORD	cchValue = MAX_KEY_LENGTH; 
-	
-	std::string ports = "";
-	
-	// Get the registry key value count. 
-	retCode = RegQueryInfoKey(
-        hKey,		             // An open registry key handle.
-        NULL,
-        NULL,
-        NULL,
-        NULL,
-        NULL, 
-        NULL,
-        &cValues,                // A pointer to a variable that receives the number of values that are associated with the key.
-        &cchMaxValue,            // A pointer to a variable that receives the size of the key's longest value name, in Unicode characters.  
-        &cbMaxValueData,         // A pointer to a variable that receives the size of the longest data component among the key's values, in bytes.
-        NULL, 
-        NULL);
-
-    
-    // Enumerate the key values. 
-
-	BYTE* buffer = new BYTE[cbMaxValueData];
-
-    if (cValues)				// cValues is the count of values found in the SERIALCOMM subkey
-    {
-		for (i=0, retCode=ERROR_SUCCESS; i<cValues; i++) 
-        { 
-			cchValue = MAX_KEY_LENGTH; 
-            achValue[0] = '\0'; 
-            retCode = RegEnumValue(
-				hKey,			// A handle to an open registry key
-				i,				// The index of the value to be retrieved
-                achValue,		// A pointer to a buffer that receives the name of the value as a null-terminated string
-                &cchValue,		// A pointer to a variable that specifies the size of the buffer pointed to by the achValue parameter, in characters.
-                NULL,			// lpReserved parameter is reserved and must be NULL
-                NULL,			
-                NULL,			
-                NULL);			
-
-            if (retCode == ERROR_SUCCESS ) 
-            { 
-				DWORD lpData = cbMaxValueData;
-				buffer[0] = '\0';
-				LONG dwRes = RegQueryValueEx(hKey, achValue, 0, NULL, (LPBYTE)buffer, &lpData);	
-				if (dwRes == ERROR_SUCCESS)
-				{
-					std::string str( reinterpret_cast<char const*>(buffer) , (int) lpData ) ;
-					std::string tmp="";
-					for (int k=0;k<(int)lpData;k++)
-                        {
-							if(buffer[k]!=0)		// Check the buffer for bytes that contain zeros.
-								tmp+=buffer[k];
-	                    }
-					
-					ports.append(tmp);		// Append port to the list of ports.
-					if (i != (cValues - 1))
-						ports.append(",");
-						
-				}
-			} 
-        }
-		
-    }
-	delete [] buffer;
-	return ports;
-}
-
 std::string CodebenderccAPI::probeUSB() {
 	CodebenderccAPI::debugMessageProbe("CodebenderccAPI::probeUSB probing USB ports",3);
 	std::string ports ="";
 	HKEY hKey;
-	
    /*
     * Open the registry key where serial port key-value pairs are stored.
 	*/
@@ -271,10 +96,8 @@ std::string CodebenderccAPI::probeUSB() {
     return ports;
 }
 #else
-
 std::string CodebenderccAPI::probeUSB() {
-	CodebenderccAPI::debugMessageProbe("CodebenderccAPI::probeUSB probing USB ports",3);
-	
+	CodebenderccAPI::debugMessageProbe("CodebenderccAPI::probeUSB probing USB ports",3);	
     DIR *dp;
     std::string dirs = "";
 	struct dirent *ep;
@@ -303,170 +126,6 @@ std::string CodebenderccAPI::probeUSB() {
     return dirs;
 }
 #endif
-
-void CodebenderccAPI::enableDebug(int debugLevel) {
-	if(debugLevel >= 1 && debugLevel <= 3) {
-		debug_ = true;
-		currentLevel= debugLevel;
-		if (currentLevel==3){
-			if (!(debugFile.is_open())){
-				debugFile.open(debugFilename.c_str());
-									   } 
-
-							}
-		else {
-			if (debugFile.is_open())
-				{			
-					debugFile.close();
-				}
-			 }	
-											}
-	else{
-		if (debugFile.is_open())
-					{			
-						debugFile.close();
-					}
-		m_host->htmlLog("Level set in enableDebug is not valid.");
-		}
-}
-
-void CodebenderccAPI::disableDebug() {
-		debug_ = false;
-		if (currentLevel==3){
-			if (debugFile.is_open())
-				 {			
-					debugFile.close();
-				 }
-							}
-}
-
-bool CodebenderccAPI::checkDebug() {
-	return debug_;
-}
-
-void CodebenderccAPI::debugMessageProbe(const char * messageDebug, int minimumLevel) {
-	if (CodebenderccAPI::checkDebug() && minimumLevel <= currentLevel && probeFlag==false)	{			
-		probeFlag=true;	
-		m_host->htmlLog(messageDebug);
-		if (currentLevel==3){
-			if (debugFile.is_open())
-				{	
-				 debugFile << messageDebug;
-				 debugFile << "\n";
-				}
-							}
-																		 }
-}
-
-void CodebenderccAPI::debugMessage(const char * messageDebug, int minimumLevel) {
-	if (CodebenderccAPI::checkDebug() && minimumLevel <= currentLevel)			
-		m_host->htmlLog(messageDebug); 
-		probeFlag=false;
-		if (currentLevel==3){
-			if (debugFile.is_open())
-				{	
-				 debugFile << messageDebug;
-				 debugFile << "\n";
-				}
-							}
-}
-
-	void CodebenderccAPI::getThreadId(const char * pidMessage,const char * threadMessage) {
-		#if defined _WIN32||_WIN64
-			pid=_getpid();
-			tid=GetCurrentThreadId();
-		#else
-			pid=getpid();
-			tid = syscall(SYS_gettid);
-		#endif
-		m_host->htmlLog(pidMessage);
-		m_host->htmlLog(boost::lexical_cast<std::string>(pid));
-		m_host->htmlLog(threadMessage);
-		m_host->htmlLog(boost::lexical_cast<std::string>(tid));
-	}
-
-CodebenderccPtr CodebenderccAPI::getPlugin() {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::getPlugin",3);
-	CodebenderccPtr plugin(m_plugin.lock());
-    if (!plugin) {
-		CodebenderccAPI::debugMessage("CodebenderccAPI::getPlugin invalid plugin",2);
-        throw FB::script_error("The plugin is invalid");
-    }
-	CodebenderccAPI::debugMessage("CodebenderccAPI::getPlugin ended",3);
-    return plugin;
-}
-
-// Read-only property version
-
-std::string CodebenderccAPI::get_version() {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::get_version",3);
-	return FBSTRING_PLUGIN_VERSION;
-}
-
-FB::variant CodebenderccAPI::getLastCommand() {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::getLastCommand",3);
-	return lastcommand;
-}
-
-FB::variant CodebenderccAPI::getFlashResult() {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::getFlashResult",3);
-	FILE *pFile;
-	#if defined _WIN32 || _WIN64
-		std::string filename = FB::wstring_to_utf8(outfile);
-		pFile = fopen(filename.c_str(), "r");
-	#else
-		pFile = fopen(outfile.c_str(), "r");
-	#endif
-    char buffer[128];
-    std::string result = "";
-    while (!feof(pFile)) {
-        if (fgets(buffer, 128, pFile) != NULL)
-            result += buffer;
-    }
-    fclose(pFile);
-	CodebenderccAPI::debugMessage("CodebenderccAPI::getFlashResult ended",3);
-    return result;
-}
-
-void CodebenderccAPI::serialWrite(const std::string & message) {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::serialWrite",3);
-    std::string mess = message;
-	size_t bytes_read;
-	try
-	{
-		if(serialPort.isOpen()){
-			
-			bytes_read = serialPort.write(mess);
-			if(bytes_read != 0){
-				perror("Wrote to port");
-				std::string portMessage = "Wrote to port: " + mess + " ";
-				CodebenderccAPI::debugMessage(portMessage.c_str(),1);
-			}
-		}
-		else {
-			CodebenderccAPI::debugMessage("CodebenderccAPI::serialWrite port not open",1);
-			perror("null");
-		}
-	}catch(...){
-		CodebenderccAPI::debugMessage("CodebenderccAPI::serialWrite open serial port exception",1);
-		notify("disconnect");
-	}
-	CodebenderccAPI::debugMessage("CodebenderccAPI::serialWrite ended",3);
-}
-
-FB::variant CodebenderccAPI::disconnect() {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::disconnect",3);
-	if(!(serialPort.isOpen()))
-		return 1;
-	try{
-			CodebenderccAPI::closePort();
-		}catch(...){
-		CodebenderccAPI::debugMessage("CodebenderccAPI::disconnect close port exception",2);
-		}
-	CodebenderccAPI::debugMessage("CodebenderccAPI::disconnect ended",3);
-	return 1;	
-}
-
 
 #if defined _WIN32 || _WIN64
 
@@ -546,26 +205,14 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 }
 #endif
 
-bool CodebenderccAPI::serialRead(const std::string &port, const std::string &baudrate, const FB::JSObjectPtr &callback) {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::serialRead",3);
-	std::string message = "connecting at ";
-    message += baudrate;
-    callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(message));
-    unsigned int brate = boost::lexical_cast<unsigned int, std::string > (baudrate);
-    boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::serialReader, this, port, brate, callback));
-    CodebenderccAPI::debugMessage("CodebenderccAPI::serialRead ended",3);
-	return true; // the thread is started
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////PRIVATE////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
 void CodebenderccAPI::doflash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr & flash_callback) {
     CodebenderccAPI::debugMessage("CodebenderccAPI::doflash",3);
-	
 	std::string os = getPlugin().get()->getOS();
-	CodebenderccAPI::getThreadId("Current process id in doflash:","Current thread id in doflash:"); 
+	CodebenderccAPI::getThreadId("Current process id in doflash: ","Current thread id in doflash: "); 
 	try {
 		if(mcu == "atmega32u4" || AddtoPortList(device))
 			{
@@ -753,7 +400,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std::string& code, const std::string& maxsize, std::map<std::string, std::string>& programmerData, const std::string& mcu, const FB::JSObjectPtr & flash_callback) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashWithProgrammer",3);
 	std::string os = getPlugin().get()->getOS();
-	CodebenderccAPI::getThreadId("Current process id in doflashWithProgrammer:","Current thread id in doflashWithProgrammer:"); 
+	CodebenderccAPI::getThreadId("Current process id in doflashWithProgrammer: ","Current thread id in doflashWithProgrammer: "); 
 	try {
 			if((programmerData["communication"] == "usb")||(programmerData["communication"] == "")||(AddtoPortList(device)))
 			{
@@ -814,7 +461,7 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 
 void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std::string, std::string>& programmerData, std::map<std::string, std::string>& bootloaderData, const std::string& mcu, const FB::JSObjectPtr & flash_callback) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader",3);
-	CodebenderccAPI::getThreadId("Current process id in doflashBootloader:","Current thread id in doflashBootloader:"); 
+	CodebenderccAPI::getThreadId("Current process id in doflashBootloader: ","Current thread id in doflashBootloader: "); 
 	std::string os = getPlugin().get()->getOS();
 	try {
 		if((programmerData["communication"] == "usb")||(programmerData["communication"] == "")||(AddtoPortList(device)))
@@ -1056,141 +703,6 @@ void CodebenderccAPI::detectNewPort(const std::string& portString) {
 	portsList = portVector;
 }
 
-/**
- * decode base64 encoded data
- *
- * @param source the encoded data (zero terminated)
- * @param target pointer to the target buffer
- * @param targetlen length of the target buffer
- * @return length of converted data on success, -1 otherwise
- */
-size_t CodebenderccAPI::base64_decode(const char *source, unsigned char *target, size_t targetlen) {
-    
-	char *src, *tmpptr;
-    char quadruple[4];
-    unsigned char tmpresult[3];
-    int i;
-    size_t tmplen = 3;
-    int converted = 0;
-
-    /* concatinate '===' to the source to handle unpadded base64 data */
-    src = (char *) malloc(strlen(source) + 5);
-    if (src == NULL)
-        return -1;
-    strcpy(src, source);
-    strcat(src, "====");
-    tmpptr = src;
-
-    /* convert as long as we get a full result */
-    while (tmplen == 3) {
-        /* get 4 characters to convert */
-        for (i = 0; i < 4; i++) {
-            /* skip invalid characters - we won't reach the end */
-            while (*tmpptr != '=' && _base64_char_value(*tmpptr) < 0)
-                tmpptr++;
-
-            quadruple[i] = *(tmpptr++);
-        }
-
-        /* convert the characters */
-        tmplen = _base64_decode_triple(quadruple, tmpresult);
-
-        /* check if the fit in the result buffer */
-        if (targetlen < tmplen) {
-            free(src);
-            return -1;
-        }
-
-        /* put the partial result in the result buffer */
-        memcpy(target, tmpresult, tmplen);
-        target += tmplen;
-        targetlen -= tmplen;
-        converted += tmplen;
-    }
-
-    free(src);
-
-    return converted;
-}
-
-/**
- * determine the value of a base64 encoding character
- *
- * @param base64char the character of which the value is searched
- * @return the value in case of success (0-63), -1 on failure
- */
-int CodebenderccAPI::_base64_char_value(char base64char) {
-
-	if (base64char >= 'A' && base64char <= 'Z')
-        return base64char - 'A';
-    if (base64char >= 'a' && base64char <= 'z')
-        return base64char - 'a' + 26;
-    if (base64char >= '0' && base64char <= '9')
-        return base64char - '0' + 2 * 26;
-    if (base64char == '+')
-        return 2 * 26 + 10;
-    if (base64char == '/')
-
-        return 2 * 26 + 11;
-    return -1;
-}
-
-/**
- * decode a 4 char base64 encoded byte triple
- *
- * @param quadruple the 4 characters that should be decoded
- * @param result the decoded data
- * @return lenth of the result (1, 2 or 3), 0 on failure
- */
-int CodebenderccAPI::_base64_decode_triple(char quadruple[4], unsigned char *result) {
-
-	int i, triple_value, bytes_to_decode = 3, only_equals_yet = 1;
-    int char_value[4];
-
-    for (i = 0; i < 4; i++)
-        char_value[i] = _base64_char_value(quadruple[i]);
-
-    /* check if the characters are valid */
-    for (i = 3; i >= 0; i--) {
-        if (char_value[i] < 0) {
-            if (only_equals_yet && quadruple[i] == '=') {
-                /* we will ignore this character anyway, make it something
-                 * that does not break our calculations */
-                char_value[i] = 0;
-                bytes_to_decode--;
-                continue;
-            }
-            return 0;
-        }
-        /* after we got a real character, no other '=' are allowed anymore */
-        only_equals_yet = 0;
-    }
-
-    /* if we got "====" as input, bytes_to_decode is -1 */
-    if (bytes_to_decode < 0)
-        bytes_to_decode = 0;
-
-    /* make one big value out of the partial values */
-    triple_value = char_value[0];
-    triple_value *= 64;
-    triple_value += char_value[1];
-    triple_value *= 64;
-    triple_value += char_value[2];
-    triple_value *= 64;
-    triple_value += char_value[3];
-
-    /* break the big value into bytes */
-    for (i = bytes_to_decode; i < 3; i++)
-        triple_value /= 256;
-    for (i = bytes_to_decode - 1; i >= 0; i--) {
-
-        result[i] = triple_value % 256;
-        triple_value /= 256;
-    }
-
-    return bytes_to_decode;
-}
-
 void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &baudrate, const FB::JSObjectPtr & callback) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader",3);	
 	if(!CodebenderccAPI::openPort(port, baudrate))
@@ -1244,114 +756,3 @@ void CodebenderccAPI::notify(const std::string &message) {
 	callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
 }
 
-/*to be removed*/
-//void CodebenderccAPI::Mynotify(const std::string &message) {
-	//callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
-//}
-
-int CodebenderccAPI::programmerPrefs(const std::string& port, const std::string& programmerProtocol, const std::string&  programmerSpeed, const std::string& programmerCommunication, const std::string& programmerForce, const std::string& programmerDelay, const std::string& mcu, std::map<std::string, std::string>& programmerData) {
-	
-	CodebenderccAPI::debugMessage("CodebenderccAPI::programmerPrefs",3);
-
-	/**
-	  * Validate the programmer parameters
-	  **/
-	if (!validate_number(programmerSpeed)) return -10;
-    if (!validate_charnum(programmerProtocol)) return -11;
-	if (!validate_charnum(mcu)) return -12;
-	if (programmerProtocol != "usbtiny" && programmerProtocol != "dapa"){
-		if (!validate_charnum(programmerCommunication)) return -13;
-		if (programmerCommunication == "serial")
-			if (!validate_device(port)) return -14;
-	}
-	if (!validate_charnum(programmerForce)) return -15;
-	if (!validate_number(programmerDelay)) return -16;
-
-	/**
-	  * Pass the programmer parameters to a map.
-	  **/
-	programmerData["protocol"] = programmerProtocol.c_str();
-	programmerData["communication"] = programmerCommunication.c_str();
-	programmerData["speed"] = programmerSpeed.c_str();
-	programmerData["force"] = programmerForce.c_str();
-	programmerData["delay"] = programmerDelay.c_str();
-
-	CodebenderccAPI::debugMessage("CodebenderccAPI::programmerPrefs ended",3);
-
-	return 0;
-}
-
-int CodebenderccAPI::bootloaderPrefs(const std::string& lFuses, const std::string& hFuses, const std::string& eFuses, const std::string& ulBits, const std::string& lBits, std::map<std::string, std::string>& data) {
-
-	CodebenderccAPI::debugMessage("CodebenderccAPI::bootloaderPrefs",3);
-
-	/**
-	  * Validate the bootloader parameters
-	  **/
-	if (lFuses == "" || !validate_hex(lFuses)) return -17;
-	if (hFuses == "" || !validate_hex(hFuses)) return -18;
-	if (eFuses != "" && !validate_hex(eFuses)) return -19;
-	if (ulBits != "" && !validate_hex(ulBits)) return -20;
-	if (lBits != "" && !validate_hex(lBits)) return -21;
-	
-	/**
-	  * Pass the programmer parameters to a map.
-	  **/
-	data["hfuses"] = hFuses.c_str();
-	data["lfuses"] = lFuses.c_str();
-	data["efuses"] = eFuses.c_str();
-	data["ulbits"] = ulBits.c_str();
-	data["lbits"] = lBits.c_str();
-
-	CodebenderccAPI::debugMessage("CodebenderccAPI::bootloaderPrefs ended",3);
-
-	return 0;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////validations//////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////
-
-bool CodebenderccAPI::validate_hex(const std::string & input) {
-  return (input.compare(0, 2, "0x") == 0
-      && input.size() > 2 && input.size() <= 4
-      && input.find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos);
-}
-
-bool CodebenderccAPI::validate_number(const std::string & input) {
-
-	try {
-        boost::lexical_cast<double>(input);
-        return true;
-    } catch (boost::bad_lexical_cast &) {
-
-        return false;
-    }
-}
-
-bool CodebenderccAPI::validate_device(const std::string & input) {
-	
-	static const boost::regex acm("\\/dev\\/ttyACM[[:digit:]]+");
-    static const boost::regex usb("\\/dev\\/ttyUSB[[:digit:]]+");
-    static const boost::regex com("COM[[:digit:]]+");
-    static const boost::regex cu("\\/dev\\/cu.[0-9a-zA-Z\\-]+");
-
-    return boost::regex_match(input, acm)
-            || boost::regex_match(input, usb)
-            || boost::regex_match(input, com)
-            || boost::regex_match(input, cu)
-            ;
-}
-
-bool CodebenderccAPI::validate_code(const std::string & input) {
-
-	static const boost::regex base64("[0-9a-zA-Z+\\/=\n]+");
-
-    return boost::regex_match(input, base64);
-}
-
-bool CodebenderccAPI::validate_charnum(const std::string & input) {
-
-	static const boost::regex charnum("[0-9a-zA-Z]*");
-    return boost::regex_match(input, charnum);
-}

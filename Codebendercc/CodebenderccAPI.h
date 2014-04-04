@@ -140,19 +140,22 @@ public:
 		registerMethod("enableDebug", make_method(this, &CodebenderccAPI::enableDebug));
 		registerMethod("disableDebug", make_method(this, &CodebenderccAPI::disableDebug));
 		registerMethod("getFlashResult", make_method(this, &CodebenderccAPI::getFlashResult));
-		
+
         //Register all JS read-only properties
         registerProperty("version", make_property(this, &CodebenderccAPI::get_version));
         registerProperty("command", make_property(this, &CodebenderccAPI::getLastCommand));
         registerProperty("retVal", make_property(this, &CodebenderccAPI::getRetVal));
 
+		
 		debug_ = false;
 		lastPortCount=0;
 		probeFlag=false;
 		usedPort="";
-
+		//Returns the string name of the current operating system. 
         std::string os = getPlugin().get()->getOS();
+		//Returns the path and filename of the current plugin module. 
         path = getPlugin().get()->getFSPath();
+		//Finds the last / and returns the rest of the path.
 		path = path.substr(0, path.find_last_of("/\\") + 1);
 
 		std::string arch = "32";
