@@ -132,6 +132,7 @@ public:
 		registerMethod("serialRead", make_method(this, &CodebenderccAPI::serialRead));
         registerMethod("disconnect", make_method(this, &CodebenderccAPI::disconnect));
         registerMethod("setCallback", make_method(this, &CodebenderccAPI::setCallback));
+        registerMethod("setErrorCallback", make_method(this, &CodebenderccAPI::setErrorCallback));
         registerMethod("serialWrite", make_method(this, &CodebenderccAPI::serialWrite));
 		registerMethod("enableDebug", make_method(this, &CodebenderccAPI::enableDebug));
 		registerMethod("disableDebug", make_method(this, &CodebenderccAPI::disableDebug));
@@ -350,6 +351,15 @@ public:
      * @return true if the callback is set, false in any error.
      */
     bool setCallback(const FB::JSObjectPtr &callback);
+
+    /**
+     * Sets an error callback to notify the web page about unknown exceptions
+     *
+     * @param callback a javaScript callback function.
+     * @return true if the callback is set, false in any error.
+     */
+    bool setErrorCallback(const FB::JSObjectPtr &error_callback);
+
     /**
      * Opens a Serial Port and Reads input from it. 
      * The connection is maintained in a @b new @b thread.
@@ -514,6 +524,12 @@ private:
      */
     void notify(const std::string &message);
 
+    /**
+     * Sends a error notification to the default callback.
+     */
+    void error_notify(const std::string &message);
+
+
 	/**
 	  * Validates the input and creates a map with the parameters of the programmer.
 	  * Returns zero upon success. All other return codes represent validation errors.
@@ -660,6 +676,7 @@ private:
 	*/
 
     FB::JSObjectPtr callback_;
+    FB::JSObjectPtr error_callback_;
     
 	/**
 	 * Serial library and timeout objects
