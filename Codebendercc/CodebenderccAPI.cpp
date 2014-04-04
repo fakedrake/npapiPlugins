@@ -120,6 +120,13 @@ bool CodebenderccAPI::setCallback(const FB::JSObjectPtr &callback) {
     return true;
 }
 
+bool CodebenderccAPI::setErrorCallback(const FB::JSObjectPtr &error_callback) {
+	CodebenderccAPI::debugMessage("CodebenderccAPI::setErrorCallback",3);	
+	error_callback_ = error_callback;
+	CodebenderccAPI::debugMessage("CodebenderccAPI::setErrorCallback ended",3);
+    return true;
+}
+
 void CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudrate) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::openPort",3);
 	std::string device;
@@ -1157,6 +1164,12 @@ void CodebenderccAPI::notify(const std::string &message) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::notify",3);	
 	callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
 }
+
+void CodebenderccAPI::error_notify(const std::string &message) {
+	CodebenderccAPI::debugMessage("CodebenderccAPI::error_notify",3);	
+	error_callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
+}
+
 
 int CodebenderccAPI::programmerPrefs(const std::string& port, const std::string& programmerProtocol, const std::string&  programmerSpeed, const std::string& programmerCommunication, const std::string& programmerForce, const std::string& programmerDelay, const std::string& mcu, std::map<std::string, std::string>& programmerData) {
 	
