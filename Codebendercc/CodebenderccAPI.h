@@ -820,6 +820,8 @@ private:
 
     FILE *fopen(const char *path, const char *mode);
 
+    size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+
     char *fgets(char *s, int size, FILE *stream);
 
     void fclose(FILE *fp);

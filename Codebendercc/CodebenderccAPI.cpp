@@ -1240,13 +1240,12 @@ CodebenderccAPI::saveToBin(unsigned char *data, size_t size)
 {
     CodebenderccAPI::debugMessage("CodebenderccAPI::saveToBin", 3);
 
-    std::ofstream myfile;
-    myfile.open(binFile.c_str(), std::fstream::binary);
+    FILE *fp = CodebenderccAPI::fopen(binFile.c_str(), "wb");
+    if (!fp)
+        return;
 
-    for (size_t i = 0; i < size; i++)
-        myfile << data[i];
-
-    myfile.close();
+    CodebenderccAPI::fwrite(data, size, 1, fp);
+    CodebenderccAPI::fclose(fp);
 
     CodebenderccAPI::debugMessage("CodebenderccAPI::saveToBin ended", 3);
 }
@@ -1260,12 +1259,12 @@ CodebenderccAPI::saveToHex(const std::string &hexContent)
 {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::saveToHex", 3);
 
-	/* Save the content of the bootloader to a local hex file. */
-	std::ofstream myfile;
-    myfile.open(hexFile.c_str(), std::fstream::binary);
+    FILE *fp = CodebenderccAPI::fopen(hexFile.c_str(), "wb");
+    if (!fp)
+        return;
 
-	myfile << hexContent;
-	myfile.close();
+    CodebenderccAPI::fwrite(hexContent.c_str(), hexContent.length(), 1, fp);
+    CodebenderccAPI::fclose(fp);
 
 	CodebenderccAPI::debugMessage("CodebenderccAPI::saveToHex ended", 3);
 }
@@ -1796,6 +1795,27 @@ CodebenderccAPI::fopen(const char *path, const char *mode)
 
     CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
     return NULL;
+}
+
+size_t
+CodebenderccAPI::fwrite(const void *ptr,
+                        size_t size,
+                        size_t nmemb,
+                        FILE *stream)
+{
+    std::string err_msg = "CodebenderccAPI::fwrite() - ";
+    size_t n;
+
+    clearerr(stream);
+
+    n = ::fwrite(ptr, size, nmemb, stream);
+
+    if (n == nmemb)
+        return n;
+
+    err_msg += (ferror(stream) != 0) ? "errno set" : "bad I/O";
+    CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
+    return n;
 }
 
 char *
