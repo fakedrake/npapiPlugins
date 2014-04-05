@@ -854,6 +854,13 @@ private:
                       LPDWORD lpType,
                       LPBYTE lpData,
                       LPDWORD lpcbData);
+
+    LONG RegQueryValueEx(HKEY hKey,
+                         LPCTSTR lpValueName,
+                         LPDWORD lpReserved,
+                         LPDWORD lpType,
+                         LPBYTE lpData,
+                         LPDWORD lpcbData);
 #endif
 };
 

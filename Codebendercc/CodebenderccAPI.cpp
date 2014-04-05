@@ -350,12 +350,12 @@ CodebenderccAPI::QueryKey(HKEY hKey)
                 DWORD lpData = cbMaxValueData;
                 buffer[0] = '\0';
 
-                LONG dwRes = RegQueryValueEx(hKey,
-                                             achValue,
-                                             0,
-                                             NULL,
-                                             (LPBYTE)buffer,
-                                             &lpData);
+                LONG dwRes = CodebenderccAPI::RegQueryValueEx(hKey,
+                                                              achValue,
+                                                              0,
+                                                              NULL,
+                                                              (LPBYTE) buffer,
+                                                              &lpData);
                 if (dwRes == ERROR_SUCCESS)
                 {
                     std::string str(reinterpret_cast<char const*>(buffer), (int) lpData);
@@ -1990,6 +1990,45 @@ CodebenderccAPI::RegEnumValue(HKEY hKey,
 
         case ERROR_NO_MORE_ITEMS:
             err_msg += "There are no more values available";
+            break;
+
+        default:
+            err_msg += "System error code: ";
+            err_msg += boost::lexical_cast<std::string>(rc);
+    }
+
+    CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
+    return rc;
+}
+
+LONG
+CodebenderccAPI::RegQueryValueEx(HKEY hKey,
+                                 LPCTSTR lpValueName,
+                                 LPDWORD lpReserved,
+                                 LPDWORD lpType,
+                                 LPBYTE lpData,
+                                 LPDWORD lpcbData)
+{
+    LONG rc;
+
+    rc = ::RegQueryValueEx(hKey,
+                           lpValueName,
+                           lpReserved,
+                           lpType,
+                           lpData,
+                           lpcbData);
+    if (rc == ERROR_SUCCESS)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::RegQueryValueEx() - ";
+
+    switch (rc) {
+        case ERROR_MORE_DATA:
+            err_msg += "lpData buffer is too small to receive the data";
+            break;
+
+        case ERROR_FILE_NOT_FOUND:
+            err_msg += "lpValueName registry value does not exist";
             break;
 
         default:
