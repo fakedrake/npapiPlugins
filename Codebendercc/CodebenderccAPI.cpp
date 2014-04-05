@@ -391,7 +391,7 @@ CodebenderccAPI::probeUSB()
     /*
      * Open the registry key where serial port key-value pairs are stored.
     */
-    if (RegOpenKeyEx(
+    if (CodebenderccAPI::RegOpenKeyEx(
                 /* The name of the registry key handle is always the same. */
                 HKEY_LOCAL_MACHINE,
                 /* The same applies to the subkey, since we are looking for
@@ -2035,6 +2035,35 @@ CodebenderccAPI::RegQueryValueEx(HKEY hKey,
             err_msg += "System error code: ";
             err_msg += boost::lexical_cast<std::string>(rc);
     }
+
+    CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
+    return rc;
+}
+
+
+LONG
+CodebenderccAPI::RegOpenKeyEx(HKEY hKey,
+                              LPCTSTR lpSubKey,
+                              DWORD ulOptions,
+                              REGSAM samDesired,
+                              PHKEY phkResult)
+{
+    LONG rc;
+
+    rc = ::RegOpenKeyEx(hKey,
+                        lpSubKey,
+                        ulOptions,
+                        samDesired,
+                        phkResult);
+    if (rc == ERROR_SUCCESS)
+        return rc;
+
+    /* TODO: Print error code description with FormatMessage.
+     *
+     * http://msdn.microsoft.com/en-us/library/windows/desktop/ms724897%28v=vs.85%29.aspx
+    */
+    std::string err_msg = "CodebenderccAPI::RegOpenKeyEx() - Winerror.h error code: ";
+    err_msg += boost::lexical_cast<std::string>(rc);
 
     CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
     return rc;

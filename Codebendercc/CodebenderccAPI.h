@@ -861,6 +861,12 @@ private:
                          LPDWORD lpType,
                          LPBYTE lpData,
                          LPDWORD lpcbData);
+
+    LONG RegOpenKeyEx(HKEY hKey,
+                      LPCTSTR lpSubKey,
+                      DWORD ulOptions,
+                      REGSAM samDesired,
+                      PHKEY phkResult);
 #endif
 };
 
