@@ -1215,7 +1215,7 @@ CodebenderccAPI::runAvrdude(const std::string &command, bool append)
         avrcommand += " 2> \"" + outfile + "\"";
 
     lastcommand = avrcommand;
-    retval = system(avrcommand.c_str());
+    retval = CodebenderccAPI::system(avrcommand.c_str());
 #endif
 
     /* Print the content of the output file, if debugging is on */
@@ -1877,4 +1877,29 @@ CodebenderccAPI::pclose(FILE *stream)
     }
 
     CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
+}
+
+/** TODO: we should return the result of WEXITSTATUS(rc) */
+int
+CodebenderccAPI::system(const char *command)
+{
+    std::string err_msg = "CodebenderccAPI::system() - ";
+    int rc;
+
+    rc = ::system(NULL);
+    if (rc == 0) {
+        CodebenderccAPI::debugMessage(
+                (err_msg + "can not access the shell").c_str(), 3);
+    }
+
+    rc = ::system(command);
+    if (rc == -1)
+        err_msg += "Unknown error";
+    else if (WEXITSTATUS(rc) == 127)
+        err_msg += "/bin/sh could not be executed";
+    else
+        return rc;
+
+    CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
+    return rc;
 }

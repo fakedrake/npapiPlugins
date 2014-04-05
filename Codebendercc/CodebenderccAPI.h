@@ -827,6 +827,8 @@ private:
     FILE *popen(const char *command, const char *type);
 
     void pclose(FILE *stream);
+
+    int system(const char *command);
 };
 
 #endif /* H_CodebenderccAPI */
