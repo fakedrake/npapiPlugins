@@ -824,9 +824,11 @@ private:
 
     void fclose(FILE *fp);
 
+#if !defined(_WIN32) && !defined(_WIN64)
     FILE *popen(const char *command, const char *type);
 
     void pclose(FILE *stream);
+#endif
 
     int system(const char *command);
 };

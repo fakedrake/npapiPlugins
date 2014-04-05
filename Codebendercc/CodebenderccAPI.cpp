@@ -1835,6 +1835,7 @@ CodebenderccAPI::fclose(FILE *fp)
     CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
 }
 
+#if !defined(_WIN32) && !defined(_WIN64)
 FILE *
 CodebenderccAPI::popen(const char *command, const char *type)
 {
@@ -1858,7 +1859,9 @@ CodebenderccAPI::popen(const char *command, const char *type)
     CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
     return NULL;
 }
+#endif
 
+#if !defined(_WIN32) && !defined(_WIN64)
 void
 CodebenderccAPI::pclose(FILE *stream)
 {
@@ -1878,6 +1881,7 @@ CodebenderccAPI::pclose(FILE *stream)
 
     CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
 }
+#endif
 
 /** TODO: we should return the result of WEXITSTATUS(rc) */
 int
@@ -1895,8 +1899,10 @@ CodebenderccAPI::system(const char *command)
     rc = ::system(command);
     if (rc == -1)
         err_msg += "Unknown error";
+#if !defined(_WIN32) && !defined(_WIN64)
     else if (WEXITSTATUS(rc) == 127)
         err_msg += "/bin/sh could not be executed";
+#endif
     else
         return rc;
 
