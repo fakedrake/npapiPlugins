@@ -889,6 +889,9 @@ private:
                        LPSTARTUPINFO lpStartupInfo,
                        LPPROCESS_INFORMATION lpProcessInformation);
 
+    DWORD WaitForSingleObject(HANDLE hHandle,
+                              DWORD dwMilliseconds);
+
 #endif
 };
 
