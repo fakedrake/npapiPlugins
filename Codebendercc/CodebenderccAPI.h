@@ -892,6 +892,10 @@ private:
     DWORD WaitForSingleObject(HANDLE hHandle,
                               DWORD dwMilliseconds);
 
+
+    BOOL GetExitCodeProcess(HANDLE hProcess,
+                            LPDWORD lpExitCode);
+
 #endif
 };
 

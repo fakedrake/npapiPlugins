@@ -754,7 +754,7 @@ CodebenderccAPI::winExecAvrdude(const std::wstring &command,
 
     /* Wait until child processes exit. Don't wait forever. */
     CodebenderccAPI::WaitForSingleObject(pi.hProcess, INFINITE);
-    GetExitCodeProcess(pi.hProcess, &dwExitCode);
+    CodebenderccAPI::GetExitCodeProcess(pi.hProcess, &dwExitCode);
     /* Kill process if it is still running */
     TerminateProcess(pi.hProcess, 0);
 
@@ -2163,6 +2163,24 @@ CodebenderccAPI::WaitForSingleObject(HANDLE hHandle,
         return rc;
 
     std::string err_msg = "CodebenderccAPI::WaitForSingleObject() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
+
+    CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
+    return rc;
+}
+
+BOOL
+CodebenderccAPI::GetExitCodeProcess(HANDLE hProcess,
+                                    LPDWORD lpExitCode)
+{
+    BOOL rc;
+
+    rc = ::GetExitCodeProcess(hProcess,
+                              lpExitCode);
+    if (rc != 0)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::GetExitCodeProcess() - extended error information: ";
     err_msg += boost::lexical_cast<std::string>(GetLastError());
 
     CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
