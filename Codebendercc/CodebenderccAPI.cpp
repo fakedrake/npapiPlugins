@@ -758,10 +758,10 @@ CodebenderccAPI::winExecAvrdude(const std::wstring &command,
     /* Kill process if it is still running */
     CodebenderccAPI::TerminateProcess(pi.hProcess, 0);
 
-    CloseHandle(fh);
+    CodebenderccAPI::CloseHandle(fh);
     /* CreateProcess docs specify that these must be closed. */
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
+    CodebenderccAPI::CloseHandle(pi.hProcess);
+    CodebenderccAPI::CloseHandle(pi.hThread);
 
     CodebenderccAPI::debugMessage("CodebenderccAPI::winExecAvrdude ended", 3);
 
@@ -2199,6 +2199,22 @@ CodebenderccAPI::TerminateProcess(HANDLE hProcess,
         return rc;
 
     std::string err_msg = "CodebenderccAPI::TerminateProcess() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
+
+    CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
+    return rc;
+}
+
+BOOL
+CodebenderccAPI::CloseHandle(HANDLE hObject)
+{
+    BOOL rc;
+
+    rc = ::CloseHandle(hObject);
+    if (rc != 0)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::CloseHandle() - extended error information: ";
     err_msg += boost::lexical_cast<std::string>(GetLastError());
 
     CodebenderccAPI::debugMessage(err_msg.c_str(), 3);

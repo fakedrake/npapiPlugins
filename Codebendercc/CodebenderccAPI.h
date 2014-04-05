@@ -899,6 +899,8 @@ private:
     BOOL TerminateProcess(HANDLE hProcess,
                           UINT uExitCode);
 
+    BOOL CloseHandle(HANDLE hObject);
+
 #endif
 };
 
