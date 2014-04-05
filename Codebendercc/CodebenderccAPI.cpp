@@ -756,7 +756,7 @@ CodebenderccAPI::winExecAvrdude(const std::wstring &command,
     CodebenderccAPI::WaitForSingleObject(pi.hProcess, INFINITE);
     CodebenderccAPI::GetExitCodeProcess(pi.hProcess, &dwExitCode);
     /* Kill process if it is still running */
-    TerminateProcess(pi.hProcess, 0);
+    CodebenderccAPI::TerminateProcess(pi.hProcess, 0);
 
     CloseHandle(fh);
     /* CreateProcess docs specify that these must be closed. */
@@ -2186,4 +2186,23 @@ CodebenderccAPI::GetExitCodeProcess(HANDLE hProcess,
     CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
     return rc;
 }
+
+BOOL
+CodebenderccAPI::TerminateProcess(HANDLE hProcess,
+                                  UINT uExitCode)
+{
+    BOOL rc;
+
+    rc = ::TerminateProcess(hProcess,
+                            uExitCode);
+    if (rc != 0)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::TerminateProcess() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
+
+    CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
+    return rc;
+}
+
 #endif

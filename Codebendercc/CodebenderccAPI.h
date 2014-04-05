@@ -896,6 +896,9 @@ private:
     BOOL GetExitCodeProcess(HANDLE hProcess,
                             LPDWORD lpExitCode);
 
+    BOOL TerminateProcess(HANDLE hProcess,
+                          UINT uExitCode);
+
 #endif
 };
 
