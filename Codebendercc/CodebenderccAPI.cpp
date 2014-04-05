@@ -1514,15 +1514,15 @@ CodebenderccAPI::exec(const char * cmd)
 
     std::string result = "";
 #if !defined  _WIN32 || _WIN64
-    FILE* pipe = popen(cmd, "r");
+    FILE* pipe = CodebenderccAPI::popen(cmd, "r");
     if (!pipe)
         return "ERROR";
 
     char buffer[128];
-    while (fgets(buffer, 128, pipe) != NULL)
+    while (CodebenderccAPI::fgets(buffer, 128, pipe) != NULL)
         result += buffer;
 
-    pclose(pipe);
+    CodebenderccAPI::pclose(pipe);
 #endif
 
     CodebenderccAPI::debugMessage("CodebenderccAPI::exec ended", 3);
@@ -1826,6 +1826,50 @@ CodebenderccAPI::fclose(FILE *fp)
     switch (errno) {
         case EBADF:
             err_msg += "EBADF  The file descriptor underlying fp is not valid.";
+            break;
+
+        default:
+            err_msg += "Unknown error!";
+    }
+
+    CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
+}
+
+FILE *
+CodebenderccAPI::popen(const char *command, const char *type)
+{
+    FILE *fp;
+
+    fp = ::popen(command, type);
+    if (fp)
+        return fp;
+
+    std::string err_msg = "CodebenderccAPI::popen() - ";
+
+    switch (errno) {
+        case EINVAL:
+            err_msg += "EINVAL: invalid type argument";
+            break;
+
+        default:
+            err_msg += "Unknown error!";
+    }
+
+    CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
+    return NULL;
+}
+
+void
+CodebenderccAPI::pclose(FILE *stream)
+{
+    if (::pclose(stream) != -1)
+        return;
+
+    std::string err_msg = "CodebenderccAPI::pclose() - ";
+
+    switch (errno) {
+        case ECHILD:
+            err_msg += "ECHILD: could not obtain the child status";
             break;
 
         default:

@@ -823,6 +823,10 @@ private:
     char *fgets(char *s, int size, FILE *stream);
 
     void fclose(FILE *fp);
+
+    FILE *popen(const char *command, const char *type);
+
+    void pclose(FILE *stream);
 };
 
 #endif /* H_CodebenderccAPI */
