@@ -877,6 +877,18 @@ private:
                       DWORD dwCreationDisposition,
                       DWORD dwFlagsAndAttributes,
                       HANDLE hTemplateFile);
+
+    BOOL CreateProcess(LPCTSTR lpApplicationName,
+                       LPTSTR lpCommandLine,
+                       LPSECURITY_ATTRIBUTES lpProcessAttributes,
+                       LPSECURITY_ATTRIBUTES lpThreadAttributes,
+                       BOOL bInheritHandles,
+                       DWORD dwCreationFlags,
+                       LPVOID lpEnvironment,
+                       LPCTSTR lpCurrentDirectory,
+                       LPSTARTUPINFO lpStartupInfo,
+                       LPPROCESS_INFORMATION lpProcessInformation);
+
 #endif
 };
 

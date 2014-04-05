@@ -726,7 +726,7 @@ CodebenderccAPI::winExecAvrdude(const std::wstring &command,
 
     /* Create the child process. The command simply executes the contents
        of the batch file, which is the actual command. */
-    success = CreateProcess(
+    success = CodebenderccAPI::CreateProcess(
                 NULL,
                 /* command line */
                 (LPWSTR)command.c_str(),
@@ -2111,6 +2111,40 @@ CodebenderccAPI::CreateFile(LPCTSTR lpFileName,
         return rc;
 
     std::string err_msg = "CodebenderccAPI::CreateFile() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
+
+    CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
+    return rc;
+}
+
+BOOL
+CodebenderccAPI::CreateProcess(LPCTSTR lpApplicationName,
+                               LPTSTR lpCommandLine,
+                               LPSECURITY_ATTRIBUTES lpProcessAttributes,
+                               LPSECURITY_ATTRIBUTES lpThreadAttributes,
+                               BOOL bInheritHandles,
+                               DWORD dwCreationFlags,
+                               LPVOID lpEnvironment,
+                               LPCTSTR lpCurrentDirectory,
+                               LPSTARTUPINFO lpStartupInfo,
+                               LPPROCESS_INFORMATION lpProcessInformation)
+{
+    BOOL rc;
+
+    rc = ::CreateProcess(lpApplicationName,
+                         lpCommandLine,
+                         lpProcessAttributes,
+                         lpThreadAttributes,
+                         bInheritHandles,
+                         dwCreationFlags,
+                         lpEnvironment,
+                         lpCurrentDirectory,
+                         lpStartupInfo,
+                         lpProcessInformation);
+    if (rc != 0)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::CreateProcess() - extended error information: ";
     err_msg += boost::lexical_cast<std::string>(GetLastError());
 
     CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
