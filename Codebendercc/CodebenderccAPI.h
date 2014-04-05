@@ -867,6 +867,9 @@ private:
                       DWORD ulOptions,
                       REGSAM samDesired,
                       PHKEY phkResult);
+
+
+    LONG RegCloseKey(HKEY hKey);
 #endif
 };
 
