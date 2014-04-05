@@ -584,21 +584,24 @@ CodebenderccAPI::getFlashResult()
     CodebenderccAPI::debugMessage("CodebenderccAPI::getFlashResult", 3);
 
     FILE *pFile;
-#if defined _WIN32 || _WIN64
-    std::string filename = FB::wstring_to_utf8(outfile);
-    pFile = fopen(filename.c_str(), "r");
-#else
-    pFile = fopen(outfile.c_str(), "r");
-#endif
     char buffer[128];
     std::string result = "";
 
+#if defined _WIN32 || _WIN64
+    std::string filename = FB::wstring_to_utf8(outfile);
+    pFile = CodebenderccAPI::fopen(filename.c_str(), "r");
+#else
+    pFile = CodebenderccAPI::fopen(outfile.c_str(), "r");
+#endif
+    if (pFile == NULL)
+        return result;
+
     while (!feof(pFile)) {
-        if (fgets(buffer, 128, pFile) != NULL)
+        if (CodebenderccAPI::fgets(buffer, 128, pFile) != NULL)
             result += buffer;
     }
 
-    fclose(pFile);
+    CodebenderccAPI::fclose(pFile);
 
     CodebenderccAPI::debugMessage("CodebenderccAPI::getFlashResult ended",3);
 
@@ -1762,6 +1765,67 @@ CodebenderccAPI::closedir(DIR *dirp)
     switch (errno) {
         case EBADF:
             err_msg += "EBADF: Invalid directory stream descriptor dirp.";
+            break;
+
+        default:
+            err_msg += "Unknown error!";
+    }
+
+    CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
+}
+
+FILE *
+CodebenderccAPI::fopen(const char *path, const char *mode)
+{
+    FILE *fp;
+
+    fp = ::fopen(path, mode);
+    if (fp)
+        return fp;
+
+    std::string err_msg = "CodebenderccAPI::fopen() - ";
+
+    switch (errno) {
+        case EINVAL:
+            err_msg += "EINVAL: The mode provided to fopen() was invalid.";
+            break;
+
+        default:
+            err_msg += "Unknown error!";
+    }
+
+    CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
+    return NULL;
+}
+
+char *
+CodebenderccAPI::fgets(char *s, int size, FILE *stream)
+{
+    char *ret;
+
+    clearerr(stream);
+    ret = ::fgets(s, size, stream);
+
+    if (ferror(stream)  == 0)
+        return ret;
+
+    std::string err_msg = "CodebenderccAPI::fgets() failed";
+
+    CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
+    return NULL;
+}
+
+void
+CodebenderccAPI::fclose(FILE *fp)
+{
+    if (::fclose(fp) == 0)
+        return;
+
+    std::string err_msg = "CodebenderccAPI::fclose() - ";
+
+    switch (errno) {
+        case EBADF:
+            err_msg += "EBADF  The file descriptor underlying fp is not valid.";
             break;
 
         default:

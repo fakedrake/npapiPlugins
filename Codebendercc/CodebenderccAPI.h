@@ -817,6 +817,12 @@ private:
     struct dirent *readdir(DIR *dirp);
 
     void closedir(DIR *dirp);
+
+    FILE *fopen(const char *path, const char *mode);
+
+    char *fgets(char *s, int size, FILE *stream);
+
+    void fclose(FILE *fp);
 };
 
 #endif /* H_CodebenderccAPI */
