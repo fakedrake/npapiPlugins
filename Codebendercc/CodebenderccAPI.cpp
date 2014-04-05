@@ -300,7 +300,7 @@ CodebenderccAPI::QueryKey(HKEY hKey)
     std::string ports = "";
 
     /* Get the registry key value count. */
-    retCode = RegQueryInfoKey(
+    retCode = CodebenderccAPI::RegQueryInfoKey(
             /* An open registry key handle. */
             hKey,
             NULL, NULL, NULL, NULL, NULL, NULL,
@@ -1909,3 +1909,52 @@ CodebenderccAPI::system(const char *command)
     CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
     return rc;
 }
+
+#if defined(_WIN32) || defined(_WIN64)
+LONG
+CodebenderccAPI::RegQueryInfoKey(HKEY hKey,
+                                 LPTSTR lpClass,
+                                 LPDWORD lpcClass,
+                                 LPDWORD lpReserved,
+                                 LPDWORD lpcSubKeys,
+                                 LPDWORD lpcMaxSubKeyLen,
+                                 LPDWORD lpcMaxClassLen,
+                                 LPDWORD lpcValues,
+                                 LPDWORD lpcMaxValueNameLen,
+                                 LPDWORD lpcMaxValueLen,
+                                 LPDWORD lpcbSecurityDescriptor,
+                                 PFILETIME lpftLastWriteTime)
+{
+    LONG rc;
+
+    rc = ::RegQueryInfoKey(hKey,
+                           lpClass,
+                           lpcClass,
+                           lpReserved,
+                           lpcSubKeys,
+                           lpcMaxSubKeyLen,
+                           lpcMaxClassLen,
+                           lpcValues,
+                           lpcMaxValueNameLen,
+                           lpcMaxValueLen,
+                           lpcbSecurityDescriptor,
+                           lpftLastWriteTime);
+    if (rc == ERROR_SUCCESS)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::RegQueryInfoKey() - ";
+
+    switch (rc) {
+        case ERROR_MORE_DATA:
+            err_msg += "lpClass buffer is too small to receive the name of the class";
+            break;
+
+        default:
+            err_msg += "System error code: ";
+            err_msg += boost::lexical_cast<std::string>(rc);
+    }
+
+    CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
+    return rc;
+}
+#endif

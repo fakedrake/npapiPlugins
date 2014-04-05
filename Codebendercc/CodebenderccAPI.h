@@ -831,6 +831,21 @@ private:
 #endif
 
     int system(const char *command);
+
+#if defined(_WIN32) || defined(_WIN64)
+    LONG RegQueryInfoKey(HKEY hKey,
+                         LPTSTR lpClass,
+                         LPDWORD lpcClass,
+                         LPDWORD lpReserved,
+                         LPDWORD lpcSubKeys,
+                         LPDWORD lpcMaxSubKeyLen,
+                         LPDWORD lpcMaxClassLen,
+                         LPDWORD lpcValues,
+                         LPDWORD lpcMaxValueNameLen,
+                         LPDWORD lpcMaxValueLen,
+                         LPDWORD lpcbSecurityDescriptor,
+                         PFILETIME lpftLastWriteTime);
+#endif
 };
 
 #endif /* H_CodebenderccAPI */
