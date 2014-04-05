@@ -707,7 +707,7 @@ CodebenderccAPI::winExecAvrdude(const std::wstring &command,
        value of the command. */
     PROCESS_INFORMATION pi = { 0 };
 
-    HANDLE fh = CreateFile(
+    HANDLE fh = CodebenderccAPI::CreateFile(
             /* Create a file handle pointing to the output file,
                in order to capture the output. */
             &outfile[0],
@@ -2084,6 +2084,34 @@ CodebenderccAPI::RegCloseKey(HKEY hKey)
     */
     std::string err_msg = "CodebenderccAPI::RegCloseKey() - Winerror.h error code: ";
     err_msg += boost::lexical_cast<std::string>(rc);
+
+    CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
+    return rc;
+}
+
+HANDLE
+CodebenderccAPI::CreateFile(LPCTSTR lpFileName,
+                            DWORD dwDesiredAccess,
+                            DWORD dwShareMode,
+                            LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+                            DWORD dwCreationDisposition,
+                            DWORD dwFlagsAndAttributes,
+                            HANDLE hTemplateFile)
+{
+    HANDLE rc;
+
+    rc = ::CreateFile(lpFileName,
+                      dwDesiredAccess,
+                      dwShareMode,
+                      lpSecurityAttributes,
+                      dwCreationDisposition,
+                      dwFlagsAndAttributes,
+                      hTemplateFile);
+    if (rc != INVALID_HANDLE_VALUE)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::CreateFile() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
 
     CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
     return rc;

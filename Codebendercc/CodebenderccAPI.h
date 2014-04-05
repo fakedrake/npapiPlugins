@@ -868,8 +868,15 @@ private:
                       REGSAM samDesired,
                       PHKEY phkResult);
 
-
     LONG RegCloseKey(HKEY hKey);
+
+    HANDLE CreateFile(LPCTSTR lpFileName,
+                      DWORD dwDesiredAccess,
+                      DWORD dwShareMode,
+                      LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+                      DWORD dwCreationDisposition,
+                      DWORD dwFlagsAndAttributes,
+                      HANDLE hTemplateFile);
 #endif
 };
 
