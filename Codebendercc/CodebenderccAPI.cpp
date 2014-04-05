@@ -329,7 +329,7 @@ CodebenderccAPI::QueryKey(HKEY hKey)
         {
             cchValue = MAX_KEY_LENGTH;
             achValue[0] = '\0';
-            retCode = RegEnumValue(
+            retCode = CodebenderccAPI::RegEnumValue(
                     /* A handle to an open registry key */
                     hKey,
                     /* The index of the value to be retrieved */
@@ -1947,6 +1947,49 @@ CodebenderccAPI::RegQueryInfoKey(HKEY hKey,
     switch (rc) {
         case ERROR_MORE_DATA:
             err_msg += "lpClass buffer is too small to receive the name of the class";
+            break;
+
+        default:
+            err_msg += "System error code: ";
+            err_msg += boost::lexical_cast<std::string>(rc);
+    }
+
+    CodebenderccAPI::debugMessage(err_msg.c_str(), 3);
+    return rc;
+}
+
+LONG
+CodebenderccAPI::RegEnumValue(HKEY hKey,
+                              DWORD dwIndex,
+                              LPTSTR lpValueName,
+                              LPDWORD lpcchValueName,
+                              LPDWORD lpReserved,
+                              LPDWORD lpType,
+                              LPBYTE lpData,
+                              LPDWORD lpcbData)
+{
+    LONG rc;
+
+    rc = ::RegEnumValue(hKey,
+                        dwIndex,
+                        lpValueName,
+                        lpcchValueName,
+                        lpReserved,
+                        lpType,
+                        lpData,
+                        lpcbData);
+    if (rc == ERROR_SUCCESS)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::RegEnumValue() - ";
+
+    switch (rc) {
+        case ERROR_MORE_DATA:
+            err_msg += "lpData buffer is too small to receive the value";
+            break;
+
+        case ERROR_NO_MORE_ITEMS:
+            err_msg += "There are no more values available";
             break;
 
         default:

@@ -845,6 +845,15 @@ private:
                          LPDWORD lpcMaxValueLen,
                          LPDWORD lpcbSecurityDescriptor,
                          PFILETIME lpftLastWriteTime);
+
+    LONG RegEnumValue(HKEY hKey,
+                      DWORD dwIndex,
+                      LPTSTR lpValueName,
+                      LPDWORD lpcchValueName,
+                      LPDWORD lpReserved,
+                      LPDWORD lpType,
+                      LPBYTE lpData,
+                      LPDWORD lpcbData);
 #endif
 };
 
