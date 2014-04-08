@@ -16,30 +16,40 @@
 
 
 #if defined _WIN32 || _WIN64
-#define MAX_KEY_LENGTH 255
-#define WIN32_LEAN_AND_MEAN 
-#include <SDKDDKVer.h>
-#include "dirent.h"
-#include <windows.h>
-#include <tchar.h>
-#include <Shellapi.h>
-#include <Tchar.h>
-#include <Iepmapi.h>
-
-#include <stdio.h>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <stdlib.h>
-#include <string.h>
-#include <tchar.h>
-
-//using namespace std;
+	#define MAX_KEY_LENGTH 255
+	#define WIN32_LEAN_AND_MEAN 
+	#include <SDKDDKVer.h>
+	#include "dirent.h"
+	#include <windows.h>
+	#include <tchar.h>
+	#include <Shellapi.h>
+	#include <Tchar.h>
+	#include <Iepmapi.h>
+	#include <stdio.h>
+	#include <iostream>
+	#include <fstream>
+	#include <string>
+	#include <stdlib.h>
+	#include <string.h>
+	#include <tchar.h>
 #else
-#include <dirent.h>
-#include <sys/file.h>
+	#include <dirent.h>
+	#include <sys/file.h>
+	#include <sys/syscall.h>
+	#include <unistd.h>
 
+     #include <stddef.h>
+     #include <stdlib.h>
+     #include <sys/types.h>
+     #include <sys/wait.h>
+
+
+#include <signal.h>
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
 #endif
+
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/regex.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -49,27 +59,13 @@
 #include <boost/asio.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/array.hpp>
-//#include <boost/optional.hpp>
-//#include <boost/weak_ptr.hpp>
-//used to check for the drivers
-//#include <boost/filesystem/operations.hpp>
-//#include <boost/filesystem/path.hpp>
-//namespace fs = boost::filesystem;
-
 #include <fstream>
 #include <vector>
-//#include <iostream>
-//#include <sstream>
-//#include <stdio.h>
-//#include <stdlib.h>
 #include <time.h>
 #include <sys/stat.h>
 #include <algorithm>
 #include <numeric>
 #include <sys/types.h>
-#include <sys/syscall.h>
-#include <unistd.h>
-
 #include <fcntl.h>
 
 #include "BrowserHost.h"
@@ -83,7 +79,7 @@
 #include "SimpleStreamHelper.h"
 #include "variant_list.h"
 #include "SimpleSerial.h"
-
+#include <exception> 
 /**
  * Wjwwod serial library. 
  * https://github.com/wjwwood/serial
@@ -91,7 +87,6 @@
 #include "serial/include/serial/serial.h"
 
 using namespace serial;
-
 
 #ifdef __APPLE__
 #import <Security/Security.h>
@@ -589,10 +584,13 @@ private:
 	  * Executes a command with avrdude.
 	  * When on Widnows, the functions creates a batch file and then 
 	  * calls CodebenderccAPI::execAvrdude function to execute the batch file,
-	  * else performs a Unix system call.
+	  * else calls CodebenderccAPI::execAvrdude function.
 	  * If appendFlag is true append the output of the avrdude command to the output file, if one exists.
 	  */
-	int runAvrdude(const std::string& command, bool appendFlag);
+	int runAvrdude(const std::string& command, bool append);
+
+    int unixExecAvrdude(const std::string &unixExecCommand);
+
 
 	/**
      * 

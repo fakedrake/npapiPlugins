@@ -27,6 +27,11 @@ bool CodebenderccAPI::openPort(const std::string &port, const unsigned int &baud
 	if(AddtoPortList(device)){ //Check if device is used by someone else
 		try
 			{
+				CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use openPort:",3);
+				for (iter = vectorPortsInUseList.begin(); iter != vectorPortsInUseList.end(); ++iter)
+					{
+					CodebenderccAPI::debugMessage((*iter).c_str(),3);
+					}
 			usedPort=device;		
 				if (serialPort.isOpen() == false){
 					// need to set a zero timeout when on Windows
@@ -238,11 +243,6 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 	try {
 		if(mcu == "atmega32u4" || AddtoPortList(device))
 			{
-				CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use:",3);
-				for (iter = vectorPortsInUseList.begin(); iter != vectorPortsInUseList.end(); ++iter)
-					{
-					CodebenderccAPI::debugMessage((*iter).c_str(),3);
-					}
 				#if !defined  _WIN32 || _WIN64	
 					chmod(avrdude.c_str(), S_IRWXU);
 				#endif
@@ -309,10 +309,11 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 								break;
 							}
 						}
-						AddtoPortList(fdevice);
+
 						if (found){		// The new leonardo port appeared in the list. Save it and go on..
 								std::string leonardoDeviceMessage = "Found leonardo device on " + fdevice + " port";
 								CodebenderccAPI::debugMessage(leonardoDeviceMessage.c_str(),2);
+								AddtoPortList(fdevice);
 							break;
 						}
 
@@ -331,12 +332,6 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 							notify("Could not auto-reset or detect a manual reset!");
 							flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-1));
 							RemovePortFromList(fdevice);
-							CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use:",3);
-								for (iter = vectorPortsInUseList.begin(); iter != vectorPortsInUseList.end(); ++iter)
-									{
-									CodebenderccAPI::debugMessage((*iter).c_str(),3);
-									}
-							return;
 						}
 					}
 				}
@@ -391,13 +386,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 						timer += 100;
 					}
 				}
-				m_host->htmlLog(fdevice);
 				RemovePortFromList(fdevice);
-				CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use:",3);
-				for (iter = vectorPortsInUseList.begin(); iter != vectorPortsInUseList.end(); ++iter)
-					{
-					CodebenderccAPI::debugMessage((*iter).c_str(),3);
-					}
 				flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
 			}
 		else{
@@ -410,11 +399,6 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 		CodebenderccAPI::debugMessage("CodebenderccAPI::doflash exception",2);
         flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(9001));
 		RemovePortFromList(device);
-		CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use:",3);
-			for (iter = vectorPortsInUseList.begin(); iter != vectorPortsInUseList.end(); ++iter)
-				{
-				CodebenderccAPI::debugMessage((*iter).c_str(),3);
-				}
     }
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflash ended",3);
 }
@@ -426,7 +410,7 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 	try {
 			if((programmerData["communication"] == "usb")||(programmerData["communication"] == "")||(AddtoPortList(device)))
 			{
-				CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use:",3);		
+				CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use in doflashWithProgrammer:",3);		
 					for (iter = vectorPortsInUseList.begin(); iter != vectorPortsInUseList.end(); ++iter)
 						{
 						CodebenderccAPI::debugMessage((*iter).c_str(),3);
@@ -453,15 +437,11 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 					command += " -Uflash:w:\"" + binFile + "\":a";
 				#endif
 				// Execute the upload command.
+			
 				retVal = CodebenderccAPI::runAvrdude(command, false);
 				_retVal = retVal;
 				flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
 				RemovePortFromList(device);
-				CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use:",3);
-				for (iter = vectorPortsInUseList.begin(); iter != vectorPortsInUseList.end(); ++iter)
-					{
-					CodebenderccAPI::debugMessage((*iter).c_str(),3);
-					}
 			}
 			else
 			{
@@ -472,11 +452,6 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 		CodebenderccAPI::debugMessage("CodebenderccAPI::doflashWithProgrammer exception",2);
         flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(9001));
 		RemovePortFromList(device);
-		CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use:",3);
-			for (iter = vectorPortsInUseList.begin(); iter != vectorPortsInUseList.end(); ++iter)
-				{
-				CodebenderccAPI::debugMessage((*iter).c_str(),3);
-				}
     }
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashWithProgrammer ended",3);
 }
@@ -547,11 +522,6 @@ void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std
 			}
 			flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
 			RemovePortFromList(fdevice);
-			CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use:",3);
-				for (iter = vectorPortsInUseList.begin(); iter != vectorPortsInUseList.end(); ++iter)
-					{
-					CodebenderccAPI::debugMessage((*iter).c_str(),3);
-					}
 		}
 	else
 		{
@@ -562,27 +532,23 @@ void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std
 		CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader exception",2);
         flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(9001));
 		RemovePortFromList(device);
-		CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use:",3);
-			for (iter = vectorPortsInUseList.begin(); iter != vectorPortsInUseList.end(); ++iter)
-				{
-				CodebenderccAPI::debugMessage((*iter).c_str(),3);
-				}
 	}
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader ended",3);
 }
 
-const std::string CodebenderccAPI::setProgrammerCommand(std::map<std::string, std::string>& programmerData) {
+const std::string CodebenderccAPI::setProgrammerCommand(std::map<std::string, std::string>& programmerData) 
+{
 	
 	CodebenderccAPI::debugMessage("CodebenderccAPI::setProgrammerCommand",3);
 
 	std::string os = getPlugin().get()->getOS();
 
-#if !defined  _WIN32 || _WIN64
-		std::string command = "\"" + avrdude + "\"" + " -C\"" + avrdudeConf + "\"";
-#else
-		std::string command = avrdude + " -C" + avrdudeConf;
-#endif
-		
+	#if !defined  _WIN32 || _WIN64
+			std::string command = "\"" + avrdude + "\"" + " -C\"" + avrdudeConf + "\"";
+	#else
+			std::string command = avrdude + " -C" + avrdudeConf;
+	#endif
+			
 		/**
 		  * Check if debugging is set to true. If the debug verbosity level is greater than 1,
 		  * add verbosity flags to the avrdude command.
@@ -614,51 +580,108 @@ const std::string CodebenderccAPI::setProgrammerCommand(std::map<std::string, st
 	return command;
 }
 
-int CodebenderccAPI::runAvrdude(const std::string& command, bool append) {
-
+int CodebenderccAPI::runAvrdude(const std::string& command, bool append) 
+{
 	CodebenderccAPI::debugMessage("CodebenderccAPI::runAvrdude",3);
-	
 	int retval = 1;
-#if defined  _WIN32 || _WIN64
-	// if on Windows, create a batch file and save the command in that file.
-	std::ofstream batchFd; 
-	try{
-		batchFd.open(batchFile.c_str());
-		batchFd << command;
-		batchFd.close();
-	}catch(...){
-		CodebenderccAPI::debugMessage("Failed to write command to batch file!",1);
-	}	
-	
-	lastcommand = command;
-	// Call winExecAvrdude, which creates a new process, runs the batch file and gets all the ouput.
-		retval = winExecAvrdude(batchFile, append);
+	#if defined  _WIN32 || _WIN64
+		// if on Windows, create a batch file and save the command in that file.
+		std::ofstream batchFd; 
+		try{
+			batchFd.open(batchFile.c_str());
+			batchFd << command;
+			batchFd.close();
+		}catch(...){
+			CodebenderccAPI::debugMessage("Failed to write command to batch file!",1);
+		}		
+		lastcommand = command;
+		// Call winExecAvrdude, which creates a new process, runs the batch file and gets all the ouput.
+			retval = winExecAvrdude(batchFile, append);
+	#else
+		/**
+		  * If on Unix-like system, simply make a system call, using the command as content and redirect
+		  * the output to the output file.
+		  */
+		std::string avrcommand = command;
+		if (append)
+			avrcommand += " 2>> \"" + outfile + "\"";
+		else
+			avrcommand += " 2> \"" + outfile + "\"";
+		lastcommand = avrcommand;
+		std::string unixCommand = command; 
 
-#else
-	/**
-	  * If on Unix-like system, simply make a system call, using the command as content and redirect
-	  * the output to the output file.
-	  */
-	std::string avrcommand = command;
-	if (append)
-		avrcommand += " 2>> \"" + outfile + "\"";
-	else
-		avrcommand += " 2> \"" + outfile + "\"";
-	lastcommand = avrcommand;
-	retval = system(avrcommand.c_str());
-#endif
+		retval = unixExecAvrdude(unixCommand);
+	#endif
 	// Print the content of the output file, if debugging is on
-	if (CodebenderccAPI::checkDebug()){
+	if (CodebenderccAPI::checkDebug())
+	{
 		std::ifstream ifs(outfile.c_str());
 		std::string content( (std::istreambuf_iterator<char>(ifs) ),
-							(std::istreambuf_iterator<char>()    ) );
+		(std::istreambuf_iterator<char>()    ) );
 		CodebenderccAPI::debugMessage(content.c_str(),1);
-	}
-	CodebenderccAPI::debugMessage(lastcommand.c_str(),1);
-
+		}
+	//CodebenderccAPI::debugMessage(lastcommand.c_str(),1);
 	CodebenderccAPI::debugMessage("CodebenderccAPI::runAvrdude ended",3);
 	return retval;
 }
+
+int CodebenderccAPI::unixExecAvrdude (const std::string &unixExecCommand)
+{ 
+
+	/* Split command and store exec arguments in a string vector */
+	std::istringstream StreamCommand(unixExecCommand);
+	std::string comArg;
+	std::vector<std::string> args;
+	std::vector<std::string>::const_iterator iterator;
+
+	while(std::getline(StreamCommand, comArg, ' ')) {
+		comArg.erase(remove( comArg.begin(), comArg.end(), '\"' ),comArg.end());
+		args.push_back(comArg);
+	}
+
+	m_host->htmlLog("arguments:");
+	for (iterator = args.begin(); iterator != args.end(); ++iterator) {
+		m_host->htmlLog((*iterator).c_str());
+	}
+
+	/* Convert string vector to char array */
+	std::vector<char *> cmd_argv(args.size() + 1);
+
+	for (std::size_t i = 0; i != args.size(); i++) {
+		cmd_argv[i] = &args[i][0];
+	}
+
+    pid_t cpid, w;
+    int status;
+    
+    cpid = fork();
+    if (cpid == -1) {
+        perror("fork");
+        exit(EXIT_FAILURE);
+    }
+
+
+    if (cpid == 0) 
+    {
+    	/* Code executed by child process */
+       execv(cmd_argv[0], cmd_argv.data());
+    } 
+    else 
+    {
+        /* Code executed by parent process */
+        do {
+            waitpid(cpid, &status, WNOHANG);
+            if (WIFEXITED(status))
+	            {
+	            return WEXITSTATUS(status);
+	        	}
+	        sleep(1);   
+        	} while (1);
+    exit(EXIT_SUCCESS);
+    }
+    exit(EXIT_SUCCESS);
+}
+
 
 /**
  * Save the binary data to the binary file specified in the constructor.
