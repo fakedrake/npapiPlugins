@@ -154,6 +154,11 @@ bool CanBeUsed(string port)
 
 bool AddtoPortList(string port)
 {
+	#if defined _WIN32||_WIN64
+	if (port.find("\\\\.\\") == string::npos) {
+			port = "\\\\.\\" + port;
+			}	
+	#endif
 	if (vectorPortsInUseList.empty())
 		{ 
 		mtxPort.lock();
@@ -179,10 +184,15 @@ bool AddtoPortList(string port)
 
 void RemovePortFromList(string port)
 {
-mtxPort.lock();
-if (std::find(vectorPortsInUseList.begin(), vectorPortsInUseList.end(), port) != vectorPortsInUseList.end())
-vectorPortsInUseList.erase(std::remove(vectorPortsInUseList.begin(), vectorPortsInUseList.end(), port));
-mtxPort.unlock();
+	#if defined _WIN32||_WIN64
+	if (port.find("\\\\.\\") == string::npos) {
+			port = "\\\\.\\" + port;
+			}	
+	#endif
+	mtxPort.lock();
+	if (std::find(vectorPortsInUseList.begin(), vectorPortsInUseList.end(), port) != vectorPortsInUseList.end())
+	vectorPortsInUseList.erase(std::remove(vectorPortsInUseList.begin(), vectorPortsInUseList.end(), port));
+	mtxPort.unlock();
 }
 
 
