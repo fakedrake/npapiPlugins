@@ -27,11 +27,6 @@ bool CodebenderccAPI::openPort(const std::string &port, const unsigned int &baud
 	if(AddtoPortList(device)){ //Check if device is used by someone else
 		try
 			{
-				CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use openPort:",3);
-				for (iter = vectorPortsInUseList.begin(); iter != vectorPortsInUseList.end(); ++iter)
-					{
-					CodebenderccAPI::debugMessage((*iter).c_str(),3);
-					}
 			usedPort=device;		
 				if (serialPort.isOpen() == false){
 					// need to set a zero timeout when on Windows
@@ -113,8 +108,7 @@ std::string CodebenderccAPI::probeUSB() {
       )
    {
       ports.append(CodebenderccAPI::QueryKey(hKey));  // Call QueryKey function to retrieve the available ports.
-   }
-   
+   }   
 	if(lastPortCount!=ports.length()){
 		lastPortCount=ports.length();
 		CodebenderccAPI::detectNewPort(ports);
@@ -149,7 +143,6 @@ std::string CodebenderccAPI::probeUSB() {
 	if(lastPortCount!=dirs.length()){
 		lastPortCount=dirs.length();
 		CodebenderccAPI::detectNewPort(dirs);
-									}
     return dirs;
 }
 #endif
@@ -158,7 +151,6 @@ std::string CodebenderccAPI::probeUSB() {
 
 int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFlag) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::winExecAvrdude",3);
-
 	DWORD dwExitCode = -1;
 	DWORD APPEND;
 	DWORD CREATE;
@@ -290,11 +282,11 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 					int elapsed_time = 0;
 					bool found = false;
 					while(elapsed_time <= 10000){
-						std::vector<std::string> newPorts;
 						std::string newports = probeUSB();
 						perror(newports.c_str());
 						std::stringstream ss(newports);
 						std::string item;
+						std::vector<std::string> newPorts;
 						while (std::getline(ss, item, ',')) {
 							newPorts.push_back(item);
 						}
@@ -410,11 +402,6 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 	try {
 			if((programmerData["communication"] == "usb")||(programmerData["communication"] == "")||(AddtoPortList(device)))
 			{
-				CodebenderccAPI::debugMessage("CodebenderccAPI::Ports in use in doflashWithProgrammer:",3);		
-					for (iter = vectorPortsInUseList.begin(); iter != vectorPortsInUseList.end(); ++iter)
-						{
-						CodebenderccAPI::debugMessage((*iter).c_str(),3);
-						}
 				#if !defined  _WIN32 || _WIN64	
 						chmod(avrdude.c_str(), S_IRWXU);
 				#endif
@@ -488,6 +475,7 @@ void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std
 			command += " -Uhfuse:w:" + bootloaderData["hfuses"] + ":m"
 					+ " -Ulfuse:w:" + bootloaderData["lfuses"] + ":m";
 			
+			
 			retVal = CodebenderccAPI::runAvrdude(command, false);
 			_retVal = retVal;
 
@@ -515,6 +503,7 @@ void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std
 						#endif
 						command += (bootloaderData["lbits"] != "") ? " -Ulock:w:" + bootloaderData["lbits"] + ":m" : "";
 
+						
 						retVal = CodebenderccAPI::runAvrdude(command, true);
 						_retVal = retVal;
 					}
@@ -537,44 +526,38 @@ void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std
 }
 
 const std::string CodebenderccAPI::setProgrammerCommand(std::map<std::string, std::string>& programmerData) 
-{
-	
+{	
 	CodebenderccAPI::debugMessage("CodebenderccAPI::setProgrammerCommand",3);
-
 	std::string os = getPlugin().get()->getOS();
-
 	#if !defined  _WIN32 || _WIN64
 			std::string command = "\"" + avrdude + "\"" + " -C\"" + avrdudeConf + "\"";
 	#else
 			std::string command = avrdude + " -C" + avrdudeConf;
 	#endif
-			
-		/**
-		  * Check if debugging is set to true. If the debug verbosity level is greater than 1,
-		  * add verbosity flags to the avrdude command.
-		  */
-		if (CodebenderccAPI::checkDebug() && currentLevel >= 2){
-			command += " -v -v -v -v";
-		}else{
-			command += " -V";
+	/**
+	* Check if debugging is set to true. If the debug verbosity level is greater than 1,
+    * add verbosity flags to the avrdude command.
+	*/
+	if (CodebenderccAPI::checkDebug() && currentLevel >= 2){
+		command += " -v -v -v -v";
+	}else{
+		command += " -V";
+	}
+	command += " -p" + programmerData["mcu"] + " -c" + programmerData["protocol"];
+	if (programmerData["communication"] == "usb"){
+		command += " -Pusb";
+	}else if (programmerData["communication"] == "serial"){
+		command += " -P";
+		command += (os == "Windows") ? "\\\\.\\" : "";
+		command += programmerData["device"];
+		if (programmerData["speed"] != "0"){
+			command += " -b" + programmerData["speed"];
 		}
-		
-		command += " -p" + programmerData["mcu"]
-				+ " -c" + programmerData["protocol"];
-		if (programmerData["communication"] == "usb"){
-			command += " -Pusb";
-		}else if (programmerData["communication"] == "serial"){
-			command += " -P";
-			command += (os == "Windows") ? "\\\\.\\" : "";
-			command += programmerData["device"];
-			if (programmerData["speed"] != "0"){
-				command += " -b" + programmerData["speed"];
-			}
-		}
-		if (programmerData["force"] == "true")
-			command += " -F";
-		if (programmerData["delay"] != "0")
-			command += " -i" + programmerData["delay"];
+	}
+	if (programmerData["force"] == "true")
+		command += " -F";
+	if (programmerData["delay"] != "0")
+		command += " -i" + programmerData["delay"];
 
 	CodebenderccAPI::debugMessage("CodebenderccAPI::setProgrammerCommand ended",3);
 	return command;
@@ -585,7 +568,7 @@ int CodebenderccAPI::runAvrdude(const std::string& command, bool append)
 	CodebenderccAPI::debugMessage("CodebenderccAPI::runAvrdude",3);
 	int retval = 1;
 	#if defined  _WIN32 || _WIN64
-		// if on Windows, create a batch file and save the command in that file.
+		// Ιf on Windows, create a batch file and save the command in that file.
 		std::ofstream batchFd; 
 		try{
 			batchFd.open(batchFile.c_str());
@@ -596,38 +579,31 @@ int CodebenderccAPI::runAvrdude(const std::string& command, bool append)
 		}		
 		lastcommand = command;
 		// Call winExecAvrdude, which creates a new process, runs the batch file and gets all the ouput.
-			retval = winExecAvrdude(batchFile, append);
+		retval = winExecAvrdude(batchFile, append);
 	#else
 		/**
-		  * If on Unix-like system, simply make a system call, using the command as content and redirect
-		  * the output to the output file.
-		  */
-		std::string avrcommand = command;
-		if (append)
-			avrcommand += " 2>> \"" + outfile + "\"";
-		else
-			avrcommand += " 2> \"" + outfile + "\"";
-		lastcommand = avrcommand;
+		 * If on Unix-like system, call unixExecAvrdude which makes a duplicate of the current process (fork) 
+		 * and replaces the entire new process with avrdude (exec).
+		 */
+		lastcommand = command;
 		std::string unixCommand = command; 
-
 		retval = unixExecAvrdude(unixCommand);
 	#endif
-	// Print the content of the output file, if debugging is on
+		/** Print the content of the output file, if debugging is on. **/
 	if (CodebenderccAPI::checkDebug())
 	{
-		std::ifstream ifs(outfile.c_str());
+		std::ifstream ifs(errfile.c_str());
 		std::string content( (std::istreambuf_iterator<char>(ifs) ),
 		(std::istreambuf_iterator<char>()    ) );
 		CodebenderccAPI::debugMessage(content.c_str(),1);
 		}
-	//CodebenderccAPI::debugMessage(lastcommand.c_str(),1);
+	CodebenderccAPI::debugMessage(lastcommand.c_str(),1);
 	CodebenderccAPI::debugMessage("CodebenderccAPI::runAvrdude ended",3);
 	return retval;
 }
 
 int CodebenderccAPI::unixExecAvrdude (const std::string &unixExecCommand)
 { 
-
 	/* Split command and store exec arguments in a string vector */
 	std::istringstream StreamCommand(unixExecCommand);
 	std::string comArg;
@@ -639,49 +615,83 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &unixExecCommand)
 		args.push_back(comArg);
 	}
 
-	m_host->htmlLog("arguments:");
-	for (iterator = args.begin(); iterator != args.end(); ++iterator) {
-		m_host->htmlLog((*iterator).c_str());
-	}
-
 	/* Convert string vector to char array */
 	std::vector<char *> cmd_argv(args.size() + 1);
-
 	for (std::size_t i = 0; i != args.size(); i++) {
 		cmd_argv[i] = &args[i][0];
 	}
 
     pid_t cpid, w;
-    int status;
     
+    /* make a duplicate of the current process */
     cpid = fork();
     if (cpid == -1) {
         perror("fork");
         exit(EXIT_FAILURE);
     }
 
-
+	/* Code executed by child process */
     if (cpid == 0) 
     {
-    	/* Code executed by child process */
-       execv(cmd_argv[0], cmd_argv.data());
+    	const char * frpathout = outfile.c_str();
+    	const char * frpatherr = errfile.c_str();		
+		stdout=freopen(frpathout,"w", stdout);
+		stderr=freopen(frpatherr,"w",stderr);
+       	execv(cmd_argv[0], cmd_argv.data());
     } 
+     /* Code executed by parent process */
     else 
     {
-        /* Code executed by parent process */
+        long oldSize=0;
+        long newSize=0;
+       	int counter =0;
         do {
-            waitpid(cpid, &status, WNOHANG);
-            if (WIFEXITED(status))
-	            {
-	            return WEXITSTATUS(status);
-	        	}
-	        sleep(1);   
-        	} while (1);
-    exit(EXIT_SUCCESS);
+        	int status = 0;
+            w = waitpid(cpid, &status, WNOHANG);
+            /* On error, -1 is returned. */
+            if (w == -1)
+            /* If WNOHANG was specified  as argument in waitpid and child specified by pid exists, 
+				but have not yet changed state, then 0 is returned. */
+            if (w == 0)
+            {
+				const char *patherr = errfile.c_str();		
+	    		oldSize=CodebenderccAPI::filesize(patherr);
+			        if (newSize != oldSize) 
+			        	newSize=oldSize;
+		   			else{
+		   				if(counter<10)
+		    				counter++;
+		    			else{
+							kill (cpid, SIGKILL);
+							continue;
+							}
+		   				}	
+	        	sleep(1);
+            }
+            /* On success waitpid(), returns the process ID of the child whose state has changed */
+			else{
+				if(WIFSIGNALED(status)) {
+	        		return WTERMSIG(status);
+				}
+				if (WIFEXITED(status)) {
+	            	return WEXITSTATUS(status);
+           		 } 
+
+				}						
+       } while (1);
     }
     exit(EXIT_SUCCESS);
 }
 
+long CodebenderccAPI::filesize(const char *filename)
+{
+FILE *f = fopen(filename,"rb");  /* open the file in read only */
+long size = 0;
+  if (fseek(f,0,SEEK_END)==0) /* seek was successful */
+      size = ftell(f);
+  fclose(f);
+  return size;
+}
 
 /**
  * Save the binary data to the binary file specified in the constructor.

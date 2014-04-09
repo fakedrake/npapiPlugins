@@ -37,17 +37,14 @@
 	#include <sys/file.h>
 	#include <sys/syscall.h>
 	#include <unistd.h>
-
-     #include <stddef.h>
-     #include <stdlib.h>
-     #include <sys/types.h>
-     #include <sys/wait.h>
-
-
-#include <signal.h>
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
+    #include <stddef.h>
+    #include <stdlib.h>
+    #include <sys/types.h>
+    #include <sys/wait.h>
+    #include <signal.h>
+    #include <stdio.h>
+    #include <string.h>
+    #include <errno.h>
 #endif
 
 #include <boost/algorithm/string/predicate.hpp>
@@ -161,44 +158,45 @@ public:
         // paths to files
         
 #if defined _WIN32||_WIN64
-			current_dir = getShortPaths(path);
-			std::wstring wchdir(current_dir);
-
-			if (os == "Windows"){
-				// WINDOWS
-				// .exe for windows 
-				// no path is appended to avrdude.exe or its config file, since both are used in a batch file
-				// that executes the avrdude command
-				avrdude = "avrdude.exe";
-				avrdudeConf = os + ".avrdude.conf";
-				
-				batchFile = wchdir + L"command.bat";
-				binFile = wchdir + L"file.bin";
-				hexFile = wchdir + L"bootloader.hex";
-				outfile = wchdir + L"out";
-				debugFilename = wchdir + L"debugging.txt";
-			}
+	current_dir = getShortPaths(path);
+	std::wstring wchdir(current_dir);
+		if (os == "Windows")
+        {
+			// WINDOWS
+			// .exe for windows 
+			// no path is appended to avrdude.exe or its config file, since both are used in a batch file
+			// that executes the avrdude command
+			avrdude = "avrdude.exe";
+			avrdudeConf = os + ".avrdude.conf";
+		
+			batchFile = wchdir + L"command.bat";
+			binFile = wchdir + L"file.bin";
+			hexFile = wchdir + L"bootloader.hex";
+			outfile = wchdir + L"out";
+			debugFilename = wchdir + L"debugging.txt";
+		}
 #else
-			
-			binFile = path + "file.bin";
-			hexFile = path + "bootloader.hex";
-			outfile = path + "out";
-			debugFilename = path + "debugging.txt";
-
+		binFile = path + "file.bin";
+		hexFile = path + "bootloader.hex";
+		outfile = path + "out.txt";
+        errfile = path + "err";
+		debugFilename = path + "debugging.txt";
 			if (os == "X11") {
 				// LINUX
 				avrdude = path + os + "." + arch + ".avrdude";
 				avrdudeConf = path + os + "." + arch + ".avrdude.conf";
-			} else {
+			                 } 
+            else {
 				// MAC
 				path = path + "../../";
 				avrdude = path + os + ".avrdude";
 				avrdudeConf = path + os + ".avrdude.conf";
-#ifdef __APPLE__		//added to avoid messing up compilation process
-					binFile = path + "file.bin";
-					outfile = path + "out";
-#endif
-			}
+                    #ifdef __APPLE__		//added to avoid messing up compilation process
+                    	binFile = path + "file.bin";
+                    	outfile = path + "out.txt";
+                        errfile = path + "err";
+                    #endif
+			     }
 #endif
 
   
@@ -584,13 +582,14 @@ private:
 	  * Executes a command with avrdude.
 	  * When on Widnows, the functions creates a batch file and then 
 	  * calls CodebenderccAPI::execAvrdude function to execute the batch file,
-	  * else calls CodebenderccAPI::execAvrdude function.
+	  * else calls CodebenderccAPI::unixExecAvrdude function.
 	  * If appendFlag is true append the output of the avrdude command to the output file, if one exists.
 	  */
 	int runAvrdude(const std::string& command, bool append);
 
     int unixExecAvrdude(const std::string &unixExecCommand);
 
+    long filesize(const char *filename);
 
 	/**
      * 
@@ -674,7 +673,7 @@ private:
 		std::wstring binFile, hexFile, outfile, batchFile;
 		const wchar_t * current_dir;
 	#else
-		std::string avrdude, avrdudeConf, binFile, hexFile, outfile;
+		std::string avrdude, avrdudeConf, binFile, hexFile, outfile, errfile;
 	#endif
     /**
      */
