@@ -617,12 +617,12 @@ int CodebenderccAPI::runAvrdude(const std::string& command, bool append) try {
 		 */
 		lastcommand = command;
 		std::string unixCommand = command; 
-		retval = unixExecAvrdude(unixCommand);
+		retval = unixExecAvrdude(unixCommand, append);
 	#endif
 		/** Print the content of the output file, if debugging is on. **/
 	if (CodebenderccAPI::checkDebug())
 	{
-		std::ifstream ifs(errfile.c_str());
+		std::ifstream ifs(outfile.c_str());
 		std::string content( (std::istreambuf_iterator<char>(ifs) ),
 		(std::istreambuf_iterator<char>()    ) );
 		CodebenderccAPI::debugMessage(content.c_str(),1);
@@ -635,7 +635,7 @@ int CodebenderccAPI::runAvrdude(const std::string& command, bool append) try {
     return 1;
 }
 
-int CodebenderccAPI::unixExecAvrdude (const std::string &unixExecCommand)
+int CodebenderccAPI::unixExecAvrdude (const std::string &unixExecCommand, bool unixAppendFlag)
 { 
 	/* Split command and store exec arguments in a string vector */
 	std::istringstream StreamCommand(unixExecCommand);
@@ -666,10 +666,16 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &unixExecCommand)
 	/* Code executed by child process */
     if (cpid == 0) 
     {
-    	const char * frpathout = outfile.c_str();
-    	const char * frpatherr = errfile.c_str();		
-		stdout=freopen(frpathout,"w", stdout);
-		stderr=freopen(frpatherr,"w",stderr);
+    	const char * frpathout = outfile.c_str();		
+    	if (unixAppendFlag){
+    		stdout=freopen(frpathout, "a", stdout);
+			stderr=freopen(frpathout, "a", stderr);
+    	}
+    	else
+    	{
+    		stdout=freopen(frpathout, "w", stdout);
+			stderr=freopen(frpathout, "w", stderr);
+    	}
        	execv(cmd_argv[0], cmd_argv.data());
     } 
      /* Code executed by parent process */
@@ -690,8 +696,8 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &unixExecCommand)
 				but have not yet changed state, then 0 is returned. */
             if (w == 0)
             {
-				const char *patherr = errfile.c_str();		
-	    		oldSize=CodebenderccAPI::filesize(patherr);
+				const char *pathout = outfile.c_str();		
+	    		oldSize=CodebenderccAPI::filesize(pathout);
 			        if (newSize != oldSize) 
 			        	newSize=oldSize;
 		   			else{

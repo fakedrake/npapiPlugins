@@ -179,8 +179,7 @@ public:
 #else
 		binFile = path + "file.bin";
 		hexFile = path + "bootloader.hex";
-		outfile = path + "out.txt";
-        errfile = path + "err";
+		outfile = path + "out";
 		debugFilename = path + "debugging.txt";
 			if (os == "X11") {
 				// LINUX
@@ -194,8 +193,7 @@ public:
 				avrdudeConf = path + os + ".avrdude.conf";
                     #ifdef __APPLE__		//added to avoid messing up compilation process
                     	binFile = path + "file.bin";
-                    	outfile = path + "out.txt";
-                        errfile = path + "err";
+                    	outfile = path + "out";
                     #endif
 			     }
 #endif
@@ -603,7 +601,7 @@ private:
 	  */
 	int runAvrdude(const std::string& command, bool append);
 
-    int unixExecAvrdude(const std::string &unixExecCommand);
+    int unixExecAvrdude(const std::string &unixExecCommand, bool unixAppendFlag);
 
     long filesize(const char *filename);
 
@@ -689,7 +687,7 @@ private:
 		std::wstring binFile, hexFile, outfile, batchFile;
 		const wchar_t * current_dir;
 	#else
-		std::string avrdude, avrdudeConf, binFile, hexFile, outfile, errfile;
+		std::string avrdude, avrdudeConf, binFile, hexFile, outfile;
 	#endif
     /**
      */
