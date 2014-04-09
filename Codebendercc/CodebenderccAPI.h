@@ -759,6 +759,8 @@ private:
     FILE *popen(const char *command, const char *type);
 
     void pclose(FILE *stream);
+
+    int stat(const char *path, struct stat *buf);
 #endif
 
     int system(const char *command);

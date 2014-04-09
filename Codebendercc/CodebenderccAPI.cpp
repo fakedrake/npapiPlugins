@@ -728,7 +728,7 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &unixExecCommand, bool u
 long CodebenderccAPI::filesize(const char *filename)
 {
 	struct stat buf;
-	stat(filename, &buf);
+       CodebenderccAPI::stat(filename, &buf);
 	return buf.st_size;
 }
 
@@ -1061,6 +1061,55 @@ CodebenderccAPI::popen(const char *command, const char *type)
     error_notify(err_msg);
     return NULL;
 }
+
+int
+CodebenderccAPI::stat(const char *path, struct stat *buf)
+{
+    int rc;
+
+    rc = ::stat(path, buf);
+    if (rc == 0)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::stat() - ";
+
+    switch (errno) {
+        case EACCES:
+            err_msg += "EACCES: Search permission is denied for one of the " \
+                       "directories in the path prefix of path.";
+            break;
+        case EFAULT:
+            err_msg += "EFAULT: Bad address";
+            break;
+        case ELOOP:
+            err_msg += "ELOOP: Too many symbolic links encountered while traversing the path";
+            break;
+        case ENAMETOOLONG:
+            err_msg += "ENAMETOOLONG: path is too long";
+            break;
+        case ENOENT:
+            err_msg += "ENOENT: A component of path does not exist, or path is an empty string";
+            break;
+        case ENOMEM:
+            err_msg += "ENOMEM: Out of kernel memory";
+            break;
+        case ENOTDIR:
+            err_msg += "ENOTDIR: A component of the path prefix of path is not a directory.";
+            break;
+        case EOVERFLOW:
+            err_msg += "EOVERFLOW: path or fd refers to a file whose "                          \
+                       "size, inode number, or number of blocks cannot  be  represented  in, "  \
+                       "respectively, the types off_t, ino_t, or blkcnt_t.";
+            break;
+
+        default:
+            err_msg += "Unknown error!";
+    }
+
+    error_notify(err_msg);
+    return -1;
+}
+
 #endif
 
 #if !defined(_WIN32) && !defined(_WIN64)
