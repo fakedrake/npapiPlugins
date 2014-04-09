@@ -42,31 +42,27 @@ bool CodebenderccAPI::openPort(const std::string &port, const unsigned int &baud
 					serialPort.open();			//open the port
 					serialPort.setDTR(true);	//set Data Transfer signal, needed for Arduino leonardo
 					serialPort.setRTS(false);	//set Request to Send signal to false, needed for Arduino leonardo  
-												}
+											}
 			}catch(serial::PortNotOpenedException& pno){
-				CodebenderccAPI::debugMessage("CodebenderccAPI::PortNotOpenedException exception",2);
-				m_host->htmlLog (pno.what());
+				CodebenderccAPI::debugMessage(pno.what(),2);
 				perror("Error opening port.");
 				RemovePortFromList(usedPort);
 				return false;
 											}
 			catch(serial::SerialException& se){
-				CodebenderccAPI::debugMessage("CodebenderccAPI::SerialException exception",2);
-				m_host->htmlLog (se.what());
+				CodebenderccAPI::debugMessage(se.what(),2);
 				perror("Error opening port.");
 				RemovePortFromList(usedPort);
 				return false;
 									}			
 			catch(std::invalid_argument& inv_arg){
-				CodebenderccAPI::debugMessage("CodebenderccAPI::invalid_argument exception",2);
-				m_host->htmlLog (inv_arg.what());
+				CodebenderccAPI::debugMessage(inv_arg.what(),2);
 				perror("Error opening port.");
 				RemovePortFromList(usedPort);
 				return false;
 									}	
 			catch(serial::IOException& IOe){
-				CodebenderccAPI::debugMessage("CodebenderccAPI::IOException exception",2);
-				m_host->htmlLog (IOe.what());
+				CodebenderccAPI::debugMessage(IOe.what(),2);
 				perror("Error opening port.");
 				RemovePortFromList(usedPort);
 				return false;
