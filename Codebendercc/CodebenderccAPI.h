@@ -742,6 +742,99 @@ private:
 		return L"";
 	}
 #endif
+
+    DIR *opendir(const char *name);
+
+    struct dirent *readdir(DIR *dirp);
+
+    void closedir(DIR *dirp);
+
+    FILE *fopen(const char *path, const char *mode);
+
+    size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+
+    char *fgets(char *s, int size, FILE *stream);
+
+    void fclose(FILE *fp);
+
+#if !defined(_WIN32) && !defined(_WIN64)
+    FILE *popen(const char *command, const char *type);
+
+    void pclose(FILE *stream);
+#endif
+
+    int system(const char *command);
+
+#if defined(_WIN32) || defined(_WIN64)
+    LONG RegQueryInfoKey(HKEY hKey,
+                         LPTSTR lpClass,
+                         LPDWORD lpcClass,
+                         LPDWORD lpReserved,
+                         LPDWORD lpcSubKeys,
+                         LPDWORD lpcMaxSubKeyLen,
+                         LPDWORD lpcMaxClassLen,
+                         LPDWORD lpcValues,
+                         LPDWORD lpcMaxValueNameLen,
+                         LPDWORD lpcMaxValueLen,
+                         LPDWORD lpcbSecurityDescriptor,
+                         PFILETIME lpftLastWriteTime);
+
+    LONG RegEnumValue(HKEY hKey,
+                      DWORD dwIndex,
+                      LPTSTR lpValueName,
+                      LPDWORD lpcchValueName,
+                      LPDWORD lpReserved,
+                      LPDWORD lpType,
+                      LPBYTE lpData,
+                      LPDWORD lpcbData);
+
+    LONG RegQueryValueEx(HKEY hKey,
+                         LPCTSTR lpValueName,
+                         LPDWORD lpReserved,
+                         LPDWORD lpType,
+                         LPBYTE lpData,
+                         LPDWORD lpcbData);
+
+    LONG RegOpenKeyEx(HKEY hKey,
+                      LPCTSTR lpSubKey,
+                      DWORD ulOptions,
+                      REGSAM samDesired,
+                      PHKEY phkResult);
+
+    LONG RegCloseKey(HKEY hKey);
+
+    HANDLE CreateFile(LPCTSTR lpFileName,
+                      DWORD dwDesiredAccess,
+                      DWORD dwShareMode,
+                      LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+                      DWORD dwCreationDisposition,
+                      DWORD dwFlagsAndAttributes,
+                      HANDLE hTemplateFile);
+
+    BOOL CreateProcess(LPCTSTR lpApplicationName,
+                       LPTSTR lpCommandLine,
+                       LPSECURITY_ATTRIBUTES lpProcessAttributes,
+                       LPSECURITY_ATTRIBUTES lpThreadAttributes,
+                       BOOL bInheritHandles,
+                       DWORD dwCreationFlags,
+                       LPVOID lpEnvironment,
+                       LPCTSTR lpCurrentDirectory,
+                       LPSTARTUPINFO lpStartupInfo,
+                       LPPROCESS_INFORMATION lpProcessInformation);
+
+    DWORD WaitForSingleObject(HANDLE hHandle,
+                              DWORD dwMilliseconds);
+
+
+    BOOL GetExitCodeProcess(HANDLE hProcess,
+                            LPDWORD lpExitCode);
+
+    BOOL TerminateProcess(HANDLE hProcess,
+                          UINT uExitCode);
+
+    BOOL CloseHandle(HANDLE hObject);
+#endif
+
 };
 
 #endif // H_CodebenderccAPI

@@ -20,7 +20,7 @@ std::string CodebenderccAPI::QueryKey(HKEY hKey) try {
 	std::string ports = "";
 	
 	// Get the registry key value count. 
-	retCode = RegQueryInfoKey(
+	retCode = CodebenderccAPI::RegQueryInfoKey(
         hKey,		             // An open registry key handle.
         NULL,
         NULL,
@@ -44,7 +44,7 @@ std::string CodebenderccAPI::QueryKey(HKEY hKey) try {
         { 
 			cchValue = MAX_KEY_LENGTH; 
             achValue[0] = '\0'; 
-            retCode = RegEnumValue(
+            retCode = CodebenderccAPI::RegEnumValue(
 				hKey,			// A handle to an open registry key
 				i,				// The index of the value to be retrieved
                 achValue,		// A pointer to a buffer that receives the name of the value as a null-terminated string
@@ -58,7 +58,7 @@ std::string CodebenderccAPI::QueryKey(HKEY hKey) try {
             { 
 				DWORD lpData = cbMaxValueData;
 				buffer[0] = '\0';
-				LONG dwRes = RegQueryValueEx(hKey, achValue, 0, NULL, (LPBYTE)buffer, &lpData);	
+				LONG dwRes = CodebenderccAPI::RegQueryValueEx(hKey, achValue, 0, NULL, (LPBYTE)buffer, &lpData);	
 				if (dwRes == ERROR_SUCCESS)
 				{
 					std::string str( reinterpret_cast<char const*>(buffer) , (int) lpData ) ;
@@ -190,17 +190,21 @@ FB::variant CodebenderccAPI::getFlashResult() try {
 	FILE *pFile;
 	#if defined _WIN32 || _WIN64
 		std::string filename = FB::wstring_to_utf8(outfile);
-		pFile = fopen(filename.c_str(), "r");
+		pFile = CodebenderccAPI::fopen(filename.c_str(), "r");
 	#else
-		pFile = fopen(outfile.c_str(), "r");
+		pFile = CodebenderccAPI::fopen(outfile.c_str(), "r");
 	#endif
     char buffer[128];
     std::string result = "";
+
+    if (pFile == NULL)
+        return result;
+
     while (!feof(pFile)) {
-        if (fgets(buffer, 128, pFile) != NULL)
+        if (CodebenderccAPI::fgets(buffer, 128, pFile) != NULL)
             result += buffer;
     }
-    fclose(pFile);
+    CodebenderccAPI::fclose(pFile);
 	CodebenderccAPI::debugMessage("CodebenderccAPI::getFlashResult ended",3);
     return result;
 }catch (...) {

@@ -106,7 +106,7 @@ std::string CodebenderccAPI::probeUSB() try {
    /*
     * Open the registry key where serial port key-value pairs are stored.
 	*/
-   if( RegOpenKeyEx( HKEY_LOCAL_MACHINE,		// The name of the registry key handle is always the same.
+   if( CodebenderccAPI::RegOpenKeyEx( HKEY_LOCAL_MACHINE,		// The name of the registry key handle is always the same.
         TEXT("HARDWARE\\DEVICEMAP\\SERIALCOMM\\"),	// The same applies to the subkey, since we are looking for serial ports only.
         0,
         KEY_READ,								// Set the access rights, before reading the key contents.
@@ -119,7 +119,7 @@ std::string CodebenderccAPI::probeUSB() try {
 		lastPortCount=ports.length();
 		CodebenderccAPI::detectNewPort(ports);
 									}
-	RegCloseKey(hKey);	// Need to close the key handle after the task is completed.	
+	CodebenderccAPI::RegCloseKey(hKey);	// Need to close the key handle after the task is completed.	
     return ports;
 } catch (...) {
     error_notify("[Windows] CodebenderccAPI::probeUSB() threw an unknown exception");
@@ -133,10 +133,10 @@ std::string CodebenderccAPI::probeUSB() try {
     DIR *dp;
     std::string dirs = "";
 	struct dirent *ep;
-    dp = opendir("/dev/");
+    dp = CodebenderccAPI::opendir("/dev/");
     if (dp != NULL) 
     {
-        while (ep = readdir(dp)) 
+        while (ep = CodebenderccAPI::readdir(dp)) 
         {
             //UNIX ARDUINO PORTS
             if (boost::contains(ep->d_name, "ttyACM") || boost::contains(ep->d_name, "ttyUSB")) {
@@ -149,7 +149,7 @@ std::string CodebenderccAPI::probeUSB() try {
                 dirs += ",";
             }
         }
-        (void) closedir(dp);
+        CodebenderccAPI::closedir(dp);
 	} else{
 		CodebenderccAPI::debugMessage("CodebenderccAPI::probeUSB could not open directory",2);
 	}	
@@ -198,7 +198,7 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 
 	PROCESS_INFORMATION pi  = { 0 }; // Create an empty process information struct. Needed to get the return value of the command.
 
-	HANDLE fh = CreateFile(		// Create a file handle pointing to the output file, in order to capture the output.
+	HANDLE fh = CodebenderccAPI::CreateFile(		// Create a file handle pointing to the output file, in order to capture the output.
 		&outfile[0], 
 		APPEND,
 		FILE_SHARE_READ|FILE_SHARE_WRITE, 
@@ -212,7 +212,7 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 	si.hStdInput = fh; 
 
 	// Create the child process. The command simply executes the contents of the batch file, which is the actual command.
-	success = CreateProcess(
+	success = CodebenderccAPI::CreateProcess(
 		NULL,
 		(LPWSTR)command.c_str(),     // command line
 		NULL,               // process security attributes
@@ -231,14 +231,14 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 	}
  
 	// Wait until child processes exit. Don't wait forever.
-	WaitForSingleObject( pi.hProcess, INFINITE );
-	GetExitCodeProcess(pi.hProcess, &dwExitCode);
-	TerminateProcess( pi.hProcess, 0 ); // Kill process if it is still running
+	CodebenderccAPI::WaitForSingleObject( pi.hProcess, INFINITE );
+	CodebenderccAPI::GetExitCodeProcess(pi.hProcess, &dwExitCode);
+	CodebenderccAPI::TerminateProcess( pi.hProcess, 0 ); // Kill process if it is still running
 	 
-	CloseHandle(fh);
+	CodebenderccAPI::CloseHandle(fh);
 	// CreateProcess docs specify that these must be closed. 
-	CloseHandle( pi.hProcess );
-	CloseHandle( pi.hThread );	
+	CodebenderccAPI::CloseHandle( pi.hProcess );
+	CodebenderccAPI::CloseHandle( pi.hThread );	
 	CodebenderccAPI::debugMessage("CodebenderccAPI::winExecAvrdude ended",3);
 	return dwExitCode;
 } catch (...) {
@@ -738,14 +738,14 @@ long size = 0;
  */
 void CodebenderccAPI::saveToBin(unsigned char * data, size_t size) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::saveToBin",3);
-	
-	std::ofstream myfile;
-    myfile.open(binFile.c_str(), std::fstream::binary);
-    for (size_t i = 0; i < size; i++) {
 
-        myfile << data[i];
-    }
-    myfile.close();
+    FILE *fp = CodebenderccAPI::fopen(binFile.c_str(), "wb");
+    if (!fp)
+        return;
+
+    CodebenderccAPI::fwrite(data, size, 1, fp);
+    CodebenderccAPI::fclose(fp);
+
 	CodebenderccAPI::debugMessage("CodebenderccAPI::saveToBin ended",3);
 } catch (...) {
     error_notify("CodebenderccAPI::saveToBin() threw an unknown exception");
@@ -755,16 +755,16 @@ void CodebenderccAPI::saveToBin(unsigned char * data, size_t size) try {
  * Save the hex data of the bootloader file to the hex file specified in the constructor.
  */
 void CodebenderccAPI::saveToHex(const std::string& hexContent) try {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::saveToHex",3);
+    CodebenderccAPI::debugMessage("CodebenderccAPI::saveToHex",3);
 
-	// Save the content of the bootloader to a local hex file.
-	std::ofstream myfile;
-    myfile.open(hexFile.c_str(), std::fstream::binary);
+    FILE *fp = CodebenderccAPI::fopen(hexFile.c_str(), "wb");
+    if (!fp)
+        return;
 
-	myfile << hexContent;
-	myfile.close();
+    CodebenderccAPI::fwrite(hexContent.c_str(), hexContent.length(), 1, fp);
+    CodebenderccAPI::fclose(fp);
 
-	CodebenderccAPI::debugMessage("CodebenderccAPI::saveToHex ended",3);
+    CodebenderccAPI::debugMessage("CodebenderccAPI::saveToHex ended",3);
 } catch (...) {
     error_notify("CodebenderccAPI::saveToHex() threw an unknown exception");
 }
@@ -842,14 +842,14 @@ std::string CodebenderccAPI::exec(const char * cmd) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::exec",3);
 	std::string result = "";
 #if !defined  _WIN32 || _WIN64	
-    FILE* pipe = popen(cmd, "r");
+    FILE* pipe = CodebenderccAPI::popen(cmd, "r");
     if (!pipe) return "ERROR";
     char buffer[128];
-    while (fgets(buffer, 128, pipe) != NULL) {
+    while (CodebenderccAPI::fgets(buffer, 128, pipe) != NULL) {
 
         result += buffer;
     }
-    pclose(pipe);
+    CodebenderccAPI::pclose(pipe);
 #endif
 	CodebenderccAPI::debugMessage("CodebenderccAPI::exec ended",3);
     return result;
@@ -868,3 +868,558 @@ void CodebenderccAPI::error_notify(const std::string &message) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::error_notify",3);	
 	error_callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
 }
+
+DIR *
+CodebenderccAPI::opendir(const char *name)
+{
+    DIR *dp;
+
+    dp = ::opendir(name);
+    if (dp)
+        return dp;
+
+    std::string err_msg = "CodebenderccAPI::opendir() - ";
+
+    switch (errno) {
+        case EACCES:
+            err_msg += "EACCES: Permission denied.";
+            break;
+        case EMFILE:
+            err_msg += "EMFILE: Too many file descriptors in use by process.";
+            break;
+        case ENFILE:
+            err_msg += "ENFILE: Too many files are currently open in the system.";
+            break;
+        case ENOENT:
+            err_msg += "ENOENT: Directory does not exist, or name is an empty string.";
+            break;
+        case ENOMEM:
+            err_msg += "ENOMEM: Insufficient memory to complete the operation.";
+            break;
+        case ENOTDIR:
+            err_msg += "ENOTDIR: name is not a directory.";
+            break;
+
+        default:
+            err_msg += "Unknown error!";
+    }
+
+    error_notify(err_msg);
+    return NULL;
+}
+
+struct dirent *
+CodebenderccAPI::readdir(DIR *dirp)
+{
+    struct dirent *dent;
+
+    errno = 0;
+    dent = ::readdir(dirp);
+
+    if (errno == 0)
+        return dent;
+
+    std::string err_msg = "CodebenderccAPI::readdir() - ";
+
+    switch (errno) {
+        case EBADF:
+            err_msg += "EBADF: Invalid directory stream descriptor dirp.";
+            break;
+
+        default:
+            err_msg += "Unknown error!";
+    }
+
+    error_notify(err_msg);
+    return NULL;
+}
+
+void
+CodebenderccAPI::closedir(DIR *dirp)
+{
+    int rc;
+
+    rc = ::closedir(dirp);
+    if (rc == 0)
+        return;
+
+    std::string err_msg = "CodebenderccAPI::closedir() - ";
+
+    switch (errno) {
+        case EBADF:
+            err_msg += "EBADF: Invalid directory stream descriptor dirp.";
+            break;
+
+        default:
+            err_msg += "Unknown error!";
+    }
+
+    error_notify(err_msg);
+}
+
+FILE *
+CodebenderccAPI::fopen(const char *path, const char *mode)
+{
+    FILE *fp;
+
+    fp = ::fopen(path, mode);
+    if (fp)
+        return fp;
+
+    std::string err_msg = "CodebenderccAPI::fopen() - ";
+
+    switch (errno) {
+        case EINVAL:
+            err_msg += "EINVAL: The mode provided to fopen() was invalid.";
+            break;
+
+        default:
+            err_msg += "Unknown error!";
+    }
+
+    error_notify(err_msg);
+    return NULL;
+}
+
+size_t
+CodebenderccAPI::fwrite(const void *ptr,
+                        size_t size,
+                        size_t nmemb,
+                        FILE *stream)
+{
+    std::string err_msg = "CodebenderccAPI::fwrite() - ";
+    size_t n;
+
+    clearerr(stream);
+
+    n = ::fwrite(ptr, size, nmemb, stream);
+    if (n == nmemb)
+        return n;
+
+    err_msg += (ferror(stream) != 0) ? "errno set" : "bad I/O";
+    error_notify(err_msg);
+    return n;
+}
+
+char *
+CodebenderccAPI::fgets(char *s, int size, FILE *stream)
+{
+    char *ret;
+
+    clearerr(stream);
+    ret = ::fgets(s, size, stream);
+
+    if (ferror(stream)  == 0)
+        return ret;
+
+    std::string err_msg = "CodebenderccAPI::fgets() failed";
+
+    error_notify(err_msg);
+    return NULL;
+}
+
+void
+CodebenderccAPI::fclose(FILE *fp)
+{
+    if (::fclose(fp) == 0)
+        return;
+
+    std::string err_msg = "CodebenderccAPI::fclose() - ";
+
+    switch (errno) {
+        case EBADF:
+            err_msg += "EBADF  The file descriptor underlying fp is not valid.";
+            break;
+
+        default:
+            err_msg += "Unknown error!";
+    }
+
+    error_notify(err_msg);
+}
+
+#if !defined(_WIN32) && !defined(_WIN64)
+FILE *
+CodebenderccAPI::popen(const char *command, const char *type)
+{
+    FILE *fp;
+
+    fp = ::popen(command, type);
+    if (fp)
+        return fp;
+
+    std::string err_msg = "CodebenderccAPI::popen() - ";
+
+    switch (errno) {
+        case EINVAL:
+            err_msg += "EINVAL: invalid type argument";
+            break;
+
+        default:
+            err_msg += "Unknown error!";
+    }
+
+    error_notify(err_msg);
+    return NULL;
+}
+#endif
+
+#if !defined(_WIN32) && !defined(_WIN64)
+void
+CodebenderccAPI::pclose(FILE *stream)
+{
+    if (::pclose(stream) != -1)
+        return;
+
+    std::string err_msg = "CodebenderccAPI::pclose() - ";
+
+    switch (errno) {
+        case ECHILD:
+            err_msg += "ECHILD: could not obtain the child status";
+            break;
+
+        default:
+            err_msg += "Unknown error!";
+    }
+
+    error_notify(err_msg);
+}
+#endif
+
+/** TODO: we should return the result of WEXITSTATUS(rc) */
+int
+CodebenderccAPI::system(const char *command)
+{
+    std::string err_msg = "CodebenderccAPI::system() - ";
+    int rc;
+
+    rc = ::system(NULL);
+    if (rc == 0)
+        error_notify(err_msg + "can not access the shell");
+
+    rc = ::system(command);
+    if (rc == -1)
+        err_msg += "Unknown error";
+#if !defined(_WIN32) && !defined(_WIN64)
+    else if (WEXITSTATUS(rc) == 127)
+        err_msg += "/bin/sh could not be executed";
+#endif
+    else
+        return rc;
+
+    error_notify(err_msg);
+    return rc;
+}
+
+#if defined(_WIN32) || defined(_WIN64)
+LONG
+CodebenderccAPI::RegQueryInfoKey(HKEY hKey,
+                                 LPTSTR lpClass,
+                                 LPDWORD lpcClass,
+                                 LPDWORD lpReserved,
+                                 LPDWORD lpcSubKeys,
+                                 LPDWORD lpcMaxSubKeyLen,
+                                 LPDWORD lpcMaxClassLen,
+                                 LPDWORD lpcValues,
+                                 LPDWORD lpcMaxValueNameLen,
+                                 LPDWORD lpcMaxValueLen,
+                                 LPDWORD lpcbSecurityDescriptor,
+                                 PFILETIME lpftLastWriteTime)
+{
+    LONG rc;
+
+    rc = ::RegQueryInfoKey(hKey,
+                           lpClass,
+                           lpcClass,
+                           lpReserved,
+                           lpcSubKeys,
+                           lpcMaxSubKeyLen,
+                           lpcMaxClassLen,
+                           lpcValues,
+                           lpcMaxValueNameLen,
+                           lpcMaxValueLen,
+                           lpcbSecurityDescriptor,
+                           lpftLastWriteTime);
+    if (rc == ERROR_SUCCESS)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::RegQueryInfoKey() - ";
+
+    switch (rc) {
+        case ERROR_MORE_DATA:
+            err_msg += "lpClass buffer is too small to receive the name of the class";
+            break;
+
+        default:
+            err_msg += "System error code: ";
+            err_msg += boost::lexical_cast<std::string>(rc);
+    }
+
+    error_notify(err_msg);
+    return rc;
+}
+
+LONG
+CodebenderccAPI::RegEnumValue(HKEY hKey,
+                              DWORD dwIndex,
+                              LPTSTR lpValueName,
+                              LPDWORD lpcchValueName,
+                              LPDWORD lpReserved,
+                              LPDWORD lpType,
+                              LPBYTE lpData,
+                              LPDWORD lpcbData)
+{
+    LONG rc;
+
+    rc = ::RegEnumValue(hKey,
+                        dwIndex,
+                        lpValueName,
+                        lpcchValueName,
+                        lpReserved,
+                        lpType,
+                        lpData,
+                        lpcbData);
+    if (rc == ERROR_SUCCESS)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::RegEnumValue() - ";
+
+    switch (rc) {
+        case ERROR_MORE_DATA:
+            err_msg += "lpData buffer is too small to receive the value";
+            break;
+
+        case ERROR_NO_MORE_ITEMS:
+            err_msg += "There are no more values available";
+            break;
+
+        default:
+            err_msg += "System error code: ";
+            err_msg += boost::lexical_cast<std::string>(rc);
+    }
+
+    error_notify(err_msg);
+    return rc;
+}
+
+LONG
+CodebenderccAPI::RegQueryValueEx(HKEY hKey,
+                                 LPCTSTR lpValueName,
+                                 LPDWORD lpReserved,
+                                 LPDWORD lpType,
+                                 LPBYTE lpData,
+                                 LPDWORD lpcbData)
+{
+    LONG rc;
+
+    rc = ::RegQueryValueEx(hKey,
+                           lpValueName,
+                           lpReserved,
+                           lpType,
+                           lpData,
+                           lpcbData);
+    if (rc == ERROR_SUCCESS)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::RegQueryValueEx() - ";
+
+    switch (rc) {
+        case ERROR_MORE_DATA:
+            err_msg += "lpData buffer is too small to receive the data";
+            break;
+
+        case ERROR_FILE_NOT_FOUND:
+            err_msg += "lpValueName registry value does not exist";
+            break;
+
+        default:
+            err_msg += "System error code: ";
+            err_msg += boost::lexical_cast<std::string>(rc);
+    }
+
+    error_notify(err_msg);
+    return rc;
+}
+
+
+LONG
+CodebenderccAPI::RegOpenKeyEx(HKEY hKey,
+                              LPCTSTR lpSubKey,
+                              DWORD ulOptions,
+                              REGSAM samDesired,
+                              PHKEY phkResult)
+{
+    LONG rc;
+
+    rc = ::RegOpenKeyEx(hKey,
+                        lpSubKey,
+                        ulOptions,
+                        samDesired,
+                        phkResult);
+    if (rc == ERROR_SUCCESS)
+        return rc;
+
+    /* TODO: Print error code description with FormatMessage.
+ *      *
+ *           * http://msdn.microsoft.com/en-us/library/windows/desktop/ms724897%28v=vs.85%29.aspx
+ *               */
+    std::string err_msg = "CodebenderccAPI::RegOpenKeyEx() - Winerror.h error code: ";
+    err_msg += boost::lexical_cast<std::string>(rc);
+
+    error_notify(err_msg);
+    return rc;
+}
+
+LONG
+CodebenderccAPI::RegCloseKey(HKEY hKey)
+{
+    LONG rc;
+
+    rc = ::RegCloseKey(hKey);
+    if (rc == ERROR_SUCCESS)
+        return rc;
+
+    /* TODO: Print error code description with FormatMessage.
+ *      *
+ *           * http://msdn.microsoft.com/en-us/library/windows/desktop/ms724837%28v=vs.85%29.aspx
+ *               */
+    std::string err_msg = "CodebenderccAPI::RegCloseKey() - Winerror.h error code: ";
+    err_msg += boost::lexical_cast<std::string>(rc);
+
+    error_notify(err_msg);
+    return rc;
+}
+
+HANDLE
+CodebenderccAPI::CreateFile(LPCTSTR lpFileName,
+                            DWORD dwDesiredAccess,
+                            DWORD dwShareMode,
+                            LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+                            DWORD dwCreationDisposition,
+                            DWORD dwFlagsAndAttributes,
+                            HANDLE hTemplateFile)
+{
+    HANDLE rc;
+
+    rc = ::CreateFile(lpFileName,
+                      dwDesiredAccess,
+                      dwShareMode,
+                      lpSecurityAttributes,
+                      dwCreationDisposition,
+                      dwFlagsAndAttributes,
+                      hTemplateFile);
+    if (rc != INVALID_HANDLE_VALUE)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::CreateFile() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
+
+    error_notify(err_msg);
+    return rc;
+}
+
+BOOL
+CodebenderccAPI::CreateProcess(LPCTSTR lpApplicationName,
+                               LPTSTR lpCommandLine,
+                               LPSECURITY_ATTRIBUTES lpProcessAttributes,
+                               LPSECURITY_ATTRIBUTES lpThreadAttributes,
+                               BOOL bInheritHandles,
+                               DWORD dwCreationFlags,
+                               LPVOID lpEnvironment,
+                               LPCTSTR lpCurrentDirectory,
+                               LPSTARTUPINFO lpStartupInfo,
+                               LPPROCESS_INFORMATION lpProcessInformation)
+{
+    BOOL rc;
+
+    rc = ::CreateProcess(lpApplicationName,
+                         lpCommandLine,
+                         lpProcessAttributes,
+                         lpThreadAttributes,
+                         bInheritHandles,
+                         dwCreationFlags,
+                         lpEnvironment,
+                         lpCurrentDirectory,
+                         lpStartupInfo,
+                         lpProcessInformation);
+    if (rc != 0)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::CreateProcess() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
+
+    error_notify(err_msg);
+    return rc;
+}
+
+DWORD
+CodebenderccAPI::WaitForSingleObject(HANDLE hHandle,
+                                     DWORD dwMilliseconds)
+{
+    DWORD rc;
+
+    rc = ::WaitForSingleObject(hHandle,
+                               dwMilliseconds);
+    if (rc != WAIT_FAILED)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::WaitForSingleObject() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
+
+    error_notify(err_msg);
+    return rc;
+}
+
+BOOL
+CodebenderccAPI::GetExitCodeProcess(HANDLE hProcess,
+                                    LPDWORD lpExitCode)
+{
+    BOOL rc;
+
+    rc = ::GetExitCodeProcess(hProcess,
+                              lpExitCode);
+    if (rc != 0)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::GetExitCodeProcess() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
+
+    error_notify(err_msg);
+    return rc;
+}
+
+BOOL
+CodebenderccAPI::TerminateProcess(HANDLE hProcess,
+                                  UINT uExitCode)
+{
+    BOOL rc;
+
+    rc = ::TerminateProcess(hProcess,
+                            uExitCode);
+    if (rc != 0)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::TerminateProcess() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
+
+    error_notify(err_msg);
+    return rc;
+}
+
+BOOL
+CodebenderccAPI::CloseHandle(HANDLE hObject)
+{
+    BOOL rc;
+
+    rc = ::CloseHandle(hObject);
+    if (rc != 0)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::CloseHandle() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
+
+    error_notify(err_msg);
+    return rc;
+}
+
+#endif
