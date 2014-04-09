@@ -749,6 +749,8 @@ private:
 
     FILE *fopen(const char *path, const char *mode);
 
+    FILE *freopen(const char *path, const char *mode, FILE *stream);
+
     size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 
     char *fgets(char *s, int size, FILE *stream);

@@ -667,15 +667,14 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &unixExecCommand, bool u
     if (cpid == 0) 
     {
     	const char * frpathout = outfile.c_str();		
-    	if (unixAppendFlag){
-    		stdout=freopen(frpathout, "a", stdout);
-			stderr=freopen(frpathout, "a", stderr);
-    	}
-    	else
-    	{
-    		stdout=freopen(frpathout, "w", stdout);
-			stderr=freopen(frpathout, "w", stderr);
-    	}
+
+        stdout = CodebenderccAPI::freopen(frpathout,
+                                          unixAppendFlag ? "a" : "w",
+                                          stdout);
+        stderr = CodebenderccAPI::freopen(frpathout,
+                                          unixAppendFlag ? "a" : "w",
+                                          stderr);
+
        	execv(cmd_argv[0], cmd_argv.data());
     } 
      /* Code executed by parent process */
@@ -970,6 +969,30 @@ CodebenderccAPI::fopen(const char *path, const char *mode)
     switch (errno) {
         case EINVAL:
             err_msg += "EINVAL: The mode provided to fopen() was invalid.";
+            break;
+
+        default:
+            err_msg += "Unknown error!";
+    }
+
+    error_notify(err_msg);
+    return NULL;
+}
+
+FILE *
+CodebenderccAPI::freopen(const char *path, const char *mode, FILE *stream)
+{
+    FILE *fp;
+
+    fp = ::freopen(path, mode, stream);
+    if (fp != NULL)
+        return fp;
+
+    std::string err_msg = "CodebenderccAPI::freopen() - ";
+
+    switch (errno) {
+        case EINVAL:
+            err_msg += "EINVAL: The mode provided to freopen() was invalid.";
             break;
 
         default:
