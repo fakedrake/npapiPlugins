@@ -6,7 +6,7 @@
 
 #if defined _WIN32||_WIN64
 
-std::string CodebenderccAPI::QueryKey(HKEY hKey) {
+std::string CodebenderccAPI::QueryKey(HKEY hKey) try {
 
     DWORD    cValues;              // number of values for key 
     DWORD    cchMaxValue;          // longest value name (characters)
@@ -80,10 +80,13 @@ std::string CodebenderccAPI::QueryKey(HKEY hKey) {
     }
 	delete [] buffer;
 	return ports;
+}catch (...) {
+    error_notify("CodebenderccAPI::QueryKey() threw an unknown exception");
+    return "";
 }
 #endif
 
-void CodebenderccAPI::enableDebug(int debugLevel) {
+void CodebenderccAPI::enableDebug(int debugLevel) try{
 	if(debugLevel >= 1 && debugLevel <= 3) {
 		debug_ = true;
 		currentLevel= debugLevel;
@@ -107,9 +110,11 @@ void CodebenderccAPI::enableDebug(int debugLevel) {
 					}
 		m_host->htmlLog("Level set in enableDebug is not valid.");
 		}
+}catch (...) {
+    error_notify("CodebenderccAPI::enableDebug() threw an unknown exception");
 }
 
-void CodebenderccAPI::disableDebug() {
+void CodebenderccAPI::disableDebug() try{
 		debug_ = false;
 		if (currentLevel==3){
 			if (debugFile.is_open())
@@ -117,13 +122,16 @@ void CodebenderccAPI::disableDebug() {
 					debugFile.close();
 				 }
 							}
+} catch (...) {
+    error_notify("CodebenderccAPI::disableDebug() threw an unknown exception");
 }
+
 
 bool CodebenderccAPI::checkDebug() {
 	return debug_;
 }
 
-void CodebenderccAPI::debugMessageProbe(const char * messageDebug, int minimumLevel) {
+void CodebenderccAPI::debugMessageProbe(const char * messageDebug, int minimumLevel) try {
 	if (CodebenderccAPI::checkDebug() && minimumLevel <= currentLevel && probeFlag==false)	{			
 		probeFlag=true;	
 		m_host->htmlLog(messageDebug);
@@ -135,9 +143,11 @@ void CodebenderccAPI::debugMessageProbe(const char * messageDebug, int minimumLe
 				}
 							}
 																		 }
+}catch (...) {
+    error_notify("CodebenderccAPI::debugMessageProbe() threw an unknown exception");
 }
 
-void CodebenderccAPI::debugMessage(const char * messageDebug, int minimumLevel) {
+void CodebenderccAPI::debugMessage(const char * messageDebug, int minimumLevel) try {
 	if (CodebenderccAPI::checkDebug() && minimumLevel <= currentLevel)			
 		m_host->htmlLog(messageDebug); 
 		probeFlag=false;
@@ -148,6 +158,8 @@ void CodebenderccAPI::debugMessage(const char * messageDebug, int minimumLevel) 
 				 debugFile << "\n";
 				}
 							}
+}catch (...) {
+    error_notify("CodebenderccAPI::debugMessage() threw an unknown exception");
 }
 
 void CodebenderccAPI::getThreadId(const char * pidMessage,const char * threadMessage) {
@@ -187,7 +199,7 @@ FB::variant CodebenderccAPI::getLastCommand() {
 	return lastcommand;
 }
 
-FB::variant CodebenderccAPI::getFlashResult() {
+FB::variant CodebenderccAPI::getFlashResult() try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::getFlashResult",3);
 	FILE *pFile;
 	#if defined _WIN32 || _WIN64
@@ -205,7 +217,12 @@ FB::variant CodebenderccAPI::getFlashResult() {
     fclose(pFile);
 	CodebenderccAPI::debugMessage("CodebenderccAPI::getFlashResult ended",3);
     return result;
+}catch (...) {
+    error_notify("CodebenderccAPI::getFlashResult() threw an unknown exception");
+    return "";
 }
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////PRIVATE////////////////////////////////////////////
@@ -219,7 +236,7 @@ FB::variant CodebenderccAPI::getFlashResult() {
  * @param targetlen length of the target buffer
  * @return length of converted data on success, -1 otherwise
  */
-size_t CodebenderccAPI::base64_decode(const char *source, unsigned char *target, size_t targetlen) {
+size_t CodebenderccAPI::base64_decode(const char *source, unsigned char *target, size_t targetlen) try {
     
 	char *src, *tmpptr;
     char quadruple[4];
@@ -266,6 +283,9 @@ size_t CodebenderccAPI::base64_decode(const char *source, unsigned char *target,
     free(src);
 
     return converted;
+}catch (...) {
+    error_notify("CodebenderccAPI::base64_decode() threw an unknown exception");
+    return 0;
 }
 
 /**
@@ -274,7 +294,7 @@ size_t CodebenderccAPI::base64_decode(const char *source, unsigned char *target,
  * @param base64char the character of which the value is searched
  * @return the value in case of success (0-63), -1 on failure
  */
-int CodebenderccAPI::_base64_char_value(char base64char) {
+int CodebenderccAPI::_base64_char_value(char base64char) try {
 
 	if (base64char >= 'A' && base64char <= 'Z')
         return base64char - 'A';
@@ -288,6 +308,9 @@ int CodebenderccAPI::_base64_char_value(char base64char) {
 
         return 2 * 26 + 11;
     return -1;
+}catch (...) {
+    error_notify("CodebenderccAPI::_base64_char_value() threw an unknown exception");
+    return -1;
 }
 
 /**
@@ -297,7 +320,7 @@ int CodebenderccAPI::_base64_char_value(char base64char) {
  * @param result the decoded data
  * @return lenth of the result (1, 2 or 3), 0 on failure
  */
-int CodebenderccAPI::_base64_decode_triple(char quadruple[4], unsigned char *result) {
+int CodebenderccAPI::_base64_decode_triple(char quadruple[4], unsigned char *result) try {
 
 	int i, triple_value, bytes_to_decode = 3, only_equals_yet = 1;
     int char_value[4];
@@ -344,9 +367,12 @@ int CodebenderccAPI::_base64_decode_triple(char quadruple[4], unsigned char *res
     }
 
     return bytes_to_decode;
+} catch (...) {
+    error_notify("CodebenderccAPI::_base64_decode_triple() threw an unknown exception");
+    return 0;
 }
 
-int CodebenderccAPI::programmerPrefs(const std::string& port, const std::string& programmerProtocol, const std::string&  programmerSpeed, const std::string& programmerCommunication, const std::string& programmerForce, const std::string& programmerDelay, const std::string& mcu, std::map<std::string, std::string>& programmerData) {
+int CodebenderccAPI::programmerPrefs(const std::string& port, const std::string& programmerProtocol, const std::string&  programmerSpeed, const std::string& programmerCommunication, const std::string& programmerForce, const std::string& programmerDelay, const std::string& mcu, std::map<std::string, std::string>& programmerData) try {
 	
 	CodebenderccAPI::debugMessage("CodebenderccAPI::programmerPrefs",3);
 
@@ -376,9 +402,12 @@ int CodebenderccAPI::programmerPrefs(const std::string& port, const std::string&
 	CodebenderccAPI::debugMessage("CodebenderccAPI::programmerPrefs ended",3);
 
 	return 0;
+}catch (...) {
+    error_notify("CodebenderccAPI::programmerPrefs() threw an unknown exception");
+    return 0;
 }
 
-int CodebenderccAPI::bootloaderPrefs(const std::string& lFuses, const std::string& hFuses, const std::string& eFuses, const std::string& ulBits, const std::string& lBits, std::map<std::string, std::string>& data) {
+int CodebenderccAPI::bootloaderPrefs(const std::string& lFuses, const std::string& hFuses, const std::string& eFuses, const std::string& ulBits, const std::string& lBits, std::map<std::string, std::string>& data) try {
 
 	CodebenderccAPI::debugMessage("CodebenderccAPI::bootloaderPrefs",3);
 
@@ -403,19 +432,25 @@ int CodebenderccAPI::bootloaderPrefs(const std::string& lFuses, const std::strin
 	CodebenderccAPI::debugMessage("CodebenderccAPI::bootloaderPrefs ended",3);
 
 	return 0;
+}catch (...) {
+    error_notify("CodebenderccAPI::bootloaderPrefs() threw an unknown exception");
+    return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////validations//////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-bool CodebenderccAPI::validate_hex(const std::string & input) {
+bool CodebenderccAPI::validate_hex(const std::string & input) try {
   return (input.compare(0, 2, "0x") == 0
       && input.size() > 2 && input.size() <= 4
       && input.find_first_not_of("0123456789abcdefABCDEF", 2) == std::string::npos);
+}catch (...) {
+    error_notify("CodebenderccAPI::validate_hex() threw an unknown exception");
+    return false;
 }
 
-bool CodebenderccAPI::validate_number(const std::string & input) {
+bool CodebenderccAPI::validate_number(const std::string & input) try {
 
 	try {
         boost::lexical_cast<double>(input);
@@ -424,9 +459,12 @@ bool CodebenderccAPI::validate_number(const std::string & input) {
 
         return false;
     }
+}catch (...) {
+    error_notify("CodebenderccAPI::validate_number() threw an unknown exception");
+    return false;
 }
 
-bool CodebenderccAPI::validate_device(const std::string & input) {
+bool CodebenderccAPI::validate_device(const std::string & input) try {
 	
 	static const boost::regex acm("\\/dev\\/ttyACM[[:digit:]]+");
     static const boost::regex usb("\\/dev\\/ttyUSB[[:digit:]]+");
@@ -438,17 +476,26 @@ bool CodebenderccAPI::validate_device(const std::string & input) {
             || boost::regex_match(input, com)
             || boost::regex_match(input, cu)
             ;
+}catch (...) {
+    error_notify("CodebenderccAPI::validate_device() threw an unknown exception");
+    return false;
 }
 
-bool CodebenderccAPI::validate_code(const std::string & input) {
+bool CodebenderccAPI::validate_code(const std::string & input) try {
 
 	static const boost::regex base64("[0-9a-zA-Z+\\/=\n]+");
 
     return boost::regex_match(input, base64);
+}catch (...) {
+    error_notify("CodebenderccAPI::validate_code() threw an unknown exception");
+    return false;
 }
 
-bool CodebenderccAPI::validate_charnum(const std::string & input) {
+bool CodebenderccAPI::validate_charnum(const std::string & input) try {
 
 	static const boost::regex charnum("[0-9a-zA-Z]*");
     return boost::regex_match(input, charnum);
+}catch (...) {
+    error_notify("CodebenderccAPI::validate_charnum() threw an unknown exception");
+    return false;
 }

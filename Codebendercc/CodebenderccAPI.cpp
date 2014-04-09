@@ -17,14 +17,15 @@ FB::variant CodebenderccAPI::download() {
 ////////////////////////////////////public//////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-bool CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudrate) {
+bool CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudrate) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::openPort",3);
 	std::string device;
 	device = port;
 	#if defined _WIN32||_WIN64
 		device = "\\\\.\\" + port;
 	#endif
-	if(AddtoPortList(device)){ //Check if device is used by someone else
+	if(AddtoPortList(device))
+	{ //Check if device is used by someone else
 		try
 			{
 			usedPort=device;		
@@ -41,7 +42,7 @@ bool CodebenderccAPI::openPort(const std::string &port, const unsigned int &baud
 					serialPort.open();			//open the port
 					serialPort.setDTR(true);	//set Data Transfer signal, needed for Arduino leonardo
 					serialPort.setRTS(false);	//set Request to Send signal to false, needed for Arduino leonardo  
-				}
+												}
 			}catch(serial::PortNotOpenedException& pno){
 				CodebenderccAPI::debugMessage("CodebenderccAPI::PortNotOpenedException exception",2);
 				m_host->htmlLog (pno.what());
@@ -70,16 +71,18 @@ bool CodebenderccAPI::openPort(const std::string &port, const unsigned int &baud
 				RemovePortFromList(usedPort);
 				return false;
 								}						
-		}	
+	}	
 	else{
 		CodebenderccAPI::debugMessage("CodebenderccAPI::Port is already in use.",3);
 		return false;
 		}	
 	CodebenderccAPI::debugMessage("CodebenderccAPI::openPort ended",3);
 	return true;
+} catch (...) {
+    error_notify("CodebenderccAPI::openPort() threw an unknown exception");
 }
 
-void CodebenderccAPI::closePort() {
+void CodebenderccAPI::closePort() try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::closePort",3);		
 	try{
 		if(serialPort.isOpen())
@@ -90,10 +93,13 @@ void CodebenderccAPI::closePort() {
 	RemovePortFromList(usedPort);
 	}
 	CodebenderccAPI::debugMessage("CodebenderccAPI::closePort ended",3);
+} catch (...) {
+    error_notify("CodebenderccAPI::closePort() threw an unknown exception");
 }
 
 #if defined _WIN32||_WIN64
-std::string CodebenderccAPI::probeUSB() {
+
+std::string CodebenderccAPI::probeUSB() try {
 	CodebenderccAPI::debugMessageProbe("CodebenderccAPI::probeUSB probing USB ports",3);
 	std::string ports ="";
 	HKEY hKey;
@@ -115,16 +121,23 @@ std::string CodebenderccAPI::probeUSB() {
 									}
 	RegCloseKey(hKey);	// Need to close the key handle after the task is completed.	
     return ports;
+} catch (...) {
+    error_notify("[Windows] CodebenderccAPI::probeUSB() threw an unknown exception");
+    return "";
 }
 #else
-std::string CodebenderccAPI::probeUSB() {
-	CodebenderccAPI::debugMessageProbe("CodebenderccAPI::probeUSB probing USB ports",3);	
+
+std::string CodebenderccAPI::probeUSB() try {
+	CodebenderccAPI::debugMessageProbe("CodebenderccAPI::probeUSB probing USB ports",3);
+
     DIR *dp;
     std::string dirs = "";
 	struct dirent *ep;
     dp = opendir("/dev/");
-    if (dp != NULL) {
-        while (ep = readdir(dp)) {
+    if (dp != NULL) 
+    {
+        while (ep = readdir(dp)) 
+        {
             //UNIX ARDUINO PORTS
             if (boost::contains(ep->d_name, "ttyACM") || boost::contains(ep->d_name, "ttyUSB")) {
                 dirs += "/dev/";
@@ -143,13 +156,20 @@ std::string CodebenderccAPI::probeUSB() {
 	if(lastPortCount!=dirs.length()){
 		lastPortCount=dirs.length();
 		CodebenderccAPI::detectNewPort(dirs);
+    return dirs;}
+
     return dirs;
+
+
+} catch (...) {
+    error_notify("CodebenderccAPI::probeUSB() threw an unknown exception");
+    return "";
 }
 #endif
 
 #if defined _WIN32 || _WIN64
 
-int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFlag) {
+int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFlag) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::winExecAvrdude",3);
 	DWORD dwExitCode = -1;
 	DWORD APPEND;
@@ -221,6 +241,9 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 	CloseHandle( pi.hThread );	
 	CodebenderccAPI::debugMessage("CodebenderccAPI::winExecAvrdude ended",3);
 	return dwExitCode;
+} catch (...) {
+    error_notify("CodebenderccAPI::winExecAvrdude() threw an unknown exception");
+    return 0;
 }
 #endif
 
@@ -228,8 +251,9 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 /////////////////////////////PRIVATE////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-void CodebenderccAPI::doflash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr & flash_callback) {
+void CodebenderccAPI::doflash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr & flash_callback) try {
     CodebenderccAPI::debugMessage("CodebenderccAPI::doflash",3);
+
 	std::string os = getPlugin().get()->getOS();
 	CodebenderccAPI::getThreadId("Current process id in doflash: ","Current thread id in doflash: "); 
 	try {
@@ -393,9 +417,11 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 		RemovePortFromList(device);
     }
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflash ended",3);
+} catch (...) {
+    error_notify("CodebenderccAPI::doFlash() threw an unknown exception");
 }
 
-void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std::string& code, const std::string& maxsize, std::map<std::string, std::string>& programmerData, const std::string& mcu, const FB::JSObjectPtr & flash_callback) {
+void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std::string& code, const std::string& maxsize, std::map<std::string, std::string>& programmerData, const std::string& mcu, const FB::JSObjectPtr & flash_callback) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashWithProgrammer",3);
 	std::string os = getPlugin().get()->getOS();
 	CodebenderccAPI::getThreadId("Current process id in doflashWithProgrammer: ","Current thread id in doflashWithProgrammer: "); 
@@ -441,9 +467,12 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 		RemovePortFromList(device);
     }
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashWithProgrammer ended",3);
+} catch (...) {
+    error_notify("CodebenderccAPI::doflashWithProgrammer() threw an unknown exception");
 }
 
-void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std::string, std::string>& programmerData, std::map<std::string, std::string>& bootloaderData, const std::string& mcu, const FB::JSObjectPtr & flash_callback) {
+void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std::string, std::string>& programmerData, std::map<std::string, std::string>& bootloaderData, const std::string& mcu, const FB::JSObjectPtr & flash_callback) try {
+
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader",3);
 	CodebenderccAPI::getThreadId("Current process id in doflashBootloader: ","Current thread id in doflashBootloader: "); 
 	std::string os = getPlugin().get()->getOS();
@@ -523,10 +552,12 @@ void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std
 		RemovePortFromList(device);
 	}
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader ended",3);
+} catch (...) {
+    error_notify("CodebenderccAPI::doflashBootloader() threw an unknown exception");
 }
 
-const std::string CodebenderccAPI::setProgrammerCommand(std::map<std::string, std::string>& programmerData) 
-{	
+const std::string CodebenderccAPI::setProgrammerCommand(std::map<std::string, std::string>& programmerData) try {
+	
 	CodebenderccAPI::debugMessage("CodebenderccAPI::setProgrammerCommand",3);
 	std::string os = getPlugin().get()->getOS();
 	#if !defined  _WIN32 || _WIN64
@@ -561,10 +592,13 @@ const std::string CodebenderccAPI::setProgrammerCommand(std::map<std::string, st
 
 	CodebenderccAPI::debugMessage("CodebenderccAPI::setProgrammerCommand ended",3);
 	return command;
+} catch (...) {
+    error_notify("CodebenderccAPI::setProgrammerCommand() threw an unknown exception");
+    return "";
 }
 
-int CodebenderccAPI::runAvrdude(const std::string& command, bool append) 
-{
+int CodebenderccAPI::runAvrdude(const std::string& command, bool append) try {
+
 	CodebenderccAPI::debugMessage("CodebenderccAPI::runAvrdude",3);
 	int retval = 1;
 	#if defined  _WIN32 || _WIN64
@@ -600,6 +634,9 @@ int CodebenderccAPI::runAvrdude(const std::string& command, bool append)
 	CodebenderccAPI::debugMessage(lastcommand.c_str(),1);
 	CodebenderccAPI::debugMessage("CodebenderccAPI::runAvrdude ended",3);
 	return retval;
+} catch (...) {
+    error_notify("CodebenderccAPI::runAvrdude() threw an unknown exception");
+    return 1;
 }
 
 int CodebenderccAPI::unixExecAvrdude (const std::string &unixExecCommand)
@@ -649,7 +686,10 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &unixExecCommand)
         	int status = 0;
             w = waitpid(cpid, &status, WNOHANG);
             /* On error, -1 is returned. */
-            if (w == -1)
+            if (w == -1){
+                perror("waitpid");
+                exit(EXIT_FAILURE);
+            }
             /* If WNOHANG was specified  as argument in waitpid and child specified by pid exists, 
 				but have not yet changed state, then 0 is returned. */
             if (w == 0)
@@ -696,7 +736,7 @@ long size = 0;
 /**
  * Save the binary data to the binary file specified in the constructor.
  */
-void CodebenderccAPI::saveToBin(unsigned char * data, size_t size) {
+void CodebenderccAPI::saveToBin(unsigned char * data, size_t size) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::saveToBin",3);
 	
 	std::ofstream myfile;
@@ -707,12 +747,14 @@ void CodebenderccAPI::saveToBin(unsigned char * data, size_t size) {
     }
     myfile.close();
 	CodebenderccAPI::debugMessage("CodebenderccAPI::saveToBin ended",3);
+} catch (...) {
+    error_notify("CodebenderccAPI::saveToBin() threw an unknown exception");
 }
 
 /**
  * Save the hex data of the bootloader file to the hex file specified in the constructor.
  */
-void CodebenderccAPI::saveToHex(const std::string& hexContent) {
+void CodebenderccAPI::saveToHex(const std::string& hexContent) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::saveToHex",3);
 
 	// Save the content of the bootloader to a local hex file.
@@ -723,9 +765,11 @@ void CodebenderccAPI::saveToHex(const std::string& hexContent) {
 	myfile.close();
 
 	CodebenderccAPI::debugMessage("CodebenderccAPI::saveToHex ended",3);
+} catch (...) {
+    error_notify("CodebenderccAPI::saveToHex() threw an unknown exception");
 }
 
-void CodebenderccAPI::detectNewPort(const std::string& portString) {
+void CodebenderccAPI::detectNewPort(const std::string& portString) try {
 	
 	std::vector<std::string> portVector;
 	std::vector< std::string >::iterator externalIterator = portsList.begin();
@@ -756,9 +800,11 @@ void CodebenderccAPI::detectNewPort(const std::string& portString) {
 	}
 	
 	portsList = portVector;
+} catch (...) {
+    error_notify("CodebenderccAPI::detectNewPort() threw an unknown exception");
 }
 
-void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &baudrate, const FB::JSObjectPtr & callback) {
+void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &baudrate, const FB::JSObjectPtr & callback) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader",3);	
 	if(!CodebenderccAPI::openPort(port, baudrate))
 		{
@@ -788,9 +834,11 @@ void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &
         notify("disconnect");
     }
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader ended",3);
+} catch (...) {
+    error_notify("CodebenderccAPI::serialReader() threw an unknown exception");
 }
 
-std::string CodebenderccAPI::exec(const char * cmd) {
+std::string CodebenderccAPI::exec(const char * cmd) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::exec",3);
 	std::string result = "";
 #if !defined  _WIN32 || _WIN64	
@@ -805,10 +853,18 @@ std::string CodebenderccAPI::exec(const char * cmd) {
 #endif
 	CodebenderccAPI::debugMessage("CodebenderccAPI::exec ended",3);
     return result;
+} catch (...) {
+    error_notify("CodebenderccAPI::exec() threw an unknown exception");
+    return "";
 }
+
 
 void CodebenderccAPI::notify(const std::string &message) {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::notify",3);	
-	callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
+CodebenderccAPI::debugMessage("CodebenderccAPI::notify",3);	
+callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
 }
 
+void CodebenderccAPI::error_notify(const std::string &message) {
+	CodebenderccAPI::debugMessage("CodebenderccAPI::error_notify",3);	
+	error_callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
+}

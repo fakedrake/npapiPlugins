@@ -4,7 +4,7 @@
 ////////////////////////////////////public//////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-FB::variant CodebenderccAPI::flash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr &flash_callback) {
+FB::variant CodebenderccAPI::flash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr &flash_callback) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::flash",3);	
 		#if defined _WIN32||_WIN64	// Check if finding the short path of the plugin failed.
 			if (current_dir == L""){
@@ -26,9 +26,12 @@ FB::variant CodebenderccAPI::flash(const std::string& device, const std::string&
 		boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doflash, this, device, code, maxsize, protocol, speed, mcu, flash_callback));
 	CodebenderccAPI::debugMessage("CodebenderccAPI::flash ended",3);		
 	return 0;
+}catch (...) {
+    error_notify("CodebenderccAPI::flash() threw an unknown exception");
+    return 0;
 }
 
-FB::variant CodebenderccAPI::flashWithProgrammer(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& programmerProtocol, const std::string& programmerCommunication, const std::string& programmerSpeed, const std::string& programmerForce, const std::string& programmerDelay, const std::string& mcu, const FB::JSObjectPtr & cback) {
+FB::variant CodebenderccAPI::flashWithProgrammer(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& programmerProtocol, const std::string& programmerCommunication, const std::string& programmerSpeed, const std::string& programmerForce, const std::string& programmerDelay, const std::string& mcu, const FB::JSObjectPtr & cback) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::flashWithProgrammer",3);
 		#if defined _WIN32||_WIN64	// Check if finding the short path of the plugin failed.
 			if (current_dir == L""){
@@ -55,9 +58,12 @@ FB::variant CodebenderccAPI::flashWithProgrammer(const std::string& device, cons
 		this, device, code, maxsize, programmerData, mcu, cback));	
 	CodebenderccAPI::debugMessage("CodebenderccAPI::flashWithProgrammer ended",3);
     return 0;
+}catch (...) {
+    error_notify("CodebenderccAPI::flashWithProgrammer() threw an unknown exception");
+    return 0;
 }
 
-FB::variant CodebenderccAPI::flashBootloader(const std::string& device, const std::string& programmerProtocol, const std::string& programmerCommunication, const std::string& programmerSpeed, const std::string& programmerForce, const std::string& programmerDelay, const std::string& highFuses, const std::string& lowFuses, const std::string& extendedFuses, const std::string& unlockBits, const std::string& lockBits, const std::string& mcu, const FB::JSObjectPtr & cback) {
+FB::variant CodebenderccAPI::flashBootloader(const std::string& device, const std::string& programmerProtocol, const std::string& programmerCommunication, const std::string& programmerSpeed, const std::string& programmerForce, const std::string& programmerDelay, const std::string& highFuses, const std::string& lowFuses, const std::string& extendedFuses, const std::string& unlockBits, const std::string& lockBits, const std::string& mcu, const FB::JSObjectPtr & cback) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::flashBootloader",3);
 	#if defined _WIN32||_WIN64	// Check if finding the short path of the plugin failed.
 		if (current_dir == L""){
@@ -89,16 +95,32 @@ FB::variant CodebenderccAPI::flashBootloader(const std::string& device, const st
 		this, device, programmerData, bootloaderData, mcu, cback));
 	CodebenderccAPI::debugMessage("CodebenderccAPI::flashBootloader ended",3);
 	return 0;
+}catch (...) {
+    error_notify("CodebenderccAPI::flashBootloader() threw an unknown exception");
+    return 0;
 }
 
-bool CodebenderccAPI::setCallback(const FB::JSObjectPtr &callback) {
+bool CodebenderccAPI::setCallback(const FB::JSObjectPtr &callback) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::setCallback",3);	
 	callback_ = callback;
 	CodebenderccAPI::debugMessage("CodebenderccAPI::setCallback ended",3);
     return true;
+}catch (...) {
+    error_notify("CodebenderccAPI::setCallback() threw an unknown exception");
+    return true;
 }
 
-void CodebenderccAPI::serialWrite(const std::string & message) {
+bool CodebenderccAPI::setErrorCallback(const FB::JSObjectPtr &error_callback) try {
+CodebenderccAPI::debugMessage("CodebenderccAPI::setErrorCallback",3);	
+error_callback_ = error_callback;
+CodebenderccAPI::debugMessage("CodebenderccAPI::setErrorCallback ended",3);
+    return true;
+} catch (...) {
+    error_notify("CodebenderccAPI::setErrorCallback() threw an unknown exception");
+    return true;
+}
+
+void CodebenderccAPI::serialWrite(const std::string & message) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialWrite",3);
     std::string mess = message;
 	size_t bytes_read;
@@ -122,9 +144,11 @@ void CodebenderccAPI::serialWrite(const std::string & message) {
 		notify("disconnect");
 	}
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialWrite ended",3);
+} catch (...) {
+    error_notify("CodebenderccAPI::serialWrite() threw an unknown exception");
 }
 
-FB::variant CodebenderccAPI::disconnect() {
+FB::variant CodebenderccAPI::disconnect() try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::disconnect",3);
 	if(!(serialPort.isOpen()))
 		return 1;
@@ -135,9 +159,12 @@ FB::variant CodebenderccAPI::disconnect() {
 		}
 	CodebenderccAPI::debugMessage("CodebenderccAPI::disconnect ended",3);
 	return 1;	
+} catch (...) {
+    error_notify("CodebenderccAPI::disconnect() threw an unknown exception");
+    return 0;
 }
 
-bool CodebenderccAPI::serialRead(const std::string &port, const std::string &baudrate, const FB::JSObjectPtr &callback) {
+bool CodebenderccAPI::serialRead(const std::string &port, const std::string &baudrate, const FB::JSObjectPtr &callback) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialRead",3);
 	std::string message = "connecting at ";
     message += baudrate;
@@ -146,4 +173,8 @@ bool CodebenderccAPI::serialRead(const std::string &port, const std::string &bau
     boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::serialReader, this, port, brate, callback));
     CodebenderccAPI::debugMessage("CodebenderccAPI::serialRead ended",3);
 	return true; // the thread is started
+}catch (...) {
+    error_notify("CodebenderccAPI::serialRead() threw an unknown exception");
+    return true;
 }
+
