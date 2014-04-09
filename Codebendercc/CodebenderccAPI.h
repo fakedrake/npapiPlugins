@@ -16,28 +16,37 @@
 
 
 #if defined _WIN32 || _WIN64
-#define MAX_KEY_LENGTH 255
-#define WIN32_LEAN_AND_MEAN 
-#include <SDKDDKVer.h>
-#include "dirent.h"
-#include <windows.h>
-#include <tchar.h>
-#include <Shellapi.h>
-#include <Tchar.h>
-#include <Iepmapi.h>
-
-#include <stdio.h>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <stdlib.h>
-#include <string.h>
-#include <tchar.h>
-
-//using namespace std;
+	#define MAX_KEY_LENGTH 255
+	#define WIN32_LEAN_AND_MEAN 
+	#include <SDKDDKVer.h>
+	#include "dirent.h"
+	#include <windows.h>
+	#include <tchar.h>
+	#include <Shellapi.h>
+	#include <Tchar.h>
+	#include <Iepmapi.h>
+	#include <stdio.h>
+	#include <iostream>
+	#include <fstream>
+	#include <string>
+	#include <stdlib.h>
+	#include <string.h>
+	#include <tchar.h>
 #else
-#include <dirent.h>
+	#include <dirent.h>
+	#include <sys/file.h>
+	#include <sys/syscall.h>
+	#include <unistd.h>
+    #include <stddef.h>
+    #include <stdlib.h>
+    #include <sys/types.h>
+    #include <sys/wait.h>
+    #include <signal.h>
+    #include <stdio.h>
+    #include <string.h>
+    #include <errno.h>
 #endif
+
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/regex.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -47,25 +56,13 @@
 #include <boost/asio.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/array.hpp>
-//#include <boost/optional.hpp>
-//#include <boost/weak_ptr.hpp>
-//used to check for the drivers
-//#include <boost/filesystem/operations.hpp>
-//#include <boost/filesystem/path.hpp>
-//namespace fs = boost::filesystem;
-
 #include <fstream>
 #include <vector>
-//#include <iostream>
-//#include <sstream>
-//#include <stdio.h>
-//#include <stdlib.h>
 #include <time.h>
 #include <sys/stat.h>
 #include <algorithm>
 #include <numeric>
-//#include <sys/types.h>
-
+#include <sys/types.h>
 #include <fcntl.h>
 
 #include "BrowserHost.h"
@@ -79,7 +76,7 @@
 #include "SimpleStreamHelper.h"
 #include "variant_list.h"
 #include "SimpleSerial.h"
-
+#include <exception> 
 /**
  * Wjwwod serial library. 
  * https://github.com/wjwwood/serial
@@ -87,7 +84,6 @@
 #include "serial/include/serial/serial.h"
 
 using namespace serial;
-
 
 #ifdef __APPLE__
 #import <Security/Security.h>
@@ -137,18 +133,22 @@ public:
 		registerMethod("enableDebug", make_method(this, &CodebenderccAPI::enableDebug));
 		registerMethod("disableDebug", make_method(this, &CodebenderccAPI::disableDebug));
 		registerMethod("getFlashResult", make_method(this, &CodebenderccAPI::getFlashResult));
-		
+
         //Register all JS read-only properties
         registerProperty("version", make_property(this, &CodebenderccAPI::get_version));
         registerProperty("command", make_property(this, &CodebenderccAPI::getLastCommand));
         registerProperty("retVal", make_property(this, &CodebenderccAPI::getRetVal));
 
+		
 		debug_ = false;
 		lastPortCount=0;
 		probeFlag=false;
-
+		usedPort="";
+		//Returns the string name of the current operating system. 
         std::string os = getPlugin().get()->getOS();
+		//Returns the path and filename of the current plugin module. 
         path = getPlugin().get()->getFSPath();
+		//Finds the last / and returns the rest of the path.
 		path = path.substr(0, path.find_last_of("/\\") + 1);
 
 		std::string arch = "32";
@@ -159,47 +159,47 @@ public:
         // paths to files
         
 #if defined _WIN32||_WIN64
-			current_dir = getShortPaths(path);
-			std::wstring wchdir(current_dir);
-
-			if (os == "Windows"){
-				// WINDOWS
-				// .exe for windows 
-				// no path is appended to avrdude.exe or its config file, since both are used in a batch file
-				// that executes the avrdude command
-				avrdude = "avrdude.exe";
-				avrdudeConf = os + ".avrdude.conf";
-				
-				batchFile = wchdir + L"command.bat";
-				binFile = wchdir + L"file.bin";
-				hexFile = wchdir + L"bootloader.hex";
-				outfile = wchdir + L"out";
-				debugFilename = wchdir + L"debugging.txt";
-			}
+	current_dir = getShortPaths(path);
+	std::wstring wchdir(current_dir);
+		if (os == "Windows")
+        {
+			// WINDOWS
+			// .exe for windows 
+			// no path is appended to avrdude.exe or its config file, since both are used in a batch file
+			// that executes the avrdude command
+			avrdude = "avrdude.exe";
+			avrdudeConf = os + ".avrdude.conf";
+		
+			batchFile = wchdir + L"command.bat";
+			binFile = wchdir + L"file.bin";
+			hexFile = wchdir + L"bootloader.hex";
+			outfile = wchdir + L"out";
+			debugFilename = wchdir + L"debugging.txt";
+		}
 #else
-			
-			binFile = path + "file.bin";
-			hexFile = path + "bootloader.hex";
-			outfile = path + "out";
-			debugFilename = path + "debugging.txt";
-
+		binFile = path + "file.bin";
+		hexFile = path + "bootloader.hex";
+		outfile = path + "out.txt";
+        errfile = path + "err";
+		debugFilename = path + "debugging.txt";
 			if (os == "X11") {
 				// LINUX
 				avrdude = path + os + "." + arch + ".avrdude";
 				avrdudeConf = path + os + "." + arch + ".avrdude.conf";
-			} else {
+			                 } 
+            else {
 				// MAC
 				path = path + "../../";
 				avrdude = path + os + ".avrdude";
 				avrdudeConf = path + os + ".avrdude.conf";
-#ifdef __APPLE__		//added to avoid messing up compilation process
-					binFile = path + "file.bin";
-					outfile = path + "out";
-#endif
-			}
+                    #ifdef __APPLE__		//added to avoid messing up compilation process
+                    	binFile = path + "file.bin";
+                    	outfile = path + "out.txt";
+                        errfile = path + "err";
+                    #endif
+			     }
 #endif
 
-        boost::thread t(boost::bind(&boost::asio::io_service::run, &io));
   
         _retVal = 9999;
     }
@@ -391,7 +391,7 @@ public:
 	/**
 	 * Creates an instance of the serial library and opens it.
 	 **/
-	void openPort(const std::string &port, const unsigned int &baudrate);
+	bool openPort(const std::string &port, const unsigned int &baudrate);
 
 	/**
 	 * Closes the current port connection.
@@ -415,6 +415,12 @@ public:
 	void debugMessageProbe(const char * messageDebug, int minimumLevel);
 	
 	/**
+	 * Function that print process and thread ids in Unix.
+	 **/
+	
+	void getThreadId(const char * pidMessage,const char * threadMessage); 
+	
+	/**
 	 * Debugging variables.
 	 **/
 	std::ofstream debugFile;
@@ -427,6 +433,19 @@ public:
 	bool probeFlag;
 	bool debug_;
 	int currentLevel;
+	std::string usedPort;
+
+	/**
+	 * Process and thread variables in Unix.
+	 **/
+
+	#if defined _WIN32||_WIN64
+		int pid;
+		long tid;
+	#else	
+		pid_t pid;
+		long tid;
+	#endif
 
 private:
 
@@ -579,10 +598,14 @@ private:
 	  * Executes a command with avrdude.
 	  * When on Widnows, the functions creates a batch file and then 
 	  * calls CodebenderccAPI::execAvrdude function to execute the batch file,
-	  * else performs a Unix system call.
+	  * else calls CodebenderccAPI::unixExecAvrdude function.
 	  * If appendFlag is true append the output of the avrdude command to the output file, if one exists.
 	  */
-	int runAvrdude(const std::string& command, bool appendFlag);
+	int runAvrdude(const std::string& command, bool append);
+
+    int unixExecAvrdude(const std::string &unixExecCommand);
+
+    long filesize(const char *filename);
 
 	/**
      * 
@@ -666,7 +689,7 @@ private:
 		std::wstring binFile, hexFile, outfile, batchFile;
 		const wchar_t * current_dir;
 	#else
-		std::string avrdude, avrdudeConf, binFile, hexFile, outfile;
+		std::string avrdude, avrdudeConf, binFile, hexFile, outfile, errfile;
 	#endif
     /**
      */
