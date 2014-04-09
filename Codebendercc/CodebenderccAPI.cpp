@@ -727,12 +727,9 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &unixExecCommand, bool u
 
 long CodebenderccAPI::filesize(const char *filename)
 {
-FILE *f = fopen(filename,"rb");  /* open the file in read only */
-long size = 0;
-  if (fseek(f,0,SEEK_END)==0) /* seek was successful */
-      size = ftell(f);
-  fclose(f);
-  return size;
+	struct stat buf;
+	stat(filename, &buf);
+	return buf.st_size;
 }
 
 /**
