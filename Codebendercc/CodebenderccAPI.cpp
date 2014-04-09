@@ -255,7 +255,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
     CodebenderccAPI::debugMessage("CodebenderccAPI::doflash",3);
 
 	std::string os = getPlugin().get()->getOS();
-	CodebenderccAPI::getThreadId("Current process id in doflash: ","Current thread id in doflash: "); 
+
 	try {
 		if(mcu == "atmega32u4" || AddtoPortList(device))
 			{
@@ -424,7 +424,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std::string& code, const std::string& maxsize, std::map<std::string, std::string>& programmerData, const std::string& mcu, const FB::JSObjectPtr & flash_callback) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashWithProgrammer",3);
 	std::string os = getPlugin().get()->getOS();
-	CodebenderccAPI::getThreadId("Current process id in doflashWithProgrammer: ","Current thread id in doflashWithProgrammer: "); 
+	
 	try {
 			if((programmerData["communication"] == "usb")||(programmerData["communication"] == "")||(AddtoPortList(device)))
 			{
@@ -474,7 +474,7 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std::string, std::string>& programmerData, std::map<std::string, std::string>& bootloaderData, const std::string& mcu, const FB::JSObjectPtr & flash_callback) try {
 
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader",3);
-	CodebenderccAPI::getThreadId("Current process id in doflashBootloader: ","Current thread id in doflashBootloader: "); 
+	
 	std::string os = getPlugin().get()->getOS();
 	try {
 		if((programmerData["communication"] == "usb")||(programmerData["communication"] == "")||(AddtoPortList(device)))

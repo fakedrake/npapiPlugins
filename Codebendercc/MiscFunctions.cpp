@@ -162,20 +162,6 @@ void CodebenderccAPI::debugMessage(const char * messageDebug, int minimumLevel) 
     error_notify("CodebenderccAPI::debugMessage() threw an unknown exception");
 }
 
-void CodebenderccAPI::getThreadId(const char * pidMessage,const char * threadMessage) {
-	#if defined _WIN32||_WIN64
-		pid=_getpid();
-		tid=GetCurrentThreadId();
-	#else
-		pid=getpid();
-		tid = syscall(SYS_gettid);
-	#endif				
-	m_host->htmlLog(pidMessage);
-	m_host->htmlLog(boost::lexical_cast<std::string>(pid));
-	m_host->htmlLog(threadMessage);
-	m_host->htmlLog(boost::lexical_cast<std::string>(tid));
-	}
-
 CodebenderccPtr CodebenderccAPI::getPlugin() {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::getPlugin",3);
 	CodebenderccPtr plugin(m_plugin.lock());
