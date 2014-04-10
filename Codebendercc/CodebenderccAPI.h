@@ -763,6 +763,12 @@ private:
     void pclose(FILE *stream);
 
     int stat(const char *path, struct stat *buf);
+
+    pid_t fork(void);
+
+    int execv(const char *path, char *const argv[]);
+
+    pid_t waitpid(pid_t pid, int *status, int options);
 #endif
 
     int system(const char *command);
