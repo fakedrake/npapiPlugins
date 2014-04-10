@@ -648,6 +648,13 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &unixExecCommand, bool u
 		args.push_back(comArg);
 	}
 
+    /* escape white space */
+    for (iterator = args.begin(); iterator != args.end(); ++iterator) {
+        std::string arg = *iterator;
+
+        boost::replace_all(arg, " ", "\\ ");
+    }
+
 	/* Convert string vector to char array */
 	std::vector<char *> cmd_argv(args.size() + 1);
 	for (std::size_t i = 0; i != args.size(); i++) {

@@ -47,6 +47,7 @@
     #include <errno.h>
 #endif
 
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/regex.hpp>
 #include <boost/algorithm/string/predicate.hpp>
