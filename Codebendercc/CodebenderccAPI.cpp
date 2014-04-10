@@ -1085,6 +1085,26 @@ CodebenderccAPI::popen(const char *command, const char *type)
     return NULL;
 }
 
+void
+CodebenderccAPI::pclose(FILE *stream)
+{
+    if (::pclose(stream) != -1)
+        return;
+
+    std::string err_msg = "CodebenderccAPI::pclose() - ";
+
+    switch (errno) {
+        case ECHILD:
+            err_msg += "ECHILD: could not obtain the child status";
+            break;
+
+        default:
+            err_msg += "Unknown error!";
+    }
+
+    error_notify(err_msg);
+}
+
 int
 CodebenderccAPI::stat(const char *path, struct stat *buf)
 {
@@ -1133,28 +1153,6 @@ CodebenderccAPI::stat(const char *path, struct stat *buf)
     return -1;
 }
 
-#endif
-
-#if !defined(_WIN32) && !defined(_WIN64)
-void
-CodebenderccAPI::pclose(FILE *stream)
-{
-    if (::pclose(stream) != -1)
-        return;
-
-    std::string err_msg = "CodebenderccAPI::pclose() - ";
-
-    switch (errno) {
-        case ECHILD:
-            err_msg += "ECHILD: could not obtain the child status";
-            break;
-
-        default:
-            err_msg += "Unknown error!";
-    }
-
-    error_notify(err_msg);
-}
 #endif
 
 /** TODO: we should return the result of WEXITSTATUS(rc) */
