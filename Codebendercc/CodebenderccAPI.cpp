@@ -616,8 +616,8 @@ int CodebenderccAPI::runAvrdude(const std::string& command, bool append) try {
 		 * and replaces the entire new process with avrdude (exec).
 		 */
 		lastcommand = command;
-		std::string unixCommand = command; 
-		retval = unixExecAvrdude(unixCommand, append);
+		
+		retval = unixExecAvrdude(command, append);
 	#endif
 		/** Print the content of the output file, if debugging is on. **/
 	if (CodebenderccAPI::checkDebug())
@@ -635,100 +635,85 @@ int CodebenderccAPI::runAvrdude(const std::string& command, bool append) try {
     return 1;
 }
 
-int CodebenderccAPI::unixExecAvrdude (const std::string &unixExecCommand, bool unixAppendFlag)
-{ 
-	/* Split command and store exec arguments in a string vector */
-	std::istringstream StreamCommand(unixExecCommand);
-	std::string comArg;
-	std::vector<std::string> args;
-	std::vector<std::string>::const_iterator iterator;
-
-	while(std::getline(StreamCommand, comArg, ' ')) {
-		comArg.erase(remove( comArg.begin(), comArg.end(), '\"' ),comArg.end());
-		args.push_back(comArg);
-	}
-
+int CodebenderccAPI::unixExecAvrdude (const std::string &command, bool appendFlag)
+{
+	std::string executionCommand = command;
 	/* Convert string vector to char array */
-	std::vector<char *> cmd_argv(args.size() + 1);
-	for (std::size_t i = 0; i != args.size(); i++) {
-		cmd_argv[i] = &args[i][0];
-	}
+	std::vector<char *> cmd_argv(4);
+	cmd_argv[0] = "sh";
+	cmd_argv[1] = "-c";
+	cmd_argv[2] = &executionCommand[0];
+	cmd_argv[3] = NULL;
 
-    pid_t cpid, w;
-    
+    pid_t pid, w;
+
     /* make a duplicate of the current process */
-    cpid = fork();
-    if (cpid == -1) {
-        perror("fork");
-        exit(EXIT_FAILURE);
+    pid = CodebenderccAPI::fork();
+    if (pid == -1)
+        return 1;
+
+    if (pid == 0) {
+    	const char *frpathout = outfile.c_str();
+
+        stdout = CodebenderccAPI::freopen(frpathout,
+                                          appendFlag ? "a" : "w",
+                                          stdout);
+        stderr = CodebenderccAPI::freopen(frpathout,
+                                          appendFlag ? "a" : "w",
+                                          stderr);
+
+        CodebenderccAPI::execvp(cmd_argv[0], cmd_argv.data());
+        return 1;
     }
 
-	/* Code executed by child process */
-    if (cpid == 0) 
-    {
-    	const char * frpathout = outfile.c_str();		
-    	if (unixAppendFlag){
-    		stdout=freopen(frpathout, "a", stdout);
-			stderr=freopen(frpathout, "a", stderr);
-    	}
-    	else
-    	{
-    		stdout=freopen(frpathout, "w", stdout);
-			stderr=freopen(frpathout, "w", stderr);
-    	}
-       	execv(cmd_argv[0], cmd_argv.data());
-    } 
-     /* Code executed by parent process */
-    else 
-    {
-        long oldSize=0;
-        long newSize=0;
-       	int counter =0;
-        do {
-        	int status = 0;
-            w = waitpid(cpid, &status, WNOHANG);
-            /* On error, -1 is returned. */
-            if (w == -1){
-                perror("waitpid");
-                exit(EXIT_FAILURE);
-            }
-            /* If WNOHANG was specified  as argument in waitpid and child specified by pid exists, 
-				but have not yet changed state, then 0 is returned. */
-            if (w == 0)
-            {
-				const char *pathout = outfile.c_str();		
-	    		oldSize=CodebenderccAPI::filesize(pathout);
-			        if (newSize != oldSize) 
-			        	newSize=oldSize;
-		   			else{
-		   				if(counter<10)
-		    				counter++;
-		    			else{
-							kill (cpid, SIGKILL);
-							continue;
-							}
-		   				}	
-	        	sleep(1);
-            }
-            /* On success waitpid(), returns the process ID of the child whose state has changed */
-			else{
-				if(WIFSIGNALED(status)) {
-	        		return WTERMSIG(status);
-				}
-				if (WIFEXITED(status)) {
-	            	return WEXITSTATUS(status);
-           		 } 
+    long oldSize=0;
+    long newSize=0;
+    int counter =0;
 
-				}						
-       } while (1);
-    }
-    exit(EXIT_SUCCESS);
+    do {
+        int status = 0;
+
+        sleep(1);
+
+        w = CodebenderccAPI::waitpid(pid, &status, WNOHANG);
+        if (w == -1)
+            return 1;
+
+        if (w == 0) {
+            /* the child's state has not changed */
+            oldSize = CodebenderccAPI::filesize(outfile.c_str());
+            if (oldSize == -1)
+                break;
+
+            if (newSize == oldSize)
+                counter++;
+            else
+                newSize = oldSize;
+        }
+        else if(WIFSIGNALED(status))
+        {
+            error_notify("process got signaled!");
+            return WTERMSIG(status);
+        }
+        else if (WIFEXITED(status))
+        {
+            error_notify("process returned normally!");
+            return WEXITSTATUS(status);
+        }
+    } while (counter != 10);
+
+    error_notify("I'm a murderer!");
+    kill(pid, SIGKILL);
+    return 1;
 }
 
 long CodebenderccAPI::filesize(const char *filename)
 {
 	struct stat buf;
-	stat(filename, &buf);
+
+    if (CodebenderccAPI::stat(filename, &buf) == -1)
+        return -1;
+
 	return buf.st_size;
 }
 
@@ -980,6 +965,30 @@ CodebenderccAPI::fopen(const char *path, const char *mode)
     return NULL;
 }
 
+FILE *
+CodebenderccAPI::freopen(const char *path, const char *mode, FILE *stream)
+{
+    FILE *fp;
+
+    fp = ::freopen(path, mode, stream);
+    if (fp != NULL)
+        return fp;
+
+    std::string err_msg = "CodebenderccAPI::freopen() - ";
+
+    switch (errno) {
+        case EINVAL:
+            err_msg += "EINVAL: The mode provided to freopen() was invalid.";
+            break;
+
+        default:
+            err_msg += "Unknown error!";
+    }
+
+    error_notify(err_msg);
+    return NULL;
+}
+
 size_t
 CodebenderccAPI::fwrite(const void *ptr,
                         size_t size,
@@ -1061,9 +1070,7 @@ CodebenderccAPI::popen(const char *command, const char *type)
     error_notify(err_msg);
     return NULL;
 }
-#endif
 
-#if !defined(_WIN32) && !defined(_WIN64)
 void
 CodebenderccAPI::pclose(FILE *stream)
 {
@@ -1083,6 +1090,141 @@ CodebenderccAPI::pclose(FILE *stream)
 
     error_notify(err_msg);
 }
+
+int
+CodebenderccAPI::stat(const char *path, struct stat *buf)
+{
+    int rc;
+
+    rc = ::stat(path, buf);
+    if (rc == 0)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::stat() - ";
+
+    switch (errno) {
+        case EACCES:
+            err_msg += "EACCES: Search permission is denied for one of the " \
+                       "directories in the path prefix of path.";
+            break;
+        case EFAULT:
+            err_msg += "EFAULT: Bad address";
+            break;
+        case ELOOP:
+            err_msg += "ELOOP: Too many symbolic links encountered while traversing the path";
+            break;
+        case ENAMETOOLONG:
+            err_msg += "ENAMETOOLONG: path is too long";
+            break;
+        case ENOENT:
+            err_msg += "ENOENT: A component of path does not exist, or path is an empty string";
+            break;
+        case ENOMEM:
+            err_msg += "ENOMEM: Out of kernel memory";
+            break;
+        case ENOTDIR:
+            err_msg += "ENOTDIR: A component of the path prefix of path is not a directory.";
+            break;
+        case EOVERFLOW:
+            err_msg += "EOVERFLOW: path or fd refers to a file whose "                          \
+                       "size, inode number, or number of blocks cannot  be  represented  in, "  \
+                       "respectively, the types off_t, ino_t, or blkcnt_t.";
+            break;
+
+        default:
+            err_msg += "Unknown error!";
+    }
+
+    error_notify(err_msg);
+    return -1;
+}
+
+pid_t
+CodebenderccAPI::fork(void)
+{
+    pid_t pid;
+
+    pid = ::fork();
+    if (pid != -1)
+        return pid;
+
+    std::string err_msg = "CodebenderccAPI::fork() - ";
+
+    switch (errno) {
+        case EAGAIN:
+            err_msg += "EAGAIN: cannot allocate sufficient memory to copy the " \
+                       "parent's page tables and allocate a  task  structure for the child.";
+            break;
+
+        case ENOMEM:
+            err_msg += "ENOMEM: failed to allocate the necessary kernel structures" \
+                       " because memory is tight.";
+            break;
+
+        case ENOSYS:
+            err_msg += "ENOSYS: fork() is not supported on this platform.";
+            break;
+
+        default:
+            err_msg += "Unknown error!";
+    }
+
+    error_notify(err_msg);
+    return pid;
+}
+
+int
+CodebenderccAPI::execvp(const char *file, char *const argv[])
+{
+    int rc;
+
+    rc = ::execvp(file, argv);
+
+    std::string err_msg = "CodebenderccAPI::execvp() - ";
+
+    if (rc == -1)
+        err_msg += "Unknown error!";
+    else
+        err_msg += "execv() returned != -1!!!";
+
+    error_notify(err_msg);
+    return rc;
+}
+
+pid_t
+CodebenderccAPI::waitpid(pid_t pid, int *status, int options)
+{
+    pid_t cpid;
+
+    cpid = ::waitpid(pid, status, options);
+    if (cpid != -1)
+        return cpid;
+
+    std::string err_msg = "CodebenderccAPI::waitpid() - ";
+
+    switch (errno) {
+        case ECHILD:
+            err_msg += "ECHILD: The process specified by pid does not exist or " \
+                       "is not a child of the calling process.";
+            break;
+
+        case EINTR:
+            err_msg += "EINTR: WNOHANG was not set and an unblocked signal or " \
+                       "a SIGCHLD was caught; see signal(7).";
+            break;
+
+        case EINVAL:
+            err_msg += "EINVAL: The option argument was invalid";
+            break;
+
+        default:
+            err_msg += "Unknown error!";
+    }
+
+    error_notify(err_msg);
+    return cpid;
+}
+
 #endif
 
 /** TODO: we should return the result of WEXITSTATUS(rc) */

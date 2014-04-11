@@ -47,6 +47,7 @@
     #include <errno.h>
 #endif
 
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/regex.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -195,10 +196,9 @@ public:
                     	binFile = path + "file.bin";
                     	outfile = path + "out";
                     #endif
-			     }
+			     }		
 #endif
 
-  
         _retVal = 9999;
     }
 
@@ -749,6 +749,8 @@ private:
 
     FILE *fopen(const char *path, const char *mode);
 
+    FILE *freopen(const char *path, const char *mode, FILE *stream);
+
     size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 
     char *fgets(char *s, int size, FILE *stream);
@@ -759,6 +761,14 @@ private:
     FILE *popen(const char *command, const char *type);
 
     void pclose(FILE *stream);
+
+    int stat(const char *path, struct stat *buf);
+
+    pid_t fork(void);
+
+    int execvp(const char *file, char *const argv[]);
+
+    pid_t waitpid(pid_t pid, int *status, int options);
 #endif
 
     int system(const char *command);
