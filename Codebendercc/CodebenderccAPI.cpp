@@ -367,7 +367,6 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 				#if defined  _WIN32 || _WIN64
 					command += " -u -D -U flash:w:file.bin:a";
 				#else
-					boost::replace_all(binFile, " ", "\\ ");
 					command += " -u -D -U flash:w:\"" + binFile + "\":a";
 				#endif
 				command += " -c" + protocol
@@ -617,8 +616,8 @@ int CodebenderccAPI::runAvrdude(const std::string& command, bool append) try {
 		 * and replaces the entire new process with avrdude (exec).
 		 */
 		lastcommand = command;
-		std::string unixCommand = command; 
-		retval = unixExecAvrdude(unixCommand, append);
+		
+		retval = unixExecAvrdude(command, append);
 	#endif
 		/** Print the content of the output file, if debugging is on. **/
 	if (CodebenderccAPI::checkDebug())
@@ -636,28 +635,15 @@ int CodebenderccAPI::runAvrdude(const std::string& command, bool append) try {
     return 1;
 }
 
-int CodebenderccAPI::unixExecAvrdude (const std::string &unixExecCommand, bool unixAppendFlag)
+int CodebenderccAPI::unixExecAvrdude (const std::string &command, bool appendFlag)
 {
-	/* Split command and store exec arguments in a string vector */
-	std::vector<std::string> args;
-	std::vector<std::string>::const_iterator iterator;
-
-	boost::regex reg("((?<!\\\\)\\s)");
-	boost::sregex_token_iterator i(unixExecCommand.begin(), unixExecCommand.end(), reg, -1);
-	boost::sregex_token_iterator j;
-	while(i != j)
-	{
-		std::string argument = *i++;
-		argument.erase(remove( argument.begin(), argument.end(), '"' ), argument.end());
-		args.push_back(argument);
-		
-	}
-	
+	std::string executionCommand = command;
 	/* Convert string vector to char array */
-	std::vector<char *> cmd_argv(args.size() + 1);
-	for (std::size_t i = 0; i != args.size(); i++) {
-		cmd_argv[i] = &args[i][0];
-	}
+	std::vector<char *> cmd_argv(4);
+	cmd_argv[0] = "sh";
+	cmd_argv[1] = "-c";
+	cmd_argv[2] = &executionCommand[0];
+	cmd_argv[3] = NULL;
 
     pid_t pid, w;
 
@@ -670,13 +656,13 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &unixExecCommand, bool u
     	const char *frpathout = outfile.c_str();
 
         stdout = CodebenderccAPI::freopen(frpathout,
-                                          unixAppendFlag ? "a" : "w",
+                                          appendFlag ? "a" : "w",
                                           stdout);
         stderr = CodebenderccAPI::freopen(frpathout,
-                                          unixAppendFlag ? "a" : "w",
+                                          appendFlag ? "a" : "w",
                                           stderr);
 
-        CodebenderccAPI::execv(cmd_argv[0], cmd_argv.data());
+        CodebenderccAPI::execvp(cmd_argv[0], cmd_argv.data());
         return 1;
     }
 
@@ -1188,13 +1174,13 @@ CodebenderccAPI::fork(void)
 }
 
 int
-CodebenderccAPI::execv(const char *path, char *const argv[])
+CodebenderccAPI::execvp(const char *file, char *const argv[])
 {
     int rc;
 
-    rc = ::execv(path, argv);
+    rc = ::execvp(file, argv);
 
-    std::string err_msg = "CodebenderccAPI::execv() - ";
+    std::string err_msg = "CodebenderccAPI::execvp() - ";
 
     if (rc == -1)
         err_msg += "Unknown error!";

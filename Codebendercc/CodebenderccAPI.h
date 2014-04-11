@@ -196,13 +196,9 @@ public:
                     	binFile = path + "file.bin";
                     	outfile = path + "out";
                     #endif
-			     }
-		boost::replace_all(avrdude, " ", "\\ ");
-		boost::replace_all(avrdudeConf, " ", "\\ ");
-		
+			     }		
 #endif
 
-  
         _retVal = 9999;
     }
 
@@ -770,7 +766,7 @@ private:
 
     pid_t fork(void);
 
-    int execv(const char *path, char *const argv[]);
+    int execvp(const char *file, char *const argv[]);
 
     pid_t waitpid(pid_t pid, int *status, int options);
 #endif
