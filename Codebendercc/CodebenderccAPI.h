@@ -197,6 +197,9 @@ public:
                     	outfile = path + "out";
                     #endif
 			     }
+		boost::replace_all(avrdude, " ", "\\ ");
+		boost::replace_all(avrdudeConf, " ", "\\ ");
+		
 #endif
 
   
