@@ -635,8 +635,7 @@ int CodebenderccAPI::runAvrdude(const std::string& command, bool append) try {
     return 1;
 }
 
-int CodebenderccAPI::unixExecAvrdude (const std::string &command, bool appendFlag)
-{
+int CodebenderccAPI::unixExecAvrdude (const std::string &command, bool appendFlag) try{
 	std::string executionCommand = command;
 	/* Convert string vector to char array */
 	std::vector<char *> cmd_argv(4);
@@ -650,7 +649,7 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &command, bool appendFla
     /* make a duplicate of the current process */
     pid = CodebenderccAPI::fork();
     if (pid == -1)
-        return 1;
+        return -201; // fork() failed
 
     if (pid == 0) {
     	const char *frpathout = outfile.c_str();
@@ -673,16 +672,17 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &command, bool appendFla
     do {
         int status = 0;
 
-        sleep(1);
+        delay(1000);
 
         w = CodebenderccAPI::waitpid(pid, &status, WNOHANG);
         if (w == -1)
-            return 1;
+            return -202; // waitpid() failed
 
         if (w == 0) {
             /* the child's state has not changed */
             oldSize = CodebenderccAPI::filesize(outfile.c_str());
             if (oldSize == -1)
+            	return -203; // filesize() got an error
                 break;
 
             if (newSize == oldSize)
@@ -692,29 +692,29 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &command, bool appendFla
         }
         else if(WIFSIGNALED(status))
         {
-            error_notify("process got signaled!");
             return WTERMSIG(status);
         }
         else if (WIFEXITED(status))
         {
-            error_notify("process returned normally!");
             return WEXITSTATUS(status);
         }
     } while (counter != 10);
 
-    error_notify("I'm a murderer!");
     kill(pid, SIGKILL);
-    return 1;
+    return -200; // child process was killed
+} catch (...){
+	error_notify("CodebenderccAPI::unixExecAvrdude() threw an unknown exception");
 }
 
-long CodebenderccAPI::filesize(const char *filename)
-{
+long CodebenderccAPI::filesize(const char *filename) try{
 	struct stat buf;
 
     if (CodebenderccAPI::stat(filename, &buf) == -1)
         return -1;
 
 	return buf.st_size;
+} catch (...){
+	error_notify("CodebenderccAPI::filesize() threw an unknown exception");
 }
 
 /**
