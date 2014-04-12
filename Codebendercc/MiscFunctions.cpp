@@ -4,7 +4,7 @@
 ////////////////////////////////////public//////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-#if defined _WIN32||_WIN64
+#ifdef _WIN32
 
 std::string CodebenderccAPI::QueryKey(HKEY hKey) try {
 
@@ -188,7 +188,7 @@ FB::variant CodebenderccAPI::getLastCommand() {
 FB::variant CodebenderccAPI::getFlashResult() try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::getFlashResult",3);
 	FILE *pFile;
-	#if defined _WIN32 || _WIN64
+	#ifdef _WIN32
 		std::string filename = FB::wstring_to_utf8(outfile);
 		pFile = CodebenderccAPI::fopen(filename.c_str(), "r");
 	#else

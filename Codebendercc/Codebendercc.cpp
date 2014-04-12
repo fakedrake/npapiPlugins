@@ -154,7 +154,7 @@ bool CanBeUsed(string port)
 
 bool AddtoPortList(string port)
 {
-	#if defined _WIN32||_WIN64
+	#ifdef _WIN32
 	if (port.find("\\\\.\\") == string::npos) {
 			port = "\\\\.\\" + port;
 			}	
@@ -184,7 +184,7 @@ bool AddtoPortList(string port)
 
 void RemovePortFromList(string port)
 {
-	#if defined _WIN32||_WIN64
+	#ifdef _WIN32
 	if (port.find("\\\\.\\") == string::npos) {
 			port = "\\\\.\\" + port;
 			}	
