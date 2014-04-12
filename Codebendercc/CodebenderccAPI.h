@@ -15,7 +15,7 @@
  */
 
 
-#if defined _WIN32 || _WIN64
+#ifdef _WIN32
 	#define MAX_KEY_LENGTH 255
 	#define WIN32_LEAN_AND_MEAN 
 	#include <SDKDDKVer.h>
@@ -159,7 +159,7 @@ public:
 
         // paths to files
         
-#if defined _WIN32||_WIN64
+#ifdef _WIN32
 	current_dir = getShortPaths(path);
 	std::wstring wchdir(current_dir);
 		if (os == "Windows")
@@ -318,7 +318,7 @@ public:
      * When on Windows OS, finds all available usb ports.
      * @return a comma separated list of the detected devices.
      */
-#if defined _WIN32 || _WIN64
+#ifdef _WIN32
 	std::string CodebenderccAPI::QueryKey(HKEY hKey);
 #endif
 	
@@ -422,7 +422,7 @@ public:
 	 * Debugging variables.
 	 **/
 	std::ofstream debugFile;
-#if defined _WIN32||_WIN64
+#ifdef _WIN32
 	std::wstring debugFilename;
 #else
 	std::string debugFilename;
@@ -437,7 +437,7 @@ public:
 	 * Process and thread variables in Unix.
 	 **/
 
-	#if defined _WIN32||_WIN64
+	#ifdef _WIN32
 		int pid;
 		long tid;
 	#else	
@@ -682,7 +682,7 @@ private:
 	/**
 	 */
 	
-	#if defined _WIN32||_WIN64
+	#ifdef _WIN32
 		std::string avrdude, avrdudeConf;
 		std::wstring binFile, hexFile, outfile, batchFile;
 		const wchar_t * current_dir;
@@ -712,14 +712,14 @@ private:
 
 	
     void delay(int duration) {
-#if defined _WIN32 || _WIN64
+#ifdef _WIN32
         Sleep(duration);
 #else
         usleep(duration * 1000);
 #endif
     }
 
-#if defined _WIN32 || _WIN64
+#ifdef _WIN32
 
 	const wchar_t * getShortPaths(std::string  &longpath) {
 
@@ -757,7 +757,7 @@ private:
 
     void fclose(FILE *fp);
 
-#if !defined(_WIN32) && !defined(_WIN64)
+#ifndef _WIN32
     FILE *popen(const char *command, const char *type);
 
     void pclose(FILE *stream);
@@ -773,7 +773,7 @@ private:
 
     int system(const char *command);
 
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
     LONG RegQueryInfoKey(HKEY hKey,
                          LPTSTR lpClass,
                          LPDWORD lpcClass,

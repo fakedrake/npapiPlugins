@@ -21,7 +21,7 @@ bool CodebenderccAPI::openPort(const std::string &port, const unsigned int &baud
 	CodebenderccAPI::debugMessage("CodebenderccAPI::openPort",3);
 	std::string device;
 	device = port;
-	#if defined _WIN32||_WIN64
+	#ifdef _WIN32
 		device = "\\\\.\\" + port;
 	#endif
 	if(AddtoPortList(device))
@@ -31,7 +31,7 @@ bool CodebenderccAPI::openPort(const std::string &port, const unsigned int &baud
 			usedPort=device;		
 				if (serialPort.isOpen() == false){
 					// need to set a zero timeout when on Windows
-					#if defined _WIN32||_WIN64
+					#ifdef _WIN32
 						portTimeout = Timeout(std::numeric_limits<uint32_t>::max(), 0, 0, 0, 0);
 					#else
 						portTimeout = Timeout(std::numeric_limits<uint32_t>::max(), 1000, 0, 1000, 0);
@@ -93,7 +93,7 @@ void CodebenderccAPI::closePort() try {
     error_notify("CodebenderccAPI::closePort() threw an unknown exception");
 }
 
-#if defined _WIN32||_WIN64
+#ifdef _WIN32
 
 std::string CodebenderccAPI::probeUSB() try {
 	CodebenderccAPI::debugMessageProbe("CodebenderccAPI::probeUSB probing USB ports",3);
@@ -163,7 +163,7 @@ std::string CodebenderccAPI::probeUSB() try {
 }
 #endif
 
-#if defined _WIN32 || _WIN64
+#ifdef _WIN32
 
 int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFlag) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::winExecAvrdude",3);
@@ -255,7 +255,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 	try {
 		if(mcu == "atmega32u4" || AddtoPortList(device))
 			{
-				#if !defined  _WIN32 || _WIN64	
+                #ifndef _WIN32
 					chmod(avrdude.c_str(), S_IRWXU);
 				#endif
 				if (mcu == "atmega32u4") {
@@ -349,7 +349,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 				}
 
 				int retVal = 1;		
-				#if !defined  _WIN32 || _WIN64
+				#ifndef _WIN32
 					std::string command = "\"" + avrdude + "\"" + " -C\"" + avrdudeConf + "\"";
 				#else
 					std::string command = avrdude + " -C" + avrdudeConf;
@@ -364,7 +364,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 				command += fdevice
 					+ " -p" + mcu;
 
-				#if defined  _WIN32 || _WIN64
+				#ifdef _WIN32
 					command += " -u -D -U flash:w:file.bin:a";
 				#else
 					command += " -u -D -U flash:w:\"" + binFile + "\":a";
@@ -424,7 +424,7 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 	try {
 			if((programmerData["communication"] == "usb")||(programmerData["communication"] == "")||(AddtoPortList(device)))
 			{
-				#if !defined  _WIN32 || _WIN64	
+				#ifndef _WIN32
 						chmod(avrdude.c_str(), S_IRWXU);
 				#endif
 
@@ -440,7 +440,7 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 				programmerData["device"] = fdevice.c_str();
 				std::string command = setProgrammerCommand(programmerData);
 
-				#if defined  _WIN32 || _WIN64
+				#ifdef _WIN32
 					command += " -Uflash:w:file.bin:a";
 				#else
 					command += " -Uflash:w:\"" + binFile + "\":a";
@@ -475,7 +475,7 @@ void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std
 	try {
 		if((programmerData["communication"] == "usb")||(programmerData["communication"] == "")||(AddtoPortList(device)))
 		{
-			#if !defined  _WIN32 || _WIN64	
+			#ifndef _WIN32
 				chmod(avrdude.c_str(), S_IRWXU);
 			#endif		
 			
@@ -521,7 +521,7 @@ void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std
 						file.close();
 					}else{
 						command = programmerCommand;
-						#if defined  _WIN32 || _WIN64
+						#ifdef _WIN32
 							command += " -Uflash:w:bootloader.hex:i";
 						#else
 							command += " -Uflash:w:\"" + hexFile + "\":i";
@@ -556,7 +556,7 @@ const std::string CodebenderccAPI::setProgrammerCommand(std::map<std::string, st
 	
 	CodebenderccAPI::debugMessage("CodebenderccAPI::setProgrammerCommand",3);
 	std::string os = getPlugin().get()->getOS();
-	#if !defined  _WIN32 || _WIN64
+	#ifndef _WIN32
 			std::string command = "\"" + avrdude + "\"" + " -C\"" + avrdudeConf + "\"";
 	#else
 			std::string command = avrdude + " -C" + avrdudeConf;
@@ -597,7 +597,7 @@ int CodebenderccAPI::runAvrdude(const std::string& command, bool append) try {
 
 	CodebenderccAPI::debugMessage("CodebenderccAPI::runAvrdude",3);
 	int retval = 1;
-	#if defined  _WIN32 || _WIN64
+	#ifdef _WIN32
 		// Ιf on Windows, create a batch file and save the command in that file.
 		std::ofstream batchFd; 
 		try{
@@ -827,7 +827,7 @@ void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &
 std::string CodebenderccAPI::exec(const char * cmd) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::exec",3);
 	std::string result = "";
-#if !defined  _WIN32 || _WIN64	
+#ifndef _WIN32
     FILE* pipe = CodebenderccAPI::popen(cmd, "r");
     if (!pipe) return "ERROR";
     char buffer[128];
@@ -1048,7 +1048,7 @@ CodebenderccAPI::fclose(FILE *fp)
     error_notify(err_msg);
 }
 
-#if !defined(_WIN32) && !defined(_WIN64)
+#ifndef _WIN32
 FILE *
 CodebenderccAPI::popen(const char *command, const char *type)
 {
@@ -1243,7 +1243,7 @@ CodebenderccAPI::system(const char *command)
     rc = ::system(command);
     if (rc == -1)
         err_msg += "Unknown error";
-#if !defined(_WIN32) && !defined(_WIN64)
+#ifndef _WIN32
     else if (WEXITSTATUS(rc) == 127)
         err_msg += "/bin/sh could not be executed";
 #endif
@@ -1254,7 +1254,7 @@ CodebenderccAPI::system(const char *command)
     return rc;
 }
 
-#if defined(_WIN32) || defined(_WIN64)
+#ifdef _WIN32
 LONG
 CodebenderccAPI::RegQueryInfoKey(HKEY hKey,
                                  LPTSTR lpClass,
