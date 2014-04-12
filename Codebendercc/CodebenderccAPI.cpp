@@ -765,8 +765,12 @@ void CodebenderccAPI::saveToBin(unsigned char * data, size_t size) try {
  */
 void CodebenderccAPI::saveToHex(const std::string& hexContent) try {
     CodebenderccAPI::debugMessage("CodebenderccAPI::saveToHex",3);
-
+#if !defined _WIN32
     FILE *fp = CodebenderccAPI::fopen(hexFile.c_str(), "wb");
+#else
+	const std::string sthexFile(hexFile.begin(),hexFile.end());
+	FILE *fp = CodebenderccAPI::fopen(sthexFile.c_str(), "wb");
+#endif
     if (!fp)
         return;
 
