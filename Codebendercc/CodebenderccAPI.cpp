@@ -650,6 +650,7 @@ int CodebenderccAPI::runAvrdude(const std::string& command, bool append) try {
     return 1;
 }
 
+#if !defined  _WIN32
 int CodebenderccAPI::unixExecAvrdude (const std::string &command, bool appendFlag) try{
 	std::string executionCommand = command;
 	/* Convert string vector to char array */
@@ -722,7 +723,9 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &command, bool appendFla
 } catch (...){
 	error_notify("CodebenderccAPI::unixExecAvrdude() threw an unknown exception");
 }
+#endif
 
+#if !defined  _WIN32
 long CodebenderccAPI::filesize(const char *filename) try{
 	struct stat buf;
 
@@ -733,6 +736,7 @@ long CodebenderccAPI::filesize(const char *filename) try{
 } catch (...){
 	error_notify("CodebenderccAPI::filesize() threw an unknown exception");
 }
+#endif
 
 /**
  * Save the binary data to the binary file specified in the constructor.
