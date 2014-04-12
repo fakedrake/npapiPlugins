@@ -649,9 +649,12 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &command, bool appendFla
     /* make a duplicate of the current process */
     pid = CodebenderccAPI::fork();
     if (pid == -1)
-        return -201; // fork() failed
+        return -200; // fork() failed
 
     if (pid == 0) {
+        pid_t cpid = getpid();
+        setpgid(cpid, cpid);
+
     	const char *frpathout = outfile.c_str();
 
         stdout = CodebenderccAPI::freopen(frpathout,
@@ -662,7 +665,7 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &command, bool appendFla
                                           stderr);
 
         CodebenderccAPI::execvp(cmd_argv[0], cmd_argv.data());
-        return 1;
+        _exit(EXIT_FAILURE);
     }
 
     long oldSize=0;
@@ -682,7 +685,6 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &command, bool appendFla
             /* the child's state has not changed */
             oldSize = CodebenderccAPI::filesize(outfile.c_str());
             if (oldSize == -1)
-            	return -203; // filesize() got an error
                 break;
 
             if (newSize == oldSize)
@@ -692,7 +694,7 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &command, bool appendFla
         }
         else if(WIFSIGNALED(status))
         {
-            return WTERMSIG(status);
+            return -203;
         }
         else if (WIFEXITED(status))
         {
@@ -700,8 +702,8 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &command, bool appendFla
         }
     } while (counter != 10);
 
-    kill(pid, SIGKILL);
-    return -200; // child process was killed
+    killpg(pid, SIGKILL);
+    return -204; // child process was killed
 } catch (...){
 	error_notify("CodebenderccAPI::unixExecAvrdude() threw an unknown exception");
 }
