@@ -743,8 +743,12 @@ long CodebenderccAPI::filesize(const char *filename) try{
  */
 void CodebenderccAPI::saveToBin(unsigned char * data, size_t size) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::saveToBin",3);
-
+#if !defined _WIN32 ||_WIN34
     FILE *fp = CodebenderccAPI::fopen(binFile.c_str(), "wb");
+#else
+	const std::string stbinFile(binFile.begin(),binFile.end());
+	FILE *fp = CodebenderccAPI::fopen(stbinFile.c_str(), "wb");
+#endif
     if (!fp)
         return;
 
