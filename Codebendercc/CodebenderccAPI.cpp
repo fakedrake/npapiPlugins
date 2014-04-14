@@ -235,7 +235,7 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 	dwFileSizeOld=GetFileSize( fh, NULL );
 	while (dwFileSizeOld!=dwFileSizeNew){
 		dwFileSizeNew=dwFileSizeOld;
-		delay(100);
+		delay(1000);
 		dwFileSizeOld=GetFileSize( fh, NULL );
 		}	
 	// Check if created process is still active once the file size stopped changing.
