@@ -110,13 +110,14 @@ std::string CodebenderccAPI::probeUSB() try {
         &hKey) == ERROR_SUCCESS					// Set the variable that revieves the open key handle.
       )
    {
-      ports.append(CodebenderccAPI::QueryKey(hKey));  // Call QueryKey function to retrieve the available ports.
-   }   
-	if(lastPortCount!=ports.length()){
-		lastPortCount=ports.length();
-		CodebenderccAPI::detectNewPort(ports);
-									}
-	CodebenderccAPI::RegCloseKey(hKey);	// Need to close the key handle after the task is completed.	
+		ports.append(CodebenderccAPI::QueryKey(hKey));  // Call QueryKey function to retrieve the available ports.
+      
+		if(lastPortCount!=ports.length()){
+			lastPortCount=ports.length();
+			CodebenderccAPI::detectNewPort(ports);
+										}
+		CodebenderccAPI::RegCloseKey(hKey);	// Need to close the key handle after the task is completed.
+   }
     return ports;
 } catch (...) {
     error_notify("[Windows] CodebenderccAPI::probeUSB() threw an unknown exception");
@@ -1423,44 +1424,60 @@ CodebenderccAPI::RegOpenKeyEx(HKEY hKey,
                               PHKEY phkResult)
 {
     LONG rc;
+	static bool errorFlag;
 
     rc = ::RegOpenKeyEx(hKey,
                         lpSubKey,
                         ulOptions,
                         samDesired,
                         phkResult);
-    if (rc == ERROR_SUCCESS)
-        return rc;
+	if (rc == ERROR_SUCCESS){
+        errorFlag = false;
+		return rc;
+	}
 
-    /* TODO: Print error code description with FormatMessage.
- *      *
- *           * http://msdn.microsoft.com/en-us/library/windows/desktop/ms724897%28v=vs.85%29.aspx
- *               */
-    std::string err_msg = "CodebenderccAPI::RegOpenKeyEx() - Winerror.h error code: ";
-    err_msg += boost::lexical_cast<std::string>(rc);
+	if (rc != ERROR_SUCCESS && errorFlag == false){
+		errorFlag = true;
+		/* TODO: Print error code description with FormatMessage.
+	 *      *
+	 *           * http://msdn.microsoft.com/en-us/library/windows/desktop/ms724897%28v=vs.85%29.aspx
+	 *               */
+		std::string err_msg = "CodebenderccAPI::RegOpenKeyEx() - Winerror.h error code: ";
+		err_msg += boost::lexical_cast<std::string>(rc);
 
-    error_notify(err_msg);
-    return rc;
+		error_notify(err_msg);
+		return rc;
+	}
+	
+	return rc;
 }
 
 LONG
 CodebenderccAPI::RegCloseKey(HKEY hKey)
 {
     LONG rc;
+	static bool errorFlag;
 
     rc = ::RegCloseKey(hKey);
-    if (rc == ERROR_SUCCESS)
-        return rc;
+	if (rc == ERROR_SUCCESS){
+		errorFlag = false;	
+		return rc;
+	}
 
-    /* TODO: Print error code description with FormatMessage.
- *      *
- *           * http://msdn.microsoft.com/en-us/library/windows/desktop/ms724837%28v=vs.85%29.aspx
- *               */
-    std::string err_msg = "CodebenderccAPI::RegCloseKey() - Winerror.h error code: ";
-    err_msg += boost::lexical_cast<std::string>(rc);
+	if (rc != ERROR_SUCCESS && errorFlag == false){
+		errorFlag = true;
+		/* TODO: Print error code description with FormatMessage.
+	 *      *
+	 *           * http://msdn.microsoft.com/en-us/library/windows/desktop/ms724837%28v=vs.85%29.aspx
+	 *               */
+		std::string err_msg = "CodebenderccAPI::RegCloseKey() - Winerror.h error code: ";
+		err_msg += boost::lexical_cast<std::string>(rc);
 
-    error_notify(err_msg);
-    return rc;
+		error_notify(err_msg);
+		return rc;
+	}
+
+	return rc;
 }
 
 HANDLE
