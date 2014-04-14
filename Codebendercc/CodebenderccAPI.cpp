@@ -150,7 +150,7 @@ std::string CodebenderccAPI::probeUSB() try {
 	} else{
 		CodebenderccAPI::debugMessage("CodebenderccAPI::probeUSB could not open directory",2);
 	}	
-	if(lastPortCount!=dirs.length()){
+	if((size_t)lastPortCount!=dirs.length()){
 		lastPortCount=dirs.length();
 		CodebenderccAPI::detectNewPort(dirs);
     return dirs;}
