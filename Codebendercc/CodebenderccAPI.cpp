@@ -76,6 +76,7 @@ bool CodebenderccAPI::openPort(const std::string &port, const unsigned int &baud
 	return true;
 } catch (...) {
     error_notify("CodebenderccAPI::openPort() threw an unknown exception");
+	return false;
 }
 
 void CodebenderccAPI::closePort() try {
@@ -722,6 +723,7 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &command, bool appendFla
     return -204; // child process was killed
 } catch (...){
 	error_notify("CodebenderccAPI::unixExecAvrdude() threw an unknown exception");
+	return -205;
 }
 #endif
 
@@ -735,6 +737,7 @@ long CodebenderccAPI::filesize(const char *filename) try{
 	return buf.st_size;
 } catch (...){
 	error_notify("CodebenderccAPI::filesize() threw an unknown exception");
+	return -1;
 }
 #endif
 
