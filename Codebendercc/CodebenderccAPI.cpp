@@ -693,22 +693,26 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &command, bool appendFla
     do {
         int status = 0;
 
-        delay(1000);
-
         w = CodebenderccAPI::waitpid(pid, &status, WNOHANG);
         if (w == -1)
             return -202; // waitpid() failed
 
         if (w == 0) {
-            /* the child's state has not changed */
-            oldSize = CodebenderccAPI::filesize(outfile.c_str());
-            if (oldSize == -1)
+		/* wait for some time before getting the size of the output file*/
+		delay(1);
+
+		/* the child's state has not changed */
+		newSize = CodebenderccAPI::filesize(outfile.c_str());
+            if (newSize == -1)
                 break;
 
             if (newSize == oldSize)
                 counter++;
             else
-                newSize = oldSize;
+			{
+                oldSize = newSize;
+				counter = 0;
+			}
         }
         else if(WIFSIGNALED(status))
         {
@@ -718,9 +722,10 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &command, bool appendFla
         {
             return WEXITSTATUS(status);
         }
-    } while (counter != 10);
+    } while (counter != 10000);
 
     killpg(pid, SIGKILL);
+	
     return -204; // child process was killed
 } catch (...){
 	error_notify("CodebenderccAPI::unixExecAvrdude() threw an unknown exception");
