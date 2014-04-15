@@ -228,26 +228,30 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 		return -3;
 	}
  
-	// Check if output file changes.
 	DWORD dwFileSizeOld=0;
 	DWORD dwFileSizeNew=0;
-	delay(100);
-	dwFileSizeOld=GetFileSize( fh, NULL );
-	while (dwFileSizeOld!=dwFileSizeNew){
-		dwFileSizeNew=dwFileSizeOld;
-		delay(1000);
-		dwFileSizeOld=GetFileSize( fh, NULL );
-		}	
-	// Check if created process is still active once the file size stopped changing.
-	CodebenderccAPI::GetExitCodeProcess(pi.hProcess, &dwExitCode);
-	if(dwExitCode==STILL_ACTIVE){
-		// Wait for 10 seconds and check again if created process is still active.
-		CodebenderccAPI::WaitForSingleObject( pi.hProcess, 10000 );
+	int counter = 0;
+
+	do {
 		CodebenderccAPI::GetExitCodeProcess(pi.hProcess, &dwExitCode);
-			if(dwExitCode==STILL_ACTIVE)
-				CodebenderccAPI::TerminateProcess( pi.hProcess, 0 ); // Kill process if it is still running
-	}
-	 
+		// Check if created process is still active.
+		if(dwExitCode==STILL_ACTIVE){
+			delay(10);
+			dwFileSizeNew=GetFileSize( fh, NULL );
+			// Check if output file changes.
+			if (dwFileSizeOld == dwFileSizeNew)
+				counter++;
+			else{
+				dwFileSizeOld = dwFileSizeNew;
+				counter = 0;
+			}
+		}else
+			break;
+	}while(counter <= 2000);
+
+	if(dwExitCode==STILL_ACTIVE)
+		CodebenderccAPI::TerminateProcess( pi.hProcess, 0 ); // Kill process if it is still running.
+
 	CodebenderccAPI::CloseHandle(fh);
 	// CreateProcess docs specify that these must be closed. 
 	CodebenderccAPI::CloseHandle( pi.hProcess );
