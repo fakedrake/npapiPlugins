@@ -15,29 +15,39 @@
  */
 
 
-#if defined _WIN32 || _WIN64
-#define MAX_KEY_LENGTH 255
-#define WIN32_LEAN_AND_MEAN 
-#include <SDKDDKVer.h>
-#include "dirent.h"
-#include <windows.h>
-#include <tchar.h>
-#include <Shellapi.h>
-#include <Tchar.h>
-#include <Iepmapi.h>
-
-#include <stdio.h>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <stdlib.h>
-#include <string.h>
-#include <tchar.h>
-
-//using namespace std;
+#ifdef _WIN32
+	#define MAX_KEY_LENGTH 255
+	#define WIN32_LEAN_AND_MEAN 
+	#include <SDKDDKVer.h>
+	#include "dirent.h"
+	#include <windows.h>
+	#include <tchar.h>
+	#include <Shellapi.h>
+	#include <Tchar.h>
+	#include <Iepmapi.h>
+	#include <stdio.h>
+	#include <iostream>
+	#include <fstream>
+	#include <string>
+	#include <stdlib.h>
+	#include <string.h>
+	#include <tchar.h>
 #else
-#include <dirent.h>
+	#include <dirent.h>
+	#include <sys/file.h>
+	#include <sys/syscall.h>
+	#include <unistd.h>
+    #include <stddef.h>
+    #include <stdlib.h>
+    #include <sys/types.h>
+    #include <sys/wait.h>
+    #include <signal.h>
+    #include <stdio.h>
+    #include <string.h>
+    #include <errno.h>
 #endif
+
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/regex.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -47,25 +57,13 @@
 #include <boost/asio.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/array.hpp>
-//#include <boost/optional.hpp>
-//#include <boost/weak_ptr.hpp>
-//used to check for the drivers
-//#include <boost/filesystem/operations.hpp>
-//#include <boost/filesystem/path.hpp>
-//namespace fs = boost::filesystem;
-
 #include <fstream>
 #include <vector>
-//#include <iostream>
-//#include <sstream>
-//#include <stdio.h>
-//#include <stdlib.h>
 #include <time.h>
 #include <sys/stat.h>
 #include <algorithm>
 #include <numeric>
-//#include <sys/types.h>
-
+#include <sys/types.h>
 #include <fcntl.h>
 
 #include "BrowserHost.h"
@@ -79,7 +77,7 @@
 #include "SimpleStreamHelper.h"
 #include "variant_list.h"
 #include "SimpleSerial.h"
-
+#include <exception> 
 /**
  * Wjwwod serial library. 
  * https://github.com/wjwwood/serial
@@ -87,7 +85,6 @@
 #include "serial/include/serial/serial.h"
 
 using namespace serial;
-
 
 #ifdef __APPLE__
 #import <Security/Security.h>
@@ -137,18 +134,22 @@ public:
 		registerMethod("enableDebug", make_method(this, &CodebenderccAPI::enableDebug));
 		registerMethod("disableDebug", make_method(this, &CodebenderccAPI::disableDebug));
 		registerMethod("getFlashResult", make_method(this, &CodebenderccAPI::getFlashResult));
-		
+
         //Register all JS read-only properties
         registerProperty("version", make_property(this, &CodebenderccAPI::get_version));
         registerProperty("command", make_property(this, &CodebenderccAPI::getLastCommand));
         registerProperty("retVal", make_property(this, &CodebenderccAPI::getRetVal));
 
+		
 		debug_ = false;
 		lastPortCount=0;
 		probeFlag=false;
-
+		usedPort="";
+		//Returns the string name of the current operating system. 
         std::string os = getPlugin().get()->getOS();
+		//Returns the path and filename of the current plugin module. 
         path = getPlugin().get()->getFSPath();
+		//Finds the last / and returns the rest of the path.
 		path = path.substr(0, path.find_last_of("/\\") + 1);
 
 		std::string arch = "32";
@@ -158,49 +159,46 @@ public:
 
         // paths to files
         
-#if defined _WIN32||_WIN64
-			current_dir = getShortPaths(path);
-			std::wstring wchdir(current_dir);
-
-			if (os == "Windows"){
-				// WINDOWS
-				// .exe for windows 
-				// no path is appended to avrdude.exe or its config file, since both are used in a batch file
-				// that executes the avrdude command
-				avrdude = "avrdude.exe";
-				avrdudeConf = os + ".avrdude.conf";
-				
-				batchFile = wchdir + L"command.bat";
-				binFile = wchdir + L"file.bin";
-				hexFile = wchdir + L"bootloader.hex";
-				outfile = wchdir + L"out";
-				debugFilename = wchdir + L"debugging.txt";
-			}
+#ifdef _WIN32
+	current_dir = getShortPaths(path);
+	std::wstring wchdir(current_dir);
+		if (os == "Windows")
+        {
+			// WINDOWS
+			// .exe for windows 
+			// no path is appended to avrdude.exe or its config file, since both are used in a batch file
+			// that executes the avrdude command
+			avrdude = "avrdude.exe";
+			avrdudeConf = os + ".avrdude.conf";
+		
+			batchFile = wchdir + L"command.bat";
+			binFile = wchdir + L"file.bin";
+			hexFile = wchdir + L"bootloader.hex";
+			outfile = wchdir + L"out";
+			debugFilename = wchdir + L"debugging.txt";
+		}
 #else
-			
-			binFile = path + "file.bin";
-			hexFile = path + "bootloader.hex";
-			outfile = path + "out";
-			debugFilename = path + "debugging.txt";
-
+		binFile = path + "file.bin";
+		hexFile = path + "bootloader.hex";
+		outfile = path + "out";
+		debugFilename = path + "debugging.txt";
 			if (os == "X11") {
 				// LINUX
 				avrdude = path + os + "." + arch + ".avrdude";
 				avrdudeConf = path + os + "." + arch + ".avrdude.conf";
-			} else {
+			                 } 
+            else {
 				// MAC
 				path = path + "../../";
 				avrdude = path + os + ".avrdude";
 				avrdudeConf = path + os + ".avrdude.conf";
-#ifdef __APPLE__		//added to avoid messing up compilation process
-					binFile = path + "file.bin";
-					outfile = path + "out";
-#endif
-			}
+                    #ifdef __APPLE__		//added to avoid messing up compilation process
+                    	binFile = path + "file.bin";
+                    	outfile = path + "out";
+                    #endif
+			     }		
 #endif
 
-        boost::thread t(boost::bind(&boost::asio::io_service::run, &io));
-  
         _retVal = 9999;
     }
 
@@ -320,7 +318,7 @@ public:
      * When on Windows OS, finds all available usb ports.
      * @return a comma separated list of the detected devices.
      */
-#if defined _WIN32 || _WIN64
+#ifdef _WIN32
 	std::string CodebenderccAPI::QueryKey(HKEY hKey);
 #endif
 	
@@ -391,7 +389,7 @@ public:
 	/**
 	 * Creates an instance of the serial library and opens it.
 	 **/
-	void openPort(const std::string &port, const unsigned int &baudrate);
+	bool openPort(const std::string &port, const unsigned int &baudrate);
 
 	/**
 	 * Closes the current port connection.
@@ -415,10 +413,16 @@ public:
 	void debugMessageProbe(const char * messageDebug, int minimumLevel);
 	
 	/**
+	 * Function that print process and thread ids in Unix.
+	 **/
+	
+	void getThreadId(const char * pidMessage,const char * threadMessage); 
+	
+	/**
 	 * Debugging variables.
 	 **/
 	std::ofstream debugFile;
-#if defined _WIN32||_WIN64
+#ifdef _WIN32
 	std::wstring debugFilename;
 #else
 	std::string debugFilename;
@@ -427,6 +431,19 @@ public:
 	bool probeFlag;
 	bool debug_;
 	int currentLevel;
+	std::string usedPort;
+
+	/**
+	 * Process and thread variables in Unix.
+	 **/
+
+	#ifdef _WIN32
+		int pid;
+		long tid;
+	#else	
+		pid_t pid;
+		long tid;
+	#endif
 
 private:
 
@@ -579,10 +596,14 @@ private:
 	  * Executes a command with avrdude.
 	  * When on Widnows, the functions creates a batch file and then 
 	  * calls CodebenderccAPI::execAvrdude function to execute the batch file,
-	  * else performs a Unix system call.
+	  * else calls CodebenderccAPI::unixExecAvrdude function.
 	  * If appendFlag is true append the output of the avrdude command to the output file, if one exists.
 	  */
-	int runAvrdude(const std::string& command, bool appendFlag);
+	int runAvrdude(const std::string& command, bool append);
+
+    int unixExecAvrdude(const std::string &unixExecCommand, bool unixAppendFlag);
+
+    long filesize(const char *filename);
 
 	/**
      * 
@@ -661,7 +682,7 @@ private:
 	/**
 	 */
 	
-	#if defined _WIN32||_WIN64
+	#ifdef _WIN32
 		std::string avrdude, avrdudeConf;
 		std::wstring binFile, hexFile, outfile, batchFile;
 		const wchar_t * current_dir;
@@ -691,14 +712,14 @@ private:
 
 	
     void delay(int duration) {
-#if defined _WIN32 || _WIN64
+#ifdef _WIN32
         Sleep(duration);
 #else
         usleep(duration * 1000);
 #endif
     }
 
-#if defined _WIN32 || _WIN64
+#ifdef _WIN32
 
 	const wchar_t * getShortPaths(std::string  &longpath) {
 
@@ -719,6 +740,109 @@ private:
 		return L"";
 	}
 #endif
+
+    DIR *opendir(const char *name);
+
+    struct dirent *readdir(DIR *dirp);
+
+    void closedir(DIR *dirp);
+
+    FILE *fopen(const char *path, const char *mode);
+
+    FILE *freopen(const char *path, const char *mode, FILE *stream);
+
+    size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+
+    char *fgets(char *s, int size, FILE *stream);
+
+    void fclose(FILE *fp);
+
+#ifndef _WIN32
+    FILE *popen(const char *command, const char *type);
+
+    void pclose(FILE *stream);
+
+    int stat(const char *path, struct stat *buf);
+
+    pid_t fork(void);
+
+    int execvp(const char *file, char *const argv[]);
+
+    pid_t waitpid(pid_t pid, int *status, int options);
+#endif
+
+    int system(const char *command);
+
+#ifdef _WIN32
+    LONG RegQueryInfoKey(HKEY hKey,
+                         LPTSTR lpClass,
+                         LPDWORD lpcClass,
+                         LPDWORD lpReserved,
+                         LPDWORD lpcSubKeys,
+                         LPDWORD lpcMaxSubKeyLen,
+                         LPDWORD lpcMaxClassLen,
+                         LPDWORD lpcValues,
+                         LPDWORD lpcMaxValueNameLen,
+                         LPDWORD lpcMaxValueLen,
+                         LPDWORD lpcbSecurityDescriptor,
+                         PFILETIME lpftLastWriteTime);
+
+    LONG RegEnumValue(HKEY hKey,
+                      DWORD dwIndex,
+                      LPTSTR lpValueName,
+                      LPDWORD lpcchValueName,
+                      LPDWORD lpReserved,
+                      LPDWORD lpType,
+                      LPBYTE lpData,
+                      LPDWORD lpcbData);
+
+    LONG RegQueryValueEx(HKEY hKey,
+                         LPCTSTR lpValueName,
+                         LPDWORD lpReserved,
+                         LPDWORD lpType,
+                         LPBYTE lpData,
+                         LPDWORD lpcbData);
+
+    LONG RegOpenKeyEx(HKEY hKey,
+                      LPCTSTR lpSubKey,
+                      DWORD ulOptions,
+                      REGSAM samDesired,
+                      PHKEY phkResult);
+
+    LONG RegCloseKey(HKEY hKey);
+
+    HANDLE CreateFile(LPCTSTR lpFileName,
+                      DWORD dwDesiredAccess,
+                      DWORD dwShareMode,
+                      LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+                      DWORD dwCreationDisposition,
+                      DWORD dwFlagsAndAttributes,
+                      HANDLE hTemplateFile);
+
+    BOOL CreateProcess(LPCTSTR lpApplicationName,
+                       LPTSTR lpCommandLine,
+                       LPSECURITY_ATTRIBUTES lpProcessAttributes,
+                       LPSECURITY_ATTRIBUTES lpThreadAttributes,
+                       BOOL bInheritHandles,
+                       DWORD dwCreationFlags,
+                       LPVOID lpEnvironment,
+                       LPCTSTR lpCurrentDirectory,
+                       LPSTARTUPINFO lpStartupInfo,
+                       LPPROCESS_INFORMATION lpProcessInformation);
+
+    DWORD WaitForSingleObject(HANDLE hHandle,
+                              DWORD dwMilliseconds);
+
+
+    BOOL GetExitCodeProcess(HANDLE hProcess,
+                            LPDWORD lpExitCode);
+
+    BOOL TerminateProcess(HANDLE hProcess,
+                          UINT uExitCode);
+
+    BOOL CloseHandle(HANDLE hObject);
+#endif
+
 };
 
 #endif // H_CodebenderccAPI

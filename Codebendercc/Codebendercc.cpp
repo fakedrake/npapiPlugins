@@ -10,6 +10,13 @@
 #include "CodebenderccAPI.h"
 
 #include "Codebendercc.h"
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm> 
+ 
+using namespace std;
+
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @fn Codebendercc::StaticInitialize()
@@ -121,4 +128,71 @@ bool Codebendercc::onWindowDetached(FB::DetachedEvent *evt, FB::PluginWindow *)
     // The window is about to be detached; act appropriately
     return false;
 }
+
+vector <string> vectorPortsInUseList;
+vector< string >::const_iterator iter;
+boost::mutex mtxPort;
+
+bool CanBeUsed(string port)
+{
+	if (vectorPortsInUseList.empty())
+		{ 
+		return true;
+		}
+	else
+		{
+			if (std::find(vectorPortsInUseList.begin(), vectorPortsInUseList.end(), port) != vectorPortsInUseList.end())
+				{
+				return false;
+				}
+			else    
+				{
+				return true;
+				}
+		 }
+}
+
+bool AddtoPortList(string port)
+{
+	#ifdef _WIN32
+	if (port.find("\\\\.\\") == string::npos) {
+			port = "\\\\.\\" + port;
+			}	
+	#endif
+	if (vectorPortsInUseList.empty())
+		{ 
+		mtxPort.lock();
+		vectorPortsInUseList.push_back(port);
+		mtxPort.unlock();
+		return true;
+		}
+	else
+		{
+			if (std::find(vectorPortsInUseList.begin(), vectorPortsInUseList.end(), port) != vectorPortsInUseList.end())
+				{
+				return false;
+				}
+			else    
+				{
+				mtxPort.lock();
+				vectorPortsInUseList.push_back(port);
+				mtxPort.unlock();
+				return true;
+				}
+		 }
+}
+
+void RemovePortFromList(string port)
+{
+	#ifdef _WIN32
+	if (port.find("\\\\.\\") == string::npos) {
+			port = "\\\\.\\" + port;
+			}	
+	#endif
+	mtxPort.lock();
+	if (std::find(vectorPortsInUseList.begin(), vectorPortsInUseList.end(), port) != vectorPortsInUseList.end())
+	vectorPortsInUseList.erase(std::remove(vectorPortsInUseList.begin(), vectorPortsInUseList.end(), port));
+	mtxPort.unlock();
+}
+
 
