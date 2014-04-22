@@ -51,17 +51,36 @@ void Codebendercc::StaticDeinitialize()
 ///////////////////////////////////////////////////////////////////////////////
 Codebendercc::Codebendercc()
 {
-}
+    
+	/* Get plugin path.*/
+  std::string path = getFSPath();
+  path = path.substr(0, path.find_last_of("/\\") + 1);
+  std::string tmp ="tmp/";
+  std::string tmpPath=path.append(tmp);
+  /* Create tmp folder to store out, file.bin, hex.bin and debugging.txt  if it doesn't exist.*/
+  boost::filesystem::path p(tmpPath);
+  if (!boost::filesystem::exists(p))
+   	boost::filesystem::create_directory(p);
+    }
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief  Codebendercc destructor.
 ///////////////////////////////////////////////////////////////////////////////
 Codebendercc::~Codebendercc()
 {
-    // This is optional, but if you reset m_api (the shared_ptr to your JSAPI
-    // root object) and tell the host to free the retained JSAPI objects then
-    // unless you are holding another shared_ptr reference to your JSAPI object
-    // they will be released here.
+  // This is optional, but if you reset m_api (the shared_ptr to your JSAPI
+  // root object) and tell the host to free the retained JSAPI objects then
+  // unless you are holding another shared_ptr reference to your JSAPI object
+  // they will be released here.
+  /* Get plugin path.*/
+  std::string path = getFSPath();
+  path = path.substr(0, path.find_last_of("/\\") + 1);
+  std::string tmp ="tmp/";
+  std::string tmpPath=path.append(tmp);
+  boost::filesystem::path p(tmpPath);
+  /* Remove tmp folder and files: file.bin, hex.bin, out and debugging.txt  if they exist.*/
+ 	if(boost::filesystem::exists(p))
+       boost::filesystem::remove_all(p);
     releaseRootJSAPI();
     m_host->freeRetainedObjects();
 }
@@ -95,7 +114,10 @@ void Codebendercc::shutdown()
 /// as it could prevent your plugin class from getting destroyed properly.
 ///////////////////////////////////////////////////////////////////////////////
 FB::JSAPIPtr Codebendercc::createJSAPI()
-{
+{  
+     /*std::string path = getFSPath();
+     m_host->htmlLog("in codebendercc");
+     m_host->htmlLog(path);*/
     // m_host is the BrowserHost
     return boost::make_shared<CodebenderccAPI>(FB::ptr_cast<Codebendercc>(shared_from_this()), m_host);
 }
@@ -194,5 +216,3 @@ void RemovePortFromList(string port)
 	vectorPortsInUseList.erase(std::remove(vectorPortsInUseList.begin(), vectorPortsInUseList.end(), port));
 	mtxPort.unlock();
 }
-
-

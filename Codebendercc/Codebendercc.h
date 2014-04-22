@@ -19,6 +19,7 @@
 #include <string>
 #include <algorithm>
 
+#include <boost/filesystem.hpp>
 using namespace std;
 
 extern vector <string> vectorPortsInUseList;

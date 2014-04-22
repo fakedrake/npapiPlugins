@@ -86,6 +86,7 @@
 
 using namespace serial;
 
+
 #ifdef __APPLE__
 #import <Security/Security.h>
 #endif
@@ -151,12 +152,12 @@ public:
         path = getPlugin().get()->getFSPath();
 		//Finds the last / and returns the rest of the path.
 		path = path.substr(0, path.find_last_of("/\\") + 1);
-
+       
 		std::string arch = "32";
 		#ifdef __x86_64
 				arch = "64";
 		#endif
-
+     
         // paths to files
         
 #ifdef _WIN32
@@ -178,10 +179,11 @@ public:
 			debugFilename = wchdir + L"debugging.txt";
 		}
 #else
-		binFile = path + "file.bin";
-		hexFile = path + "bootloader.hex";
-		outfile = path + "out";
-		debugFilename = path + "debugging.txt";
+        std::string tmp ="tmp/";
+		binFile = path + tmp + "file.bin";
+		hexFile = path + tmp + "bootloader.hex";
+		outfile = path  + tmp + "out";
+		debugFilename = path + tmp + "debugging.txt";
 			if (os == "X11") {
 				// LINUX
 				avrdude = path + os + "." + arch + ".avrdude";
