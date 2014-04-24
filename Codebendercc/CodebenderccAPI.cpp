@@ -702,21 +702,29 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &command, bool appendFla
             return -202; // waitpid() failed
 
         if (w == 0) {
-		/* wait for some time before getting the size of the output file*/
+		/* wait for 0.0001 sec before getting the size of the output file*/
 		delay(1);
-
-		/* the child's state has not changed */
-		newSize = CodebenderccAPI::filesize(outfile.c_str());
-            if (newSize == -1)
-                break;
-
-            if (newSize == oldSize)
-                counter++;
-            else
-			{
-                oldSize = newSize;
-				counter = 0;
-			}
+		/* Check if the file exists */
+		boost::filesystem::path out(outfile);
+	 		if(boost::filesystem::exists(out))
+	 			{
+				/* the child's state has not changed */
+				newSize = CodebenderccAPI::filesize(outfile.c_str());
+		            if (newSize == -1)
+		                break;
+		            if (newSize == oldSize)
+		                counter++;
+		            else
+					{
+		                oldSize = newSize;
+						counter = 0;
+					}
+				}
+				/* If file doesn't exist, increase counter */
+				else 
+				{
+				counter++;	
+				}	
         }
         else if(WIFSIGNALED(status))
         {
