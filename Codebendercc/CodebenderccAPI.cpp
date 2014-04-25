@@ -795,7 +795,7 @@ void CodebenderccAPI::saveToHex(const std::string& hexContent) try {
     if (!fp)
         return;
 
-    CodebenderccAPI::fwrite(hexContent.c_str(), hexContent.length(), 1, fp);
+    CodebenderccAPI::fwrite(hexContent.c_str(), hexContent.length(), hexContent.length() ? 1 : 0, fp);
     CodebenderccAPI::fclose(fp);
 
     CodebenderccAPI::debugMessage("CodebenderccAPI::saveToHex ended",3);
