@@ -249,8 +249,10 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 			break;
 	}while(counter <= 2000);
 
-	if(dwExitCode==STILL_ACTIVE)
+	if(dwExitCode == STILL_ACTIVE){
 		CodebenderccAPI::TerminateProcess( pi.hProcess, 0 ); // Kill process if it is still running.
+		dwExitCode = -204;
+	}
 
 	CodebenderccAPI::CloseHandle(fh);
 	// CreateProcess docs specify that these must be closed. 
