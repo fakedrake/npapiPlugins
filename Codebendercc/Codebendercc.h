@@ -28,6 +28,9 @@ bool AddtoPortList(string port);
 void RemovePortFromList(string port);
 bool CanBeUsed(string port);
 
+extern boost::mutex mtxAvrdudeFlag;
+extern bool isAvrdudeRunning;
+
 FB_FORWARD_PTR(Codebendercc)
 class Codebendercc : public FB::PluginCore
 {

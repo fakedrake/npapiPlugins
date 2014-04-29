@@ -195,4 +195,7 @@ void RemovePortFromList(string port)
 	mtxPort.unlock();
 }
 
+boost::mutex mtxAvrdudeFlag;
+bool isAvrdudeRunning = false;
+
 

@@ -271,6 +271,14 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 void CodebenderccAPI::doflash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr & flash_callback) try {
     CodebenderccAPI::debugMessage("CodebenderccAPI::doflash",3);
 
+	mtxAvrdudeFlag.lock();
+	if(isAvrdudeRunning){
+		flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-23));
+		mtxAvrdudeFlag.unlock();
+		return;
+		}
+	isAvrdudeRunning=true;
+	mtxAvrdudeFlag.unlock();
 	std::string os = getPlugin().get()->getOS();
 
 	try {
@@ -292,6 +300,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 						if(!CodebenderccAPI::openPort(fdevice, 1200))
 						{
 						flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-22));
+						isAvrdudeRunning=false;	
 						return;
 						}
 						delay(2000);
@@ -420,16 +429,19 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 					}
 				}
 				RemovePortFromList(fdevice);
+				isAvrdudeRunning=false;	
 				flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
 			}
 		else{
 				CodebenderccAPI::debugMessage("Port is in use, choose another port",3);
+				isAvrdudeRunning=false;	
 				flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-22));
 			}	
 		} 
 	catch (...) 
 	{
 		CodebenderccAPI::debugMessage("CodebenderccAPI::doflash exception",2);
+		isAvrdudeRunning=false;	
         flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(9001));
 		RemovePortFromList(device);
     }
@@ -440,6 +452,15 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 
 void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std::string& code, const std::string& maxsize, std::map<std::string, std::string>& programmerData, const std::string& mcu, const FB::JSObjectPtr & flash_callback) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashWithProgrammer",3);
+	mtxAvrdudeFlag.lock();
+	if(isAvrdudeRunning){
+		flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-23));
+		mtxAvrdudeFlag.unlock();
+		return;
+		}
+	isAvrdudeRunning=true;
+	mtxAvrdudeFlag.unlock();
+
 	std::string os = getPlugin().get()->getOS();
 	
 	try {
@@ -476,22 +497,31 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 			else
 			{
 				flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-22));
+				isAvrdudeRunning=false;	
 				CodebenderccAPI::debugMessage("CodebenderccAPI::Port is already in use.",3);
 			}
 	}catch(...){
 		CodebenderccAPI::debugMessage("CodebenderccAPI::doflashWithProgrammer exception",2);
+		isAvrdudeRunning=false;	
         flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(9001));
 		RemovePortFromList(device);
     }
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashWithProgrammer ended",3);
+	isAvrdudeRunning=false;	
 } catch (...) {
     error_notify("CodebenderccAPI::doflashWithProgrammer() threw an unknown exception");
 }
 
 void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std::string, std::string>& programmerData, std::map<std::string, std::string>& bootloaderData, const std::string& mcu, const FB::JSObjectPtr & flash_callback) try {
-
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader",3);
-	
+	mtxAvrdudeFlag.lock();
+	if(isAvrdudeRunning){
+		flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-23));
+		mtxAvrdudeFlag.unlock();
+		return;
+		}
+	isAvrdudeRunning=true;
+	mtxAvrdudeFlag.unlock();
 	std::string os = getPlugin().get()->getOS();
 	try {
 		if((programmerData["communication"] == "usb")||(programmerData["communication"] == "")||(AddtoPortList(device)))
@@ -561,13 +591,16 @@ void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std
 	else
 		{
 			flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-22));
+			isAvrdudeRunning=false;	
 			CodebenderccAPI::debugMessage("CodebenderccAPI::Port is already in use:",3);
 		}	
 	}catch(...){
 		CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader exception",2);
+		isAvrdudeRunning=false;	
         flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(9001));
 		RemovePortFromList(device);
 	}
+	isAvrdudeRunning=false;	
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader ended",3);
 } catch (...) {
     error_notify("CodebenderccAPI::doflashBootloader() threw an unknown exception");
