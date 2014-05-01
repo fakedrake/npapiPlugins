@@ -769,7 +769,7 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &command, bool appendFla
         {
             return WEXITSTATUS(status);
         }
-    } while (counter != 10000);
+    } while (counter != 20000);
 
     killpg(pid, SIGKILL);
 	
