@@ -270,7 +270,7 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 /////////////////////////////PRIVATE////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-void CodebenderccAPI::doflash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr & flash_callback) try {
+void CodebenderccAPI::doflash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& disable_flushing, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr & flash_callback) try {
     CodebenderccAPI::debugMessage("CodebenderccAPI::doflash",3);
 
 	mtxAvrdudeFlag.lock();
@@ -404,6 +404,13 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 				command += " -c" + protocol
 				+ " -b" + speed
 				+ " -F";
+
+				/**
+				  * Flush the buffer of the serial port before uploading, 
+				  * unless the board definition specifies not to do so.
+				  **/
+				if (disable_flushing == "" || disable_flushing == "false")
+					CodebenderccAPI::flushBuffer(fdevice);
 
 				retVal = CodebenderccAPI::runAvrdude(command, false);
 				_retVal = retVal;

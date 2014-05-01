@@ -4,7 +4,7 @@
 ////////////////////////////////////public//////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-FB::variant CodebenderccAPI::flash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr &flash_callback) try {
+FB::variant CodebenderccAPI::flash(const std::string& device, const std::string& code, const std::string& maxsize, const std::string& protocol, const std::string& disable_flushing, const std::string& speed, const std::string& mcu, const FB::JSObjectPtr &flash_callback) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::flash",3);	
 		#ifdef _WIN32	// Check if finding the short path of the plugin failed.
 			if (current_dir == L""){
@@ -19,11 +19,12 @@ FB::variant CodebenderccAPI::flash(const std::string& device, const std::string&
 			if (!validate_number(speed)) error_code = -7;
 			if (!validate_charnum(protocol)) error_code = -8;
 			if (!validate_charnum(mcu)) error_code = -9;
+			if (!validate_charnum(disable_flushing)) error_code = -30;
 			if (error_code != 0){
 				flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(error_code));
 				return 0;
 			}	
-		boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doflash, this, device, code, maxsize, protocol, speed, mcu, flash_callback));
+		boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doflash, this, device, code, maxsize, protocol, disable_flushing, speed, mcu, flash_callback));
 	CodebenderccAPI::debugMessage("CodebenderccAPI::flash ended",3);		
 	return 0;
 }catch (...) {
