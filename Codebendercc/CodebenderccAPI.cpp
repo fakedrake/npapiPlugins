@@ -225,7 +225,7 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 	if (! success)
 	{
 		CodebenderccAPI::debugMessage("Failed to create child process.", 1);
-		return -3;
+		return -200;
 	}
  
 	DWORD dwFileSizeOld=0;
