@@ -45,25 +45,25 @@ bool CodebenderccAPI::openPort(const std::string &port, const unsigned int &baud
 											}
 			}catch(serial::PortNotOpenedException& pno){
 				CodebenderccAPI::debugMessage(pno.what(),2);
-				perror("Error opening port.");
+				error_notify(pno.what());
 				RemovePortFromList(usedPort);
 				return false;
 											}
 			catch(serial::SerialException& se){
 				CodebenderccAPI::debugMessage(se.what(),2);
-				perror("Error opening port.");
+				error_notify(se.what());
 				RemovePortFromList(usedPort);
 				return false;
 									}			
 			catch(std::invalid_argument& inv_arg){
 				CodebenderccAPI::debugMessage(inv_arg.what(),2);
-				perror("Error opening port.");
+				error_notify(inv_arg.what());
 				RemovePortFromList(usedPort);
 				return false;
 									}	
 			catch(serial::IOException& IOe){
 				CodebenderccAPI::debugMessage(IOe.what(),2);
-				perror("Error opening port.");
+				error_notify(IOe.what());
 				RemovePortFromList(usedPort);
 				return false;
 								}						
