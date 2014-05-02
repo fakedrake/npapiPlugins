@@ -392,12 +392,12 @@ public:
 	/**
 	 * Creates an instance of the serial library and opens it.
 	 **/
-	bool openPort(const std::string &port, const unsigned int &baudrate);
+	bool openPort(const std::string &port, const unsigned int &baudrate, bool flushFlag);
 
 	/**
 	 * Closes the current port connection.
 	 **/
-	void closePort();
+	void closePort(bool flushFlag);
 
 	/**
 	 * Functions to check and enable or disable debugging.

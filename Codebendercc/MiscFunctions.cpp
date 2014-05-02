@@ -431,7 +431,7 @@ void CodebenderccAPI::flushBuffer(const std::string& port) try {
 
  	CodebenderccAPI::debugMessage("CodebenderccAPI::flushBuffer",3);
  	
-	if(!CodebenderccAPI::openPort(port, 9600)) {
+	if(!CodebenderccAPI::openPort(port, 9600, true)) {
 		error_notify("CodebenderccAPI::flushBuffer() got an error while opening the serial port.");	
 		return;
 	}
@@ -446,7 +446,7 @@ void CodebenderccAPI::flushBuffer(const std::string& port) try {
  	serialPort.setDTR(true);
  	serialPort.setRTS(true);
  
- 	CodebenderccAPI::closePort();
+ 	CodebenderccAPI::closePort(true);
  	
  	CodebenderccAPI::debugMessage("CodebenderccAPI::flushBuffer ended",3);
  	

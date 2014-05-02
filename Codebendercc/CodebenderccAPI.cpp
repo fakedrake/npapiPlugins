@@ -17,14 +17,14 @@ FB::variant CodebenderccAPI::download() {
 ////////////////////////////////////public//////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-bool CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudrate) try {
+bool CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudrate, bool flushFlag) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::openPort",3);
 	std::string device;
 	device = port;
 	#ifdef _WIN32
 		device = "\\\\.\\" + port;
 	#endif
-	if(AddtoPortList(device))
+	if(flushFlag || AddtoPortList(device))
 	{ //Check if device is used by someone else
 		try
 			{
@@ -46,25 +46,29 @@ bool CodebenderccAPI::openPort(const std::string &port, const unsigned int &baud
 			}catch(serial::PortNotOpenedException& pno){
 				CodebenderccAPI::debugMessage(pno.what(),2);
 				error_notify(pno.what());
-				RemovePortFromList(usedPort);
+				if(!flushFlag)
+					RemovePortFromList(usedPort);
 				return false;
 											}
 			catch(serial::SerialException& se){
 				CodebenderccAPI::debugMessage(se.what(),2);
 				error_notify(se.what());
-				RemovePortFromList(usedPort);
+				if(!flushFlag)
+					RemovePortFromList(usedPort);
 				return false;
 									}			
 			catch(std::invalid_argument& inv_arg){
 				CodebenderccAPI::debugMessage(inv_arg.what(),2);
 				error_notify(inv_arg.what());
-				RemovePortFromList(usedPort);
+				if(!flushFlag)
+					RemovePortFromList(usedPort);
 				return false;
 									}	
 			catch(serial::IOException& IOe){
 				CodebenderccAPI::debugMessage(IOe.what(),2);
 				error_notify(IOe.what());
-				RemovePortFromList(usedPort);
+				if(!flushFlag)
+					RemovePortFromList(usedPort);
 				return false;
 								}						
 	}	
@@ -79,15 +83,17 @@ bool CodebenderccAPI::openPort(const std::string &port, const unsigned int &baud
 	return false;
 }
 
-void CodebenderccAPI::closePort() try {
+void CodebenderccAPI::closePort(bool flushFlag) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::closePort",3);		
 	try{
 		if(serialPort.isOpen())
 			serialPort.close();
-			RemovePortFromList(usedPort);
+			if(!flushFlag)
+				RemovePortFromList(usedPort);
 	}catch(...){
 	CodebenderccAPI::debugMessage("CodebenderccAPI::closePort exception",2);
-	RemovePortFromList(usedPort);
+	if(!flushFlag)
+		RemovePortFromList(usedPort);
 	}
 	CodebenderccAPI::debugMessage("CodebenderccAPI::closePort ended",3);
 } catch (...) {
@@ -299,14 +305,14 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 				if (mcu == "atmega32u4") {
 					try {	
 						// set the "magic" baudrate to force leonardo reset
-						if(!CodebenderccAPI::openPort(fdevice, 1200))
+						if(!CodebenderccAPI::openPort(fdevice, 1200, false))
 						{
 						flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-22));
 						isAvrdudeRunning=false;	
 						return;
 						}
 						delay(2000);
-						CodebenderccAPI::closePort();
+						CodebenderccAPI::closePort(false);
 						// delay for 300 ms so that the reset is complete
 						if ((os == "Windows") || (os == "X11"))
 							delay(300);
@@ -882,7 +888,7 @@ void CodebenderccAPI::detectNewPort(const std::string& portString) try {
 
 void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &baudrate, const FB::JSObjectPtr & callback) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader",3);	
-	if(!CodebenderccAPI::openPort(port, baudrate))
+	if(!CodebenderccAPI::openPort(port, baudrate, false))
 		{
 		notify("disconnect");
 		return;
@@ -905,7 +911,7 @@ void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &
 		}	
     catch (...) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader loop interrupted",1);
-		closePort();
+		closePort(false);
 		/*Port is already closed from closePort() and notify("disconnect") closes the port for second time*/
         notify("disconnect");
     }

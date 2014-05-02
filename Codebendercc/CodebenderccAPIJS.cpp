@@ -154,7 +154,7 @@ FB::variant CodebenderccAPI::disconnect() try {
 	if(!(serialPort.isOpen()))
 		return 1;
 	try{
-			CodebenderccAPI::closePort();
+			CodebenderccAPI::closePort(false);
 		}catch(...){
 		CodebenderccAPI::debugMessage("CodebenderccAPI::disconnect close port exception",2);
 		}
