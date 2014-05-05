@@ -165,13 +165,13 @@ FB::variant CodebenderccAPI::disconnect() try {
     return 0;
 }
 
-bool CodebenderccAPI::serialRead(const std::string &port, const std::string &baudrate, const FB::JSObjectPtr &callback) try {
+bool CodebenderccAPI::serialRead(const std::string &port, const std::string &baudrate, const FB::JSObjectPtr &callback,  const FB::JSObjectPtr &valHandCallback) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialRead",3);
 	std::string message = "connecting at ";
     message += baudrate;
     callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(message));
     unsigned int brate = boost::lexical_cast<unsigned int, std::string > (baudrate);
-    boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::serialReader, this, port, brate, callback));
+    boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::serialReader, this, port, brate, callback, valHandCallback));
     CodebenderccAPI::debugMessage("CodebenderccAPI::serialRead ended",3);
 	return true; // the thread is started
 }catch (...) {

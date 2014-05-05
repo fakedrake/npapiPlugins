@@ -369,9 +369,10 @@ public:
      * @param port The port of the device as a string. @see validate_device
      * @param baudrate The baudrate to use for the connection as a string.
      * @param callback A callback function to report all characters read from the Serial Port.
+     * @param valHandCallback A callback function to display exception thrown by openPort.
      * @return true if connection was attempted, false otherwise.
      */
-    bool serialRead(const std::string &port, const std::string &baudrate, const FB::JSObjectPtr &callback);
+    bool serialRead(const std::string &port, const std::string &baudrate, const FB::JSObjectPtr &callback, const FB::JSObjectPtr &valHandCallback);
     /**
      * Write String to the open serial port.
      * @param the string to write.
@@ -392,7 +393,7 @@ public:
 	/**
 	 * Creates an instance of the serial library and opens it.
 	 **/
-	bool openPort(const std::string &port, const unsigned int &baudrate, bool flushFlag);
+	int openPort(const std::string &port, const unsigned int &baudrate, bool flushFlag);
 
 	/**
 	 * Closes the current port connection.
@@ -663,8 +664,9 @@ private:
      * @param 
      * @param 
      * @param 
+     * @param
      */
-    void serialReader(const std::string &, const unsigned int &, const FB::JSObjectPtr &);
+    void serialReader(const std::string &, const unsigned int &, const FB::JSObjectPtr &, const FB::JSObjectPtr &);
 
 	/**
 	 * Creates a separate process to run the avrdude command when on Windows OS.
