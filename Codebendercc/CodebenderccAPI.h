@@ -47,6 +47,7 @@
     #include <errno.h>
 #endif
 
+#include <boost/filesystem.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/regex.hpp>
@@ -241,6 +242,7 @@ public:
      * @param code A base64 encoded string of the binary file to be flashed to the device. 
      * @param maxsize The maximum size of a binary file that can be flashed to the specific Arduino/other Board.
      * @param protocol The protocol to be used for Avrdude.
+	 * @param disable_flushing Specify whether the serial port buffer should be flushed or not.
      * @param speed The baudrate to be used with Avrdude.
      * @param mcu The mcu to be used with Avrdude.
      * @param cback A callback used to report the flash result.
@@ -250,6 +252,7 @@ public:
 		const std::string& code, 
 		const std::string& maxsize, 
 		const std::string& protocol, 
+		const std::string& disable_flushing, 
 		const std::string& speed, 
 		const std::string& mcu, 
 		const FB::JSObjectPtr & cback);
@@ -389,12 +392,12 @@ public:
 	/**
 	 * Creates an instance of the serial library and opens it.
 	 **/
-	bool openPort(const std::string &port, const unsigned int &baudrate);
+	bool openPort(const std::string &port, const unsigned int &baudrate, bool flushFlag);
 
 	/**
 	 * Closes the current port connection.
 	 **/
-	void closePort();
+	void closePort(bool flushFlag);
 
 	/**
 	 * Functions to check and enable or disable debugging.
@@ -612,6 +615,7 @@ private:
      * @param 
      * @param 
      * @param 
+	 * @param
      * @param 
      * @param 
      */
@@ -619,6 +623,7 @@ private:
 		const std::string&, 
 		const std::string&, 
 		const std::string&, 
+		const std::string&,
 		const std::string&, 
 		const std::string&, 
 		const FB::JSObjectPtr &);
@@ -669,6 +674,11 @@ private:
 	 * @return a code (integer) that indicates whether the command was successful or not
 	 */
     int winExecAvrdude(const std::wstring & cmd, bool appendFlag);
+
+	/**
+ 	 * Flushes the contents of the serial port and toggles the DTR and RTS signal values.
+ 	 **/
+	void flushBuffer(const std::string &);
 
     /**
      */

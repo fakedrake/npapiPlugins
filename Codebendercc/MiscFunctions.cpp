@@ -427,6 +427,34 @@ int CodebenderccAPI::bootloaderPrefs(const std::string& lFuses, const std::strin
     return 0;
 }
 
+void CodebenderccAPI::flushBuffer(const std::string& port) try {
+
+ 	CodebenderccAPI::debugMessage("CodebenderccAPI::flushBuffer",3);
+ 	
+	if(!CodebenderccAPI::openPort(port, 9600, true)) {
+		error_notify("CodebenderccAPI::flushBuffer() got an error while opening the serial port.");	
+		return;
+	}
+
+ 	serialPort.flush();
+ 	
+ 	serialPort.setDTR(false);
+ 	serialPort.setRTS(false);
+ 	
+ 	delay(100);
+ 	
+ 	serialPort.setDTR(true);
+ 	serialPort.setRTS(true);
+ 
+ 	CodebenderccAPI::closePort(true);
+ 	
+ 	CodebenderccAPI::debugMessage("CodebenderccAPI::flushBuffer ended",3);
+ 	
+ }catch(...) {
+ 	error_notify("CodebenderccAPI::flushBuffer() threw an unknown exception");
+ 	return;
+ }
+
 ////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////validations//////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
