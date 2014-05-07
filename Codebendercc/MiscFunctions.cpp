@@ -437,16 +437,29 @@ void CodebenderccAPI::flushBuffer(const std::string& port) try {
         error_notify("CodebenderccAPI::flushBuffer() got an error while opening the serial port."); 
         return;    
         }
+ 	try{
+ 	    serialPort.flush();
  	
- 	serialPort.flush();
+        serialPort.setDTR(false);
+        serialPort.setRTS(false);
+
+ 	    delay(100);
  	
- 	serialPort.setDTR(false);
- 	serialPort.setRTS(false);
- 	
- 	delay(100);
- 	
- 	serialPort.setDTR(true);
- 	serialPort.setRTS(true);
+ 	    serialPort.setDTR(true);
+ 	    serialPort.setRTS(true);
+     }
+    catch(serial::SerialException& se){
+        error_notify(se.what());
+        return ;
+    }           
+    catch(serial::IOException& IOe){  
+        error_notify(IOe.what());
+        return ;
+    }
+    catch(serial::PortNotOpenedException& pno){
+        error_notify(pno.what());
+        return ;
+    }
  
  	CodebenderccAPI::closePort(true);
  	
