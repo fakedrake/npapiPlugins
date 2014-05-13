@@ -124,30 +124,42 @@ CodebenderccAPI::debugMessage("CodebenderccAPI::setErrorCallback ended",3);
 void CodebenderccAPI::serialWrite(const std::string & message) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialWrite",3);
     std::string mess = message;
+    std::cout << "in serial write mess variable:\n" << mess << ".\n";
 	size_t bytes_read;
-	try
-	{
-		if(serialPort.isOpen()){
-			
+	if(serialPort.isOpen()){
+		try{
 			bytes_read = serialPort.write(mess);
+			std::cout << "bytes_read in serial write after write function call:\n" << bytes_read << ".\n";
 			if(bytes_read != 0){
-				perror("Wrote to port");
+				perror("Wrote to port ");
 				std::string portMessage = "Wrote to port: " + mess + " ";
 				CodebenderccAPI::debugMessage(portMessage.c_str(),1);
 			}
-		}
-		else {
-			CodebenderccAPI::debugMessage("CodebenderccAPI::serialWrite port not open",1);
-			perror("null");
-		}
-	}catch(...){
-		CodebenderccAPI::debugMessage("CodebenderccAPI::serialWrite open serial port exception",1);
-		notify("disconnect");
-	}
+		}catch(serial::PortNotOpenedException& pno){
+			CodebenderccAPI::debugMessage(pno.what(),2);
+			error_notify(pno.what());
+			notify("disconnect");
+			return;
+			}
+		catch(serial::SerialException& se){
+			CodebenderccAPI::debugMessage(se.what(),2);
+			error_notify(se.what());
+			notify("disconnect");
+			return;
+			}			
+		catch(serial::IOException& IOe){
+			CodebenderccAPI::debugMessage(IOe.what(),2);
+			error_notify(IOe.what());
+			notify("disconnect");
+			return;
+			}
+	}else {
+		CodebenderccAPI::debugMessage("CodebenderccAPI::serialWrite port not open",1);
+		perror("null");}		
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialWrite ended",3);
-} catch (...) {
+	} catch (...) {
     error_notify("CodebenderccAPI::serialWrite() threw an unknown exception");
-}
+	}
 
 FB::variant CodebenderccAPI::disconnect() try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::disconnect",3);
