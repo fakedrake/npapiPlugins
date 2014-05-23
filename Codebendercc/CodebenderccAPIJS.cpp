@@ -131,7 +131,6 @@ void CodebenderccAPI::serialWrite(const std::string & message) try {
 			bytes_read = serialPort.write(mess);
 
 			if(bytes_read != 0){
-				perror("Wrote to port ");
 				std::string portMessage = "Wrote to port: " + mess + " ";
 				CodebenderccAPI::debugMessage(portMessage.c_str(),1);
 			}
