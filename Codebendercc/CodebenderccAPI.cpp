@@ -897,19 +897,27 @@ void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &
 		return;
 		}	
 	try {
-		int d;
-		std::string rcvd;		
-		for (;;) {
-			if(serialPort.isOpen())
-				rcvd = "";	
-				rcvd = serialPort.read((size_t) 1);
-					if(rcvd != ""){
-						d = (int) rcvd[0];
-						std::string characterMessage="Received character:";
-						characterMessage.append(&rcvd[0]);
-						CodebenderccAPI::debugMessage(characterMessage.c_str(),2);
-						callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(d));
-					}
+
+			int d;
+			std::string rcvd;
+		
+#ifndef _WIN32
+			serialPort.flushInput();
+			serialPort.flushOutput();
+#endif
+		
+			for (;;) {
+				if(serialPort.isOpen()){
+					rcvd = "";	
+					rcvd = serialPort.read((size_t) 1);
+						if(rcvd != ""){
+							d = (int) rcvd[0];
+							std::string characterMessage="Received character:";
+							characterMessage.append(&rcvd[0]);
+							CodebenderccAPI::debugMessage(characterMessage.c_str(),2);
+							callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(d));
+						}
+				}
 			}
 		}	
     catch (...) {
