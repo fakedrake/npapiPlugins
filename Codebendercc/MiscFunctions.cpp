@@ -430,13 +430,9 @@ int CodebenderccAPI::bootloaderPrefs(const std::string& lFuses, const std::strin
 void CodebenderccAPI::flushBuffer(const std::string& port) try {
 
  	CodebenderccAPI::debugMessage("CodebenderccAPI::flushBuffer",3);
-
-    int openPortStatus=CodebenderccAPI::openPort(port, 9600, true);
+    int openPortStatus=CodebenderccAPI::openPort(port, 9600, true, "CodebenderccAPI::flushBuffer - ");
     if(openPortStatus!=1)
-        {
-        error_notify("CodebenderccAPI::flushBuffer() got an error while opening the serial port."); 
         return;    
-        }
  	try{
  	    serialPort.flush();
  	

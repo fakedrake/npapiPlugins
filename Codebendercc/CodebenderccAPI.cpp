@@ -17,7 +17,7 @@ FB::variant CodebenderccAPI::download() {
 ////////////////////////////////////public//////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-int CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudrate, bool flushFlag) try {
+int CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudrate, bool flushFlag,const std::string &functionPrefix) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::openPort",3);
 	std::string device;
 	device = port;
@@ -45,28 +45,36 @@ int CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudr
 											}
 			}catch(serial::PortNotOpenedException& pno){
 				CodebenderccAPI::debugMessage(pno.what(),2);
-				error_notify(pno.what());
+				std::string err_mess = boost::lexical_cast<std::string>(pno.what());
+				std::string result = functionPrefix + err_mess;
+				error_notify(result);
 				if(!flushFlag)
 					RemovePortFromList(usedPort);
 				return -50;
 											}
 			catch(serial::SerialException& se){
 				CodebenderccAPI::debugMessage(se.what(),2);
-				error_notify(se.what());
+				std::string err_mess = boost::lexical_cast<std::string>(se.what());
+				std::string result = functionPrefix + err_mess;
+				error_notify(result);
 				if(!flushFlag)
 					RemovePortFromList(usedPort);
 				return -51;
 									}			
 			catch(std::invalid_argument& inv_arg){
 				CodebenderccAPI::debugMessage(inv_arg.what(),2);
-				error_notify(inv_arg.what());
+				std::string err_mess = boost::lexical_cast<std::string>(inv_arg.what());
+				std::string result = functionPrefix + err_mess;
+				error_notify(result);
 				if(!flushFlag)
 					RemovePortFromList(usedPort);
 				return -52;
 									}	
 			catch(serial::IOException& IOe){
 				CodebenderccAPI::debugMessage(IOe.what(),2);
-				error_notify(IOe.what());
+				std::string err_mess = boost::lexical_cast<std::string>(IOe.what());
+				std::string result = functionPrefix + err_mess;
+				error_notify(result);
 				if(!flushFlag)
 					RemovePortFromList(usedPort);
 				return -53;
@@ -305,7 +313,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 				if (mcu == "atmega32u4") {
 					try {	
 						// set the "magic" baudrate to force leonardo reset
-						int openPortStatus=CodebenderccAPI::openPort(fdevice, 1200, false);
+						int openPortStatus=CodebenderccAPI::openPort(fdevice, 1200, false, "CodebenderccAPI::doflash Leonardo reset- ");
 						if(openPortStatus!=1)
 						{
 							flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(openPortStatus));
@@ -889,7 +897,7 @@ void CodebenderccAPI::detectNewPort(const std::string& portString) try {
 
 void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &baudrate, const FB::JSObjectPtr & callback, const FB::JSObjectPtr & valHandCallback) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader",3);	
-	int openPortStatus=CodebenderccAPI::openPort(port, baudrate, false);
+	int openPortStatus=CodebenderccAPI::openPort(port, baudrate, false, "CodebenderccAPI::serialReader - ");
 	if(openPortStatus!=1)
 		{
 		valHandCallback->InvokeAsync("", FB::variant_list_of(shared_from_this())(openPortStatus));

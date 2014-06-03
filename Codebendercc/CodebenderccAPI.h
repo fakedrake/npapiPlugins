@@ -393,7 +393,7 @@ public:
 	/**
 	 * Creates an instance of the serial library and opens it.
 	 **/
-	int openPort(const std::string &port, const unsigned int &baudrate, bool flushFlag);
+	int openPort(const std::string &port, const unsigned int &baudrate, bool flushFlag,const std::string &functionPrefix);
 
 	/**
 	 * Closes the current port connection.
