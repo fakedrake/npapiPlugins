@@ -434,8 +434,9 @@ void CodebenderccAPI::flushBuffer(const std::string& port) try {
     if(openPortStatus!=1)
         return;    
  	try{
- 	    serialPort.flush();
- 	
+ 	    serialPort.flushInput();
+ 	    serialPort.flushOutput();
+
         serialPort.setDTR(false);
         serialPort.setRTS(false);
 
