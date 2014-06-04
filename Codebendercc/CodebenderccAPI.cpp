@@ -908,12 +908,10 @@ void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &
 
 			int d;
 			std::string rcvd;
-		
-#ifndef _WIN32
+
 			serialPort.flushInput();
 			serialPort.flushOutput();
-#endif
-		
+
 			for (;;) {
 				if(serialPort.isOpen()){
 					rcvd = "";	
