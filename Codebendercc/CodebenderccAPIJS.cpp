@@ -124,12 +124,12 @@ CodebenderccAPI::debugMessage("CodebenderccAPI::setErrorCallback ended",3);
 void CodebenderccAPI::serialWrite(const std::string & message) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialWrite",3);
     std::string mess = message;
-    std::cout << "in serial write mess variable:\n" << mess << ".\n";
+
 	size_t bytes_read;
 	if(serialPort.isOpen()){
 		try{
 			bytes_read = serialPort.write(mess);
-			std::cout << "bytes_read in serial write after write function call:\n" << bytes_read << ".\n";
+
 			if(bytes_read != 0){
 				perror("Wrote to port ");
 				std::string portMessage = "Wrote to port: " + mess + " ";
