@@ -81,6 +81,10 @@ int CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudr
 				else {error_notify(result);}
 				if(!flushFlag)
 					RemovePortFromList(usedPort);
+#ifndef _WIN32
+				if (result.find("IO Exception (16)")!=std::string::npos))
+					return -55;
+#endif
 				return -53;
 								}						
 	}	
