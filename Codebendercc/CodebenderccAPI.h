@@ -530,7 +530,7 @@ private:
     /**
      * Sends a error notification to the default callback.
      */
-    void error_notify(const std::string &message);
+    void error_notify(const std::string &message, int optionalWarningFlag = 0);
 
 
 	/**

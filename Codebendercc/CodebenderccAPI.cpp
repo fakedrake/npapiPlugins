@@ -963,9 +963,9 @@ CodebenderccAPI::debugMessage("CodebenderccAPI::notify",3);
 callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
 }
 
-void CodebenderccAPI::error_notify(const std::string &message) {
+void CodebenderccAPI::error_notify(const std::string &message, int warningFlag) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::error_notify",3);	
-	error_callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
+	error_callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str())(warningFlag));
 }
 
 DIR *
