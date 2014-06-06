@@ -662,7 +662,7 @@ private:
 	/**
  	 * Flushes the contents of the serial port and toggles the DTR and RTS signal values.
  	 **/
-	void flushBuffer(const std::string &);
+	int flushBuffer(const std::string &);
 
     /**
      */

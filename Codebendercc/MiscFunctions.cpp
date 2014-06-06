@@ -427,12 +427,16 @@ int CodebenderccAPI::bootloaderPrefs(const std::string& lFuses, const std::strin
     return 0;
 }
 
-void CodebenderccAPI::flushBuffer(const std::string& port) try {
+int CodebenderccAPI::flushBuffer(const std::string& port) try {
 
  	CodebenderccAPI::debugMessage("CodebenderccAPI::flushBuffer",3);
     int openPortStatus=CodebenderccAPI::openPort(port, 9600, true, "CodebenderccAPI::flushBuffer - ");
-    if(openPortStatus!=1)
-        return;    
+    if(openPortStatus!=1){
+		if (openPortStatus == -55)
+			return openPortStatus;
+		else
+			return -1;    
+	}
  	try{
  	    serialPort.flushInput();
  	    serialPort.flushOutput();
@@ -449,28 +453,29 @@ void CodebenderccAPI::flushBuffer(const std::string& port) try {
         std::string err_msg = boost::lexical_cast<std::string>(se.what());
         std::string result = "flushBuffer exception: " + err_msg;
         error_notify(result, 1);
-        return ;
+        return -1;
     }           
     catch(serial::IOException& IOe){  
         std::string err_msg = boost::lexical_cast<std::string>(IOe.what());
         std::string result = "flushBuffer exception: " + err_msg;
         error_notify(result, 1);
-        return ;
+        return -1;
     }
     catch(serial::PortNotOpenedException& pno){
         std::string err_msg = boost::lexical_cast<std::string>(pno.what());
         std::string result = "flushBuffer exception: " + err_msg;
         error_notify(result, 1);
-        return ;
+        return -1;
     }
  
  	CodebenderccAPI::closePort(true);
  	
  	CodebenderccAPI::debugMessage("CodebenderccAPI::flushBuffer ended",3);
  	
+	return 0;
  }catch(...) {
  	error_notify("CodebenderccAPI::flushBuffer() threw an unknown exception");
- 	return;
+ 	return -1;
  }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -433,7 +433,12 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 				  * unless the board definition specifies not to do so.
 				  **/
 				if (disable_flushing == "" || disable_flushing == "false")
-					CodebenderccAPI::flushBuffer(fdevice);
+					if (CodebenderccAPI::flushBuffer(fdevice) == -55){
+						RemovePortFromList(fdevice);
+						isAvrdudeRunning=false;	
+						flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-55));
+						return;
+					}
 
 				retVal = CodebenderccAPI::runAvrdude(command, false);
 				_retVal = retVal;
