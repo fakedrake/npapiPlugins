@@ -47,7 +47,8 @@ int CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudr
 				CodebenderccAPI::debugMessage(pno.what(),2);
 				std::string err_mess = boost::lexical_cast<std::string>(pno.what());
 				std::string result = functionPrefix + err_mess;
-				error_notify(result);
+				if (functionPrefix.find("flushBuffer")!=std::string::npos) {error_notify(result, 1);}
+				else {error_notify(result);}
 				if(!flushFlag)
 					RemovePortFromList(usedPort);
 				return -50;
@@ -56,7 +57,8 @@ int CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudr
 				CodebenderccAPI::debugMessage(se.what(),2);
 				std::string err_mess = boost::lexical_cast<std::string>(se.what());
 				std::string result = functionPrefix + err_mess;
-				error_notify(result);
+				if (functionPrefix.find("flushBuffer")!=std::string::npos) {error_notify(result, 1);}
+				else {error_notify(result);}
 				if(!flushFlag)
 					RemovePortFromList(usedPort);
 				return -51;
@@ -65,7 +67,8 @@ int CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudr
 				CodebenderccAPI::debugMessage(inv_arg.what(),2);
 				std::string err_mess = boost::lexical_cast<std::string>(inv_arg.what());
 				std::string result = functionPrefix + err_mess;
-				error_notify(result);
+				if (functionPrefix.find("flushBuffer")!=std::string::npos) {error_notify(result, 1);}
+				else {error_notify(result);}
 				if(!flushFlag)
 					RemovePortFromList(usedPort);
 				return -52;
@@ -74,7 +77,8 @@ int CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudr
 				CodebenderccAPI::debugMessage(IOe.what(),2);
 				std::string err_mess = boost::lexical_cast<std::string>(IOe.what());
 				std::string result = functionPrefix + err_mess;
-				error_notify(result);
+				if (functionPrefix.find("flushBuffer")!=std::string::npos) {error_notify(result, 1);}
+				else {error_notify(result);}
 				if(!flushFlag)
 					RemovePortFromList(usedPort);
 				return -53;

@@ -448,19 +448,19 @@ void CodebenderccAPI::flushBuffer(const std::string& port) try {
     catch(serial::SerialException& se){
         std::string err_msg = boost::lexical_cast<std::string>(se.what());
         std::string result = "flushBuffer exception: " + err_msg;
-        error_notify(result);
+        error_notify(result, 1);
         return ;
     }           
     catch(serial::IOException& IOe){  
         std::string err_msg = boost::lexical_cast<std::string>(IOe.what());
         std::string result = "flushBuffer exception: " + err_msg;
-        error_notify(result);
+        error_notify(result, 1);
         return ;
     }
     catch(serial::PortNotOpenedException& pno){
         std::string err_msg = boost::lexical_cast<std::string>(pno.what());
         std::string result = "flushBuffer exception: " + err_msg;
-        error_notify(result);
+        error_notify(result, 1);
         return ;
     }
  
