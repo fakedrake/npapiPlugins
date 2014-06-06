@@ -1535,7 +1535,10 @@ CodebenderccAPI::RegOpenKeyEx(HKEY hKey,
 		std::string err_msg = "CodebenderccAPI::RegOpenKeyEx() - Winerror.h error code: ";
 		err_msg += boost::lexical_cast<std::string>(rc);
 
-		error_notify(err_msg);
+		if(rc==2)
+			error_notify(err_msg,1);
+		else
+			error_notify(err_msg);
 		return rc;
 	}
 	
@@ -1563,7 +1566,10 @@ CodebenderccAPI::RegCloseKey(HKEY hKey)
 		std::string err_msg = "CodebenderccAPI::RegCloseKey() - Winerror.h error code: ";
 		err_msg += boost::lexical_cast<std::string>(rc);
 
-		error_notify(err_msg);
+		if(rc==6)
+			error_notify(err_msg,1);
+		else
+			error_notify(err_msg);
 		return rc;
 	}
 
