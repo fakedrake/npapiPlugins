@@ -446,15 +446,21 @@ void CodebenderccAPI::flushBuffer(const std::string& port) try {
  	    serialPort.setRTS(true);
      }
     catch(serial::SerialException& se){
-        error_notify(se.what());
+        std::string err_msg = boost::lexical_cast<std::string>(se.what());
+        std::string result = "flushBuffer exception: " + err_msg;
+        error_notify(result);
         return ;
     }           
     catch(serial::IOException& IOe){  
-        error_notify(IOe.what());
+        std::string err_msg = boost::lexical_cast<std::string>(IOe.what());
+        std::string result = "flushBuffer exception: " + err_msg;
+        error_notify(result);
         return ;
     }
     catch(serial::PortNotOpenedException& pno){
-        error_notify(pno.what());
+        std::string err_msg = boost::lexical_cast<std::string>(pno.what());
+        std::string result = "flushBuffer exception: " + err_msg;
+        error_notify(result);
         return ;
     }
  
