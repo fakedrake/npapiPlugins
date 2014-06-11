@@ -30,12 +30,9 @@ int CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudr
 			{
 			usedPort=device;		
 				if (serialPort.isOpen() == false){
-					// need to set a zero timeout when on Windows
-					#ifdef _WIN32
-						portTimeout = Timeout(std::numeric_limits<uint32_t>::max(), 0, 0, 0, 0);
-					#else
-						portTimeout = Timeout(std::numeric_limits<uint32_t>::max(), 1000, 0, 1000, 0);
-					#endif
+					uint32_t TotalTimeoutConstantDivider = ((baudrate/9)/100 == 0)? 1 : (baudrate/9)/100; 
+					uint32_t readTotalTimeoutConst = 1000/TotalTimeoutConstantDivider;
+					portTimeout = Timeout(10, readTotalTimeoutConst, 0, 0, 10);
 					serialPort.setPort(device);				//set port name
 					serialPort.setBaudrate(baudrate);		//set port baudrate
 					serialPort.setTimeout(portTimeout);		//set the read/write timeout of the port
