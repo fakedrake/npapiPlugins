@@ -138,18 +138,21 @@ void CodebenderccAPI::serialWrite(const std::string & message) try {
 			CodebenderccAPI::debugMessage(pno.what(),2);
 			error_notify(pno.what());
 			notify("disconnect");
+			CodebenderccAPI::disconnect();
 			return;
 			}
 		catch(serial::SerialException& se){
 			CodebenderccAPI::debugMessage(se.what(),2);
 			error_notify(se.what());
 			notify("disconnect");
+			CodebenderccAPI::disconnect();
 			return;
 			}			
 		catch(serial::IOException& IOe){
 			CodebenderccAPI::debugMessage(IOe.what(),2);
 			error_notify(IOe.what());
 			notify("disconnect");
+			CodebenderccAPI::disconnect();
 			return;
 			}
 	}else {

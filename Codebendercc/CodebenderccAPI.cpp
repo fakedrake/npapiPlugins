@@ -915,6 +915,7 @@ void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &
 		{
 		valHandCallback->InvokeAsync("", FB::variant_list_of(shared_from_this())(openPortStatus));
 		notify("disconnect");
+		CodebenderccAPI::disconnect();
 		return;
 		}	
 	try {
@@ -939,13 +940,15 @@ void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &
 		}	
     catch (...) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader loop interrupted",1);
-		closePort(false);
-		/*Port is already closed from closePort() and notify("disconnect") closes the port for second time*/
-        notify("disconnect");
+		notify("disconnect");
+		CodebenderccAPI::disconnect();
+
     }
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader ended",3);
 } catch (...) {
     error_notify("CodebenderccAPI::serialReader() threw an unknown exception");
+    notify("disconnect");
+	CodebenderccAPI::disconnect();
 }
 
 std::string CodebenderccAPI::exec(const char * cmd) try {
