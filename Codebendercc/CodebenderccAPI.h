@@ -430,6 +430,7 @@ public:
 	bool debug_;
 	int currentLevel;
 	std::string usedPort;
+    boost::mutex serialMonitor;
 
 private:
 
