@@ -919,11 +919,9 @@ void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &
 		}	
 	try {
 
-			int d;
-			std::string rcvd;
-
-			serialPort.flushInput();
-			serialPort.flushOutput();
+		std::string rcvd;
+		serialPort.flushInput();
+		serialPort.flushOutput();
 
 			for (;;) {
 				if(serialPort.isOpen()){
@@ -931,14 +929,11 @@ void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &
 						continue;	
 					}
 					rcvd = "";	
-					rcvd = serialPort.read((size_t) 1);
-						if(rcvd != ""){
-							d = (int) rcvd[0];
-							std::string characterMessage="Received character:";
-							characterMessage.append(&rcvd[0]);
-							CodebenderccAPI::debugMessage(characterMessage.c_str(),2);
-							callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(d));
-						}
+					rcvd = serialPort.read((size_t) 100);
+						if(rcvd != "")
+							callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(rcvd));
+				}else{
+					break;
 				}
 			}
 		}	
