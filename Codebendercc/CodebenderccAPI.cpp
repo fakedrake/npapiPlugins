@@ -927,6 +927,9 @@ void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &
 
 			for (;;) {
 				if(serialPort.isOpen()){
+					if(!serialPort.available()){
+						continue;	
+					}
 					rcvd = "";	
 					rcvd = serialPort.read((size_t) 1);
 						if(rcvd != ""){
