@@ -942,6 +942,7 @@ void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &
 		}	
     catch (...) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader loop interrupted",1);
+	 	error_notify("CodebenderccAPI::serialReader loop interrupted", 1);
 		serialMonitor.unlock();	
 		notify("disconnect");
 		CodebenderccAPI::disconnect();
