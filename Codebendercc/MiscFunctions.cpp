@@ -434,6 +434,10 @@ int CodebenderccAPI::flushBuffer(const std::string& port) try {
     if(openPortStatus!=1){
 		if (openPortStatus == -55)
 			return openPortStatus;
+        else if (openPortStatus == -56)
+            return openPortStatus;
+        else if (openPortStatus == -57)
+            return openPortStatus;
 		else
 			return -1;    
 	}

@@ -74,14 +74,21 @@ int CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudr
 				CodebenderccAPI::debugMessage(IOe.what(),2);
 				std::string err_mess = boost::lexical_cast<std::string>(IOe.what());
 				std::string result = functionPrefix + err_mess;
-				if (functionPrefix.find("flushBuffer")!=std::string::npos) {error_notify(result, 1);}
+				if (functionPrefix.find("flushBuffer")!=std::string::npos) 
+					{error_notify(result, 1);}
 				else {error_notify(result);}
 				if(!flushFlag)
 					RemovePortFromList(usedPort);
-#ifndef _WIN32
-				if (result.find("IO Exception (16)")!=std::string::npos)
-					return -55;
-#endif
+				#ifndef _WIN32
+					if (result.find("IO Exception (16)")!=std::string::npos)
+						return -55;
+					else if (result.find("IO Exception (13)")!=std::string::npos)
+						return -56;
+					else if (result.find("IO Exception (2)")!=std::string::npos)
+						return -57;
+					else
+						return -53;	
+				#endif
 				return -53;
 								}						
 	}	
@@ -429,13 +436,18 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 				  * Flush the buffer of the serial port before uploading, 
 				  * unless the board definition specifies not to do so.
 				  **/
-				if (disable_flushing == "" || disable_flushing == "false")
-					if (CodebenderccAPI::flushBuffer(fdevice) == -55){
-						RemovePortFromList(fdevice);
-						isAvrdudeRunning=false;	
-						flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-55));
-						return;
+				if (disable_flushing == "" || disable_flushing == "false"){	
+					int flushBufferRetVal = CodebenderccAPI::flushBuffer(fdevice);
+					if (flushBufferRetVal != 0){
+ 						if (flushBufferRetVal != -1 ){
+							RemovePortFromList(fdevice);
+							isAvrdudeRunning=false;	
+							flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(flushBufferRetVal));
+							return;
+							}
 					}
+						
+				}
 
 				retVal = CodebenderccAPI::runAvrdude(command, false);
 				_retVal = retVal;
