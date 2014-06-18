@@ -334,7 +334,7 @@ public:
      * Returns the last avrdude's output.
      * @return the output recorded from avrdude.
      */
-    FB::variant getFlashResult();
+    std::string getFlashResult();
     /**
      * The last avrdude command executed.
      * @return the last avrdude command executed.

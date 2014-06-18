@@ -185,7 +185,7 @@ FB::variant CodebenderccAPI::getLastCommand() {
 	return lastcommand;
 }
 
-FB::variant CodebenderccAPI::getFlashResult() try {
+std::string CodebenderccAPI::getFlashResult() try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::getFlashResult",3);
 	FILE *pFile;
 	#ifdef _WIN32
