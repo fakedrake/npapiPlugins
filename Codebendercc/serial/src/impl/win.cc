@@ -67,8 +67,12 @@ Serial::SerialImpl::open ()
       // Use this->getPort to convert to a std::string
       ss << "Specified port, " << this->getPort() << ", does not exist.";
       THROW (IOException, ss.str().c_str());
+    case ERROR_ACCESS_DENIED:
+      // Use this->getPort to convert to a std::string
+      ss << "Can't open device, " << this->getPort() << ", access is denied.";
+      THROW (IOException, ss.str().c_str()); 
     default:
-      ss << "Unknown error opening the serial port: " << errno;
+      ss << "Unknown error opening the serial port: " << errno_;
       THROW (IOException, ss.str().c_str());
     }
   }
