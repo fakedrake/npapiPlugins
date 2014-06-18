@@ -88,8 +88,12 @@ int CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudr
 						return -57;
 					else
 						return -53;	
+				#ifdef _WIN32
+					if (result.find("Specified port,")!=std::string::npos)
+						return -57;
+					else
+						return -53;
 				#endif
-				return -53;
 								}						
 	}	
 	else{
