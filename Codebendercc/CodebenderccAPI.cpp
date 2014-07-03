@@ -990,6 +990,156 @@ void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &
 	CodebenderccAPI::disconnect();
 }
 
+int CodebenderccAPI::PortNotOpenedException(std::string err_mess)try{
+	if (err_mess.find("Serial::setDTR")!=std::string::npos)
+		return 1001;
+	else if	(err_mess.find("Serial::setRTS")!=std::string::npos)
+		return 1002;
+	else 
+		return 1000;
+}catch (...) {
+error_notify("CodebenderccAPI::PortNotOpenedException threw an unknown exception.");
+    return -1;
+}
+
+int CodebenderccAPI::SerialException(std::string err_mess)try{
+	if (err_mess.find("Serial port already open.")!=std::string::npos)
+		return 2001;
+	int error_code=CodebenderccAPI::checkIfIsDigit(err_mess);
+	if (error_code == 10000)
+		return error_code;
+	if (err_mess.find("setDTR failed on a call to ioctl(TIOCMBIC):")!=std::string::npos)
+		return (2100+error_code);	
+	else if	(err_mess.find("setDTR failed on a call to ioctl(TIOCMBIS):")!=std::string::npos)
+		return (2300+error_code);	
+	else if	(err_mess.find("setRTS failed on a call to ioctl(TIOCMBIS):")!=std::string::npos)
+		return (2500+error_code);	
+	else if	(err_mess.find("setRTS failed on a call to ioctl(TIOCMBIC):")!=std::string::npos)
+		return (2700+error_code);
+	else
+		return 2000;		
+	}catch (...) {
+    error_notify("CodebenderccAPI::SerialException threw an unknown exception.");
+    	return -1;
+	}
+
+int CodebenderccAPI::invalid_argument(std::string err_mess)try{
+	if (err_mess.find("Empty port is invalid")!=std::string::npos)
+		return 3001;
+	else if	(err_mess.find("invalid char len")!=std::string::npos)
+		return 3002;
+	else if	(err_mess.find("invalid stop bit")!=std::string::npos)
+		return 3003;
+	else if	(err_mess.find("invalid parity")!=std::string::npos)
+		return 3004;
+	else if	(err_mess.find("OS does not currently support custom bauds")!=std::string::npos)
+		return 3005;
+	else 
+		return 3000;
+}catch (...) {
+error_notify("CodebenderccAPI::invalid_argument threw an unknown exception.");
+    return -1;
+}
+
+#ifndef _WIN32
+	int CodebenderccAPI::IOException(std::string err_mess)try{
+		if (err_mess.find("Too many file handles open.")!=std::string::npos)
+			return 4001;
+		else if	(err_mess.find("Invalid file descriptor, is the serial port open?")!=std::string::npos)
+			return 4002;
+		else if	(err_mess.find("::tcgetattr")!=std::string::npos)
+			return 4003;	
+		int error_code=CodebenderccAPI::GetTag(err_mess);
+		if (error_code == 20000)
+			return error_code;
+		if	(err_mess.find("IO Exception (")!=std::string::npos) 
+			return (4100+error_code);		
+		else 
+			return 4000;			
+	}catch (...) {
+    error_notify("CodebenderccAPI::IOException threw an unknown exception.");
+    	return -1;
+	}
+#endif
+#ifdef _WIN32
+	int CodebenderccAPI::IOException(std::string err_mess)try{
+		if (err_mess.find("Error setting timeouts.")!=std::string::npos)
+			return 5001;
+		else if	(err_mess.find("Error setting serial port settings")!=std::string::npos)
+			return 5002;
+		else if	(err_mess.find("Invalid file descriptor, is the serial port open?")!=std::string::npos)
+			return 5003;	
+		else if	(err_mess.find("Error getting the serial port state")!=std::string::npos)
+			return 5004;
+		int error_code=CodebenderccAPI::GetNumberBetween(err_mess);
+		if (error_code == 20000)
+			return error_code;
+		if	(err_mess.find("Unknown error opening the serial port:")!=std::string::npos)
+			return (6000+error_code);	
+		else 
+			return 5000;
+	}catch (...) {
+    error_notify("CodebenderccAPI::IOException threw an unknown exception.");
+    	return -1;
+	}
+#endif
+
+int CodebenderccAPI::checkIfIsDigit(std::string err_mess)try{
+	int err_code;
+	int nIndex;
+	stringstream strStream;
+       for (nIndex=0; nIndex < err_mess.length(); nIndex++){
+       	    if (isdigit(err_mess[nIndex]))    
+				strStream << err_mess[nIndex];
+       }
+    strStream >> err_code;
+	return err_code;
+	}catch (...) {
+    error_notify("CodebenderccAPI::checkIfIsDigit threw an unknown exception.");
+    	return 10000;
+	}
+
+int CodebenderccAPI::GetTag(std::string str)try{
+	int err_code;
+	std::string retVal;
+    std::string::size_type start = str.find('(');
+    if (start != str.npos)
+    {
+        std::string::size_type end = str.find(')', start + 1);
+        if (end != str.npos)
+        {
+            ++start;
+            std::string::size_type count = end - start;
+			retVal=str.substr(start, count);
+			err_code=atoi(retVal.c_str());
+            return err_code;
+        }
+    }
+    return -1;
+	}catch (...) {
+    error_notify("CodebenderccAPI::GetTag threw an unknown exception.");
+    	return 20000;
+	}
+
+int CodebenderccAPI::GetNumberBetween(std::string str)try{
+	int err_code;
+    std::string::size_type start = str.find_last_of(':');
+    if (start != str.npos)
+    {
+        std::string::size_type end = str.find_first_of(',', start + 1);
+        if (end != str.npos){
+            ++start;
+            std::string::size_type count = end - start;
+			err_code=atoi((str.substr(start, count)).c_str());
+            return err_code;
+        }
+    }
+    return -1;
+	}catch (...) {
+    error_notify("CodebenderccAPI::GetNumberBetween threw an unknown exception.");
+    	return 20000;
+	}	
+
 std::string CodebenderccAPI::exec(const char * cmd) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::exec",3);
 	std::string result = "";

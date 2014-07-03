@@ -651,6 +651,20 @@ private:
      */
     void serialReader(const std::string &, const unsigned int &, const FB::JSObjectPtr &, const FB::JSObjectPtr &);
 
+    int PortNotOpenedException(std::string);
+
+    int SerialException(std::string);
+
+    int invalid_argument(std::string);
+
+    int IOException(std::string);
+
+    int checkIfIsDigit(std::string);
+
+	int GetTag(std::string);
+
+	int GetNumberBetween(std::string);
+
 	/**
 	 * Creates a separate process to run the avrdude command when on Windows OS.
      * Thus, one can get both the output of the command (the output that would originally be printed on a 
