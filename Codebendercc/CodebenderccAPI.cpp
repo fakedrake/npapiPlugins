@@ -448,20 +448,25 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 				  * Flush the buffer of the serial port before uploading, 
 				  * unless the board definition specifies not to do so.
 				  **/
+
+				int finalRetVal=0;
+				 
 				if (disable_flushing == "" || disable_flushing == "false"){	
 					int flushBufferRetVal = CodebenderccAPI::flushBuffer(fdevice);
-					if (flushBufferRetVal != 0){
- 						if (flushBufferRetVal != -1 ){
-							RemovePortFromList(fdevice);
-							isAvrdudeRunning=false;	
-							flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(flushBufferRetVal));
-							return;
-							}
-					}
-						
+					finalRetVal=flushBufferRetVal;
+					if (flushBufferRetVal == -55 || flushBufferRetVal == -56 || flushBufferRetVal == -57){
+						RemovePortFromList(fdevice);
+						isAvrdudeRunning=false;	
+						flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(flushBufferRetVal));
+						return;}							
 				}
 
 				retVal = CodebenderccAPI::runAvrdude(command, false);
+
+				if (retVal==1)
+					if(finalRetVal != 0 ||finalRetVal != -55 || finalRetVal != -56 || finalRetVal != -57)
+						retVal= 30000 + finalRetVal;
+
 				_retVal = retVal;
 				
 				// If the current board is leonardo, wait for a few seconds until the sketch actually takes control of the port
