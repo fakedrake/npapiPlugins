@@ -431,16 +431,8 @@ int CodebenderccAPI::flushBuffer(const std::string& port) try {
 
  	CodebenderccAPI::debugMessage("CodebenderccAPI::flushBuffer",3);
     int openPortStatus=CodebenderccAPI::openPort(port, 9600, true, "CodebenderccAPI::flushBuffer - ");
-    if(openPortStatus!=1){
-		if (openPortStatus == -55)
-			return openPortStatus;
-        else if (openPortStatus == -56)
-            return openPortStatus;
-        else if (openPortStatus == -57)
-            return openPortStatus;
-		else
-			return -1;    
-	}
+    if(openPortStatus!=1)
+		return openPortStatus;
  	try{
  	    serialPort.flushInput();
  	    serialPort.flushOutput();
