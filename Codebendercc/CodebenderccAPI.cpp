@@ -48,7 +48,8 @@ int CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudr
 				else {error_notify(result);}
 				if(!flushFlag)
 					RemovePortFromList(usedPort);
-				return -50;
+				int return_value= CodebenderccAPI::PortNotOpenedException(err_mess);
+				return return_value;
 											}
 			catch(serial::SerialException& se){
 				CodebenderccAPI::debugMessage(se.what(),2);
@@ -58,7 +59,8 @@ int CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudr
 				else {error_notify(result);}
 				if(!flushFlag)
 					RemovePortFromList(usedPort);
-				return -51;
+				int return_value= CodebenderccAPI::SerialException(err_mess);
+				return return_value;
 									}			
 			catch(std::invalid_argument& inv_arg){
 				CodebenderccAPI::debugMessage(inv_arg.what(),2);
@@ -68,7 +70,8 @@ int CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudr
 				else {error_notify(result);}
 				if(!flushFlag)
 					RemovePortFromList(usedPort);
-				return -52;
+				int return_value= CodebenderccAPI::invalid_argument(err_mess);
+				return return_value;
 									}	
 			catch(serial::IOException& IOe){
 				CodebenderccAPI::debugMessage(IOe.what(),2);
@@ -86,16 +89,18 @@ int CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudr
 						return -56;
 					else if (result.find("IO Exception (2)")!=std::string::npos)
 						return -57;
-					else
-						return -53;
+					else{
+						int return_value= CodebenderccAPI::IOException(err_mess);
+						return return_value;}
 				#endif	
 				#ifdef _WIN32
 					if (result.find("Can't open device,")!=std::string::npos)
 						return -56;
 					else if (result.find("Specified port,")!=std::string::npos)
 						return -57;
-					else
-						return -53;
+					else{
+						int return_value= CodebenderccAPI::IOException(err_mess);
+						return return_value;}
 				#endif
 								}						
 	}	
