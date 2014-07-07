@@ -135,13 +135,14 @@ public:
 		registerMethod("enableDebug", make_method(this, &CodebenderccAPI::enableDebug));
 		registerMethod("disableDebug", make_method(this, &CodebenderccAPI::disableDebug));
 		registerMethod("getFlashResult", make_method(this, &CodebenderccAPI::getFlashResult));
+		registerMethod("serialMonitorSetStatus", make_method(this, &CodebenderccAPI::serialMonitorSetStatus));
 
         //Register all JS read-only properties
         registerProperty("version", make_property(this, &CodebenderccAPI::get_version));
         registerProperty("command", make_property(this, &CodebenderccAPI::getLastCommand));
         registerProperty("retVal", make_property(this, &CodebenderccAPI::getRetVal));
 
-		
+		serialMonitorStatus=false;
 		debug_ = false;
 		lastPortCount=0;
 		probeFlag=false;
@@ -409,6 +410,10 @@ public:
 
 	bool checkDebug();
 	
+
+	void serialMonitorSetStatus ();
+	bool checkSerialMonitorStatus();
+
 	/**
 	 * Functions that print debugging messages depending on the level.
 	 **/
@@ -431,6 +436,7 @@ public:
 	int currentLevel;
 	std::string usedPort;
     boost::mutex serialMonitor;
+	bool serialMonitorStatus;
 
 private:
 

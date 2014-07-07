@@ -945,9 +945,7 @@ void CodebenderccAPI::detectNewPort(const std::string& portString) try {
 void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &baudrate, const FB::JSObjectPtr & callback, const FB::JSObjectPtr & valHandCallback) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader",3);
 	
-	serialMonitor.lock();	
 	int openPortStatus=CodebenderccAPI::openPort(port, baudrate, false, "CodebenderccAPI::serialReader - ");
-	serialMonitor.unlock();
 
 	if(openPortStatus!=1){
 		valHandCallback->InvokeAsync("", FB::variant_list_of(shared_from_this())(openPortStatus));
@@ -961,45 +959,54 @@ void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &
 		std::string rcvd;
 		serialPort.flushInput();
 		serialPort.flushOutput();
-
+		serialMonitor.lock();
+		serialMonitorStatus=true;
+		serialMonitor.unlock();
 		for (;;) {
 
-		    serialMonitor.lock();
+		    if (CodebenderccAPI::checkSerialMonitorStatus()==0)
+				break;
 
-		    if (!serialPort.isOpen()) {
-		        serialMonitor.unlock();
+		    if (!serialPort.isOpen()) 
 		        break;
-		    }
 
-		    if(!serialPort.available()) {
-		        serialMonitor.unlock();
+		    if(!serialPort.available()) 
 		        continue;   
-		    }
-
+		    
 		    rcvd = "";
 		    rcvd = serialPort.read((size_t) 100);
 		    
 		    if (rcvd != "")
-		        callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(rcvd));
-	   
-		    serialMonitor.unlock();
+		        callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(rcvd));	   
+
 
 				}
 		}catch (...) {
 
 		CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader loop interrupted",1);
 	 	error_notify("CodebenderccAPI::serialReader loop interrupted", 1);
-		serialMonitor.unlock();	
 		notify("disconnect");
+		CodebenderccAPI::serialMonitorSetStatus();
 		CodebenderccAPI::disconnect();
 
     }
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader ended",3);
 } catch (...) {
-    error_notify("CodebenderccAPI::serialReader() threw an unknown exception");
-    serialMonitor.unlock();	
+    error_notify("CodebenderccAPI::serialReader() threw an unknown exception");	
     notify("disconnect");
+	CodebenderccAPI::serialMonitorSetStatus();
 	CodebenderccAPI::disconnect();
+}
+
+void CodebenderccAPI::serialMonitorSetStatus()
+{	serialMonitor.lock();
+	serialMonitorStatus= false;
+	serialMonitor.unlock();
+}
+
+bool CodebenderccAPI::checkSerialMonitorStatus()
+{
+	return serialMonitorStatus;
 }
 
 int CodebenderccAPI::PortNotOpenedException(std::string err_mess)try{
