@@ -462,10 +462,12 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 				}
 
 				retVal = CodebenderccAPI::runAvrdude(command, false);
-
-				if (retVal==1)
-					if(finalRetVal != 0 ||finalRetVal != -55 || finalRetVal != -56 || finalRetVal != -57)
+				if (retVal==1){
+					if(finalRetVal == 0)
+						retVal=retVal;			
+					else 
 						retVal= 30000 + finalRetVal;
+							  }
 
 				_retVal = retVal;
 				
