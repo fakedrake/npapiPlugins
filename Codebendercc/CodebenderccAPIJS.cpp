@@ -168,18 +168,14 @@ FB::variant CodebenderccAPI::disconnect() try {
 	if(!(serialPort.isOpen()))
 		return 1;
 	try{
-		serialMonitor.lock();
-			CodebenderccAPI::closePort(false);
-		serialMonitor.unlock();
+		CodebenderccAPI::closePort(false);
 		}catch(...){
 		CodebenderccAPI::debugMessage("CodebenderccAPI::disconnect close port exception",2);
-	    serialMonitor.unlock();
 		}
 	CodebenderccAPI::debugMessage("CodebenderccAPI::disconnect ended",3);
 	return 1;	
 } catch (...) {
     error_notify("CodebenderccAPI::disconnect() threw an unknown exception");
-	serialMonitor.unlock();
     return 0;
 }
 
