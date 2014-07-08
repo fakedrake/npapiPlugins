@@ -979,7 +979,6 @@ void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &
 		    if (rcvd != "")
 		        callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(rcvd));	   
 
-
 				}
 		}catch (...) {
 
@@ -990,6 +989,7 @@ void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &
 		CodebenderccAPI::disconnect();
 
     }
+    CodebenderccAPI::disconnect();
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader ended",3);
 } catch (...) {
     error_notify("CodebenderccAPI::serialReader() threw an unknown exception");	
