@@ -405,7 +405,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 						elapsed_time += 250;
 
 						// If a certain ammount of time has gone by, and the initial port is in the lost of ports, upload using this port
-						if(((os == "Widnows" && elapsed_time >= 500) || elapsed_time >=5000) && (std::find(oldPorts.begin(), oldPorts.end(), fdevice) != oldPorts.end()) ){
+						if(((os != "Widnows" && elapsed_time >= 500) || elapsed_time >=5000) && (std::find(oldPorts.begin(), oldPorts.end(), fdevice) != oldPorts.end()) ){
 							std::string uploadingDeviceMessage = "Uploading using selected port: {" + fdevice +"}";
 							CodebenderccAPI::debugMessage(uploadingDeviceMessage.c_str(),2);
 							break;
