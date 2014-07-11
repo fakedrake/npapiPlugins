@@ -749,13 +749,7 @@ int CodebenderccAPI::runAvrdude(const std::string& command, bool append) try {
 		}
 	CodebenderccAPI::debugMessage(lastcommand.c_str(),1);
 	CodebenderccAPI::debugMessage("CodebenderccAPI::runAvrdude ended",3);
-	if(retval==0)
-		return retval;
-	std::string avrdudeResult=CodebenderccAPI::getFlashResult();
-	if(std::string::npos != avrdudeResult.find("avrdude"))
-        return retval;    		
-	else
-        return 100;   			
+	return retval;  			
 } catch (...) {
     error_notify("CodebenderccAPI::runAvrdude() threw an unknown exception");
     return 1;
