@@ -415,6 +415,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 							notify("Could not auto-reset or detect a manual reset!");
 							flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-1));
 							RemovePortFromList(fdevice);
+							isAvrdudeRunning=false;
 							return;
 						}
 					}
