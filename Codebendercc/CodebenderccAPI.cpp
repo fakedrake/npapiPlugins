@@ -288,7 +288,9 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 	}while(counter <= 2000);
 
 	if(dwExitCode == STILL_ACTIVE){
-		CodebenderccAPI::TerminateProcess( pi.hProcess, 0 ); // Kill process if it is still running.
+		// Kill child & main process if it is still running.
+		DWORD dwPid = GetProcessId(pi.hProcess);
+        CodebenderccAPI::winKillAvrdude(dwPid);
 		dwExitCode = -204;
 	}
 
@@ -303,6 +305,52 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
     return 0;
 }
 #endif
+
+void CodebenderccAPI::winKillAvrdude( DWORD dwPid) try {
+CodebenderccAPI::debugMessage("CodebenderccAPI::winKillAvrdude",3);
+
+PROCESSENTRY32 pe;
+memset(&pe, 0, sizeof(PROCESSENTRY32));
+pe.dwSize = sizeof(PROCESSENTRY32);
+
+HANDLE hSnap = :: CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+
+	if (::Process32First(hSnap, &pe))
+	{
+	    BOOL bContinue = TRUE;
+
+	    // kill child processes
+	    while (bContinue)
+	    {
+	        // only kill child processes
+	        if (pe.th32ParentProcessID == dwPid)
+	        {
+	            HANDLE hChildProc = ::OpenProcess(PROCESS_ALL_ACCESS, FALSE, pe.th32ProcessID);
+
+	            if (hChildProc)
+	            {
+	                ::TerminateProcess(hChildProc, 1);
+	                ::CloseHandle(hChildProc);
+	            }               
+	        }
+
+	        bContinue = ::Process32Next(hSnap, &pe);
+	    }
+
+	    // kill the main process
+	    HANDLE hProc = ::OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwPid);
+
+	    if (hProc)
+	    {
+	        ::TerminateProcess(hProc, 1);
+	        ::CloseHandle(hProc);
+	    }     
+	        CodebenderccAPI::debugMessage("CodebenderccAPI::winKillAvrdude ended",3);
+	}
+} catch (...) {
+  error_notify("CodebenderccAPI::winKillAvrdude() threw an unknown exception");
+  return;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////PRIVATE////////////////////////////////////////////

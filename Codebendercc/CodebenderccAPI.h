@@ -32,6 +32,8 @@
 	#include <stdlib.h>
 	#include <string.h>
 	#include <tchar.h>
+    #include <tlhelp32.h>
+    #include <comdef.h>
 #else
 	#include <dirent.h>
 	#include <sys/file.h>
@@ -679,6 +681,11 @@ private:
 	 * @return a code (integer) that indicates whether the command was successful or not
 	 */
     int winExecAvrdude(const std::wstring & cmd, bool appendFlag);
+
+    /**
+     * Kills avrdude process if it is still running on Windows OS.
+     **/
+    void winKillAvrdude();
 
 	/**
  	 * Flushes the contents of the serial port and toggles the DTR and RTS signal values.
