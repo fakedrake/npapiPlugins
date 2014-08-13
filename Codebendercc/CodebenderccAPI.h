@@ -874,6 +874,9 @@ private:
     BOOL Process32First(HANDLE hSnapshot,
                         LPPROCESSENTRY32 lppe);
 
+    BOOL Process32Next(HANDLE hSnapshot,
+                       LPPROCESSENTRY32 lppe);
+
 #endif
 
 };

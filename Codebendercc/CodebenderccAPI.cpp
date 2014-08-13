@@ -334,7 +334,7 @@ HANDLE hSnap = CodebenderccAPI::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	            }               
 	        }
 
-	        bContinue = ::Process32Next(hSnap, &pe);
+	        bContinue = CodebenderccAPI::Process32Next(hSnap, &pe);
 	    }
 
 	    // kill the main process
@@ -2017,6 +2017,29 @@ CodebenderccAPI::Process32First(HANDLE hSnapshot,
         return rc;
 
     std::string err_msg = "CodebenderccAPI::Process32First() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
+
+    error_notify(err_msg);
+    return rc;
+}
+
+BOOL
+CodebenderccAPI::Process32Next(HANDLE hSnapshot,
+                              LPPROCESSENTRY32 lppe)
+{
+    BOOL rc;
+
+    rc = ::Process32Next(hSnapshot,
+                         lppe);
+    if (rc != 0)
+        return rc;
+
+    DWORD err = GetLastError();
+
+    if(err == ERROR_NO_MORE_FILES)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::Process32Next() - extended error information: ";
     err_msg += boost::lexical_cast<std::string>(GetLastError());
 
     error_notify(err_msg);
