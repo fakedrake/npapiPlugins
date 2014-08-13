@@ -329,8 +329,8 @@ HANDLE hSnap = :: CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 
 	            if (hChildProc)
 	            {
-	                ::TerminateProcess(hChildProc, 1);
-	                ::CloseHandle(hChildProc);
+	                CodebenderccAPI::TerminateProcess(hChildProc, 1);
+	                CodebenderccAPI::CloseHandle(hChildProc);
 	            }               
 	        }
 
@@ -342,10 +342,11 @@ HANDLE hSnap = :: CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 
 	    if (hProc)
 	    {
-	        ::TerminateProcess(hProc, 1);
-	        ::CloseHandle(hProc);
-	    }     
-	        CodebenderccAPI::debugMessage("CodebenderccAPI::winKillAvrdude ended",3);
+	        CodebenderccAPI::TerminateProcess(hProc, 1);
+	        CodebenderccAPI::CloseHandle(hProc);
+	    }  
+	       
+	CodebenderccAPI::debugMessage("CodebenderccAPI::winKillAvrdude ended",3);
 	}
 } catch (...) {
   error_notify("CodebenderccAPI::winKillAvrdude() threw an unknown exception");
