@@ -313,7 +313,7 @@ PROCESSENTRY32 pe;
 memset(&pe, 0, sizeof(PROCESSENTRY32));
 pe.dwSize = sizeof(PROCESSENTRY32);
 
-HANDLE hSnap = :: CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+HANDLE hSnap = CodebenderccAPI::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 
 	if (::Process32First(hSnap, &pe))
 	{
@@ -1987,5 +1987,22 @@ CodebenderccAPI::OpenProcess(DWORD dwDesiredAccess,
     return rc;
 }
 
+HANDLE
+CodebenderccAPI::CreateToolhelp32Snapshot(DWORD dwFlags,
+                            			 DWORD th32ProcessID)
+{
+    HANDLE rc;
+
+    rc = ::CreateToolhelp32Snapshot(dwFlags,
+                      			   th32ProcessID);
+    if (rc != INVALID_HANDLE_VALUE)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::CreateToolhelp32Snapshot() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
+
+    error_notify(err_msg);
+    return rc;
+}
 
 #endif

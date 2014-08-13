@@ -868,6 +868,10 @@ private:
                        BOOL bInheritHandle,
                        DWORD dwProcessId);
 
+    HANDLE CreateToolhelp32Snapshot(DWORD dwFlags,
+                                    DWORD th32ProcessID);
+
+
 #endif
 
 };
