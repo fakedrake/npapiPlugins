@@ -325,7 +325,7 @@ HANDLE hSnap = :: CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	        // only kill child processes
 	        if (pe.th32ParentProcessID == dwPid)
 	        {
-	            HANDLE hChildProc = ::OpenProcess(PROCESS_ALL_ACCESS, FALSE, pe.th32ProcessID);
+	            HANDLE hChildProc = CodebenderccAPI::OpenProcess(PROCESS_ALL_ACCESS, FALSE, pe.th32ProcessID);
 
 	            if (hChildProc)
 	            {
@@ -338,7 +338,7 @@ HANDLE hSnap = :: CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	    }
 
 	    // kill the main process
-	    HANDLE hProc = ::OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwPid);
+	    HANDLE hProc = CodebenderccAPI::OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwPid);
 
 	    if (hProc)
 	    {
@@ -1966,5 +1966,26 @@ CodebenderccAPI::CloseHandle(HANDLE hObject)
     error_notify(err_msg);
     return rc;
 }
+
+HANDLE
+CodebenderccAPI::OpenProcess(DWORD dwDesiredAccess,
+                            BOOL bInheritHandle,
+                            DWORD dwProcessId)
+{
+    HANDLE rc;
+
+    rc = ::OpenProcess(dwDesiredAccess,
+                      bInheritHandle,
+                      dwProcessId);
+    if (rc != NULL)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::OpenProcess() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
+
+    error_notify(err_msg);
+    return rc;
+}
+
 
 #endif

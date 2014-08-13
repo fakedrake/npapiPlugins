@@ -863,6 +863,11 @@ private:
                           UINT uExitCode);
 
     BOOL CloseHandle(HANDLE hObject);
+
+    HANDLE OpenProcess(DWORD dwDesiredAccess,
+                       BOOL bInheritHandle,
+                       DWORD dwProcessId);
+
 #endif
 
 };
