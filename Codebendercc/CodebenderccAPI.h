@@ -871,6 +871,8 @@ private:
     HANDLE CreateToolhelp32Snapshot(DWORD dwFlags,
                                     DWORD th32ProcessID);
 
+    BOOL Process32First(HANDLE hSnapshot,
+                        LPPROCESSENTRY32 lppe);
 
 #endif
 
