@@ -348,6 +348,8 @@ HANDLE hSnap = CodebenderccAPI::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	       
 	CodebenderccAPI::debugMessage("CodebenderccAPI::winKillAvrdude ended",3);
 	}
+
+CodebenderccAPI::CloseHandle(hSnap);
 } catch (...) {
   error_notify("CodebenderccAPI::winKillAvrdude() threw an unknown exception");
   return;
