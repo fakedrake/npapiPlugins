@@ -99,7 +99,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     ///
     ////////////////////////////////////////////////////////////////////////////
-#define MSG_LEONARD_AUTORESET "Trying Arduino Leonardo auto-reset. If it does not reset automatically please reset the Arduino manualy!"
+#define MSG_LEONARD_AUTORESET "Trying Arduino Leonardo auto-reset. If it does not reset automatically please reset the Arduino manually!"
 
     /**
      * Constructor for your JSAPI object.
@@ -135,13 +135,14 @@ public:
 		registerMethod("enableDebug", make_method(this, &CodebenderccAPI::enableDebug));
 		registerMethod("disableDebug", make_method(this, &CodebenderccAPI::disableDebug));
 		registerMethod("getFlashResult", make_method(this, &CodebenderccAPI::getFlashResult));
+		registerMethod("serialMonitorSetStatus", make_method(this, &CodebenderccAPI::serialMonitorSetStatus));
 
         //Register all JS read-only properties
         registerProperty("version", make_property(this, &CodebenderccAPI::get_version));
         registerProperty("command", make_property(this, &CodebenderccAPI::getLastCommand));
         registerProperty("retVal", make_property(this, &CodebenderccAPI::getRetVal));
 
-		
+		serialMonitorStatus=false;
 		debug_ = false;
 		lastPortCount=0;
 		probeFlag=false;
@@ -334,7 +335,7 @@ public:
      * Returns the last avrdude's output.
      * @return the output recorded from avrdude.
      */
-    FB::variant getFlashResult();
+    std::string getFlashResult();
     /**
      * The last avrdude command executed.
      * @return the last avrdude command executed.
@@ -369,9 +370,10 @@ public:
      * @param port The port of the device as a string. @see validate_device
      * @param baudrate The baudrate to use for the connection as a string.
      * @param callback A callback function to report all characters read from the Serial Port.
+     * @param valHandCallback A callback function to display exception thrown by openPort.
      * @return true if connection was attempted, false otherwise.
      */
-    bool serialRead(const std::string &port, const std::string &baudrate, const FB::JSObjectPtr &callback);
+    bool serialRead(const std::string &port, const std::string &baudrate, const FB::JSObjectPtr &callback, const FB::JSObjectPtr &valHandCallback);
     /**
      * Write String to the open serial port.
      * @param the string to write.
@@ -392,7 +394,7 @@ public:
 	/**
 	 * Creates an instance of the serial library and opens it.
 	 **/
-	bool openPort(const std::string &port, const unsigned int &baudrate, bool flushFlag);
+	int openPort(const std::string &port, const unsigned int &baudrate, bool flushFlag,const std::string &functionPrefix);
 
 	/**
 	 * Closes the current port connection.
@@ -408,18 +410,16 @@ public:
 
 	bool checkDebug();
 	
+
+	void serialMonitorSetStatus ();
+	bool checkSerialMonitorStatus();
+
 	/**
 	 * Functions that print debugging messages depending on the level.
 	 **/
 	void debugMessage(const char * messageDebug, int minimumLevel); 
 
 	void debugMessageProbe(const char * messageDebug, int minimumLevel);
-	
-	/**
-	 * Function that print process and thread ids in Unix.
-	 **/
-	
-	void getThreadId(const char * pidMessage,const char * threadMessage); 
 	
 	/**
 	 * Debugging variables.
@@ -435,18 +435,8 @@ public:
 	bool debug_;
 	int currentLevel;
 	std::string usedPort;
-
-	/**
-	 * Process and thread variables in Unix.
-	 **/
-
-	#ifdef _WIN32
-		int pid;
-		long tid;
-	#else	
-		pid_t pid;
-		long tid;
-	#endif
+    boost::mutex serialMonitor;
+	bool serialMonitorStatus;
 
 private:
 
@@ -547,7 +537,7 @@ private:
     /**
      * Sends a error notification to the default callback.
      */
-    void error_notify(const std::string &message);
+    void error_notify(const std::string &message, int optionalWarningFlag = 0);
 
 
 	/**
@@ -663,8 +653,23 @@ private:
      * @param 
      * @param 
      * @param 
+     * @param
      */
-    void serialReader(const std::string &, const unsigned int &, const FB::JSObjectPtr &);
+    void serialReader(const std::string &, const unsigned int &, const FB::JSObjectPtr &, const FB::JSObjectPtr &);
+
+    int PortNotOpenedException(std::string);
+
+    int SerialException(std::string);
+
+    int invalid_argument(std::string);
+
+    int IOException(std::string);
+
+    int checkIfIsDigit(std::string);
+
+	int GetTag(std::string);
+
+	int GetNumberBetween(std::string);
 
 	/**
 	 * Creates a separate process to run the avrdude command when on Windows OS.
@@ -678,7 +683,7 @@ private:
 	/**
  	 * Flushes the contents of the serial port and toggles the DTR and RTS signal values.
  	 **/
-	void flushBuffer(const std::string &);
+	int flushBuffer(const std::string &);
 
     /**
      */

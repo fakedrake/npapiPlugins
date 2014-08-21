@@ -17,7 +17,7 @@ FB::variant CodebenderccAPI::download() {
 ////////////////////////////////////public//////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-bool CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudrate, bool flushFlag) try {
+int CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudrate, bool flushFlag,const std::string &functionPrefix) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::openPort",3);
 	std::string device;
 	device = port;
@@ -30,12 +30,9 @@ bool CodebenderccAPI::openPort(const std::string &port, const unsigned int &baud
 			{
 			usedPort=device;		
 				if (serialPort.isOpen() == false){
-					// need to set a zero timeout when on Windows
-					#ifdef _WIN32
-						portTimeout = Timeout(std::numeric_limits<uint32_t>::max(), 0, 0, 0, 0);
-					#else
-						portTimeout = Timeout(std::numeric_limits<uint32_t>::max(), 1000, 0, 1000, 0);
-					#endif
+					uint32_t TotalTimeoutConstantDivider = ((baudrate/9)/100 == 0)? 1 : (baudrate/9)/100; 
+					uint32_t readTotalTimeoutConst = 1000/TotalTimeoutConstantDivider;
+					portTimeout = Timeout(10, readTotalTimeoutConst, 0, 0, 10);
 					serialPort.setPort(device);				//set port name
 					serialPort.setBaudrate(baudrate);		//set port baudrate
 					serialPort.setTimeout(portTimeout);		//set the read/write timeout of the port
@@ -45,42 +42,77 @@ bool CodebenderccAPI::openPort(const std::string &port, const unsigned int &baud
 											}
 			}catch(serial::PortNotOpenedException& pno){
 				CodebenderccAPI::debugMessage(pno.what(),2);
-				error_notify(pno.what());
+				std::string err_mess = boost::lexical_cast<std::string>(pno.what());
+				std::string result = functionPrefix + err_mess;
+				if (functionPrefix.find("flushBuffer")!=std::string::npos) {error_notify(result, 1);}
+				else {error_notify(result);}
 				if(!flushFlag)
 					RemovePortFromList(usedPort);
-				return false;
+				int return_value= CodebenderccAPI::PortNotOpenedException(err_mess);
+				return return_value;
 											}
 			catch(serial::SerialException& se){
 				CodebenderccAPI::debugMessage(se.what(),2);
-				error_notify(se.what());
+				std::string err_mess = boost::lexical_cast<std::string>(se.what());
+				std::string result = functionPrefix + err_mess;
+				if (functionPrefix.find("flushBuffer")!=std::string::npos) {error_notify(result, 1);}
+				else {error_notify(result);}
 				if(!flushFlag)
 					RemovePortFromList(usedPort);
-				return false;
+				int return_value= CodebenderccAPI::SerialException(err_mess);
+				return return_value;
 									}			
 			catch(std::invalid_argument& inv_arg){
 				CodebenderccAPI::debugMessage(inv_arg.what(),2);
-				error_notify(inv_arg.what());
+				std::string err_mess = boost::lexical_cast<std::string>(inv_arg.what());
+				std::string result = functionPrefix + err_mess;
+				if (functionPrefix.find("flushBuffer")!=std::string::npos) {error_notify(result, 1);}
+				else {error_notify(result);}
 				if(!flushFlag)
 					RemovePortFromList(usedPort);
-				return false;
+				int return_value= CodebenderccAPI::invalid_argument(err_mess);
+				return return_value;
 									}	
 			catch(serial::IOException& IOe){
 				CodebenderccAPI::debugMessage(IOe.what(),2);
-				error_notify(IOe.what());
+				std::string err_mess = boost::lexical_cast<std::string>(IOe.what());
+				std::string result = functionPrefix + err_mess;
+				if (functionPrefix.find("flushBuffer")!=std::string::npos) 
+					{error_notify(result, 1);}
+				else {error_notify(result);}
 				if(!flushFlag)
 					RemovePortFromList(usedPort);
-				return false;
+				#ifndef _WIN32
+					if (result.find("IO Exception (16)")!=std::string::npos)
+						return -55;
+					else if (result.find("IO Exception (13)")!=std::string::npos)
+						return -56;
+					else if (result.find("IO Exception (2)")!=std::string::npos)
+						return -57;
+					else{
+						int return_value= CodebenderccAPI::IOException(err_mess);
+						return return_value;}
+				#endif	
+				#ifdef _WIN32
+					if (result.find("Can't open device,")!=std::string::npos)
+						return -56;
+					else if (result.find("Specified port,")!=std::string::npos)
+						return -57;
+					else{
+						int return_value= CodebenderccAPI::IOException(err_mess);
+						return return_value;}
+				#endif
 								}						
 	}	
 	else{
 		CodebenderccAPI::debugMessage("CodebenderccAPI::Port is already in use.",3);
-		return false;
+		return -22;
 		}	
 	CodebenderccAPI::debugMessage("CodebenderccAPI::openPort ended",3);
-	return true;
+	return 1;
 } catch (...) {
     error_notify("CodebenderccAPI::openPort() threw an unknown exception");
-	return false;
+	return -54;
 }
 
 void CodebenderccAPI::closePort(bool flushFlag) try {
@@ -305,11 +337,12 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 				if (mcu == "atmega32u4") {
 					try {	
 						// set the "magic" baudrate to force leonardo reset
-						if(!CodebenderccAPI::openPort(fdevice, 1200, false))
+						int openPortStatus=CodebenderccAPI::openPort(fdevice, 1200, false, "CodebenderccAPI::doflash Leonardo reset- ");
+						if(openPortStatus!=1)
 						{
-						flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-22));
-						isAvrdudeRunning=false;	
-						return;
+							flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(openPortStatus));
+							isAvrdudeRunning=false;	
+							return;
 						}
 						delay(2000);
 						CodebenderccAPI::closePort(false);
@@ -372,7 +405,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 						elapsed_time += 250;
 
 						// If a certain ammount of time has gone by, and the initial port is in the lost of ports, upload using this port
-						if(((os == "Widnows" && elapsed_time >= 500) || elapsed_time >=5000) && (std::find(oldPorts.begin(), oldPorts.end(), fdevice) != oldPorts.end()) ){
+						if((elapsed_time >=5000) && (std::find(oldPorts.begin(), oldPorts.end(), fdevice) != oldPorts.end()) ){
 							std::string uploadingDeviceMessage = "Uploading using selected port: {" + fdevice +"}";
 							CodebenderccAPI::debugMessage(uploadingDeviceMessage.c_str(),2);
 							break;
@@ -382,6 +415,8 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 							notify("Could not auto-reset or detect a manual reset!");
 							flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-1));
 							RemovePortFromList(fdevice);
+							isAvrdudeRunning=false;
+							return;
 						}
 					}
 				}
@@ -415,10 +450,27 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 				  * Flush the buffer of the serial port before uploading, 
 				  * unless the board definition specifies not to do so.
 				  **/
-				if (disable_flushing == "" || disable_flushing == "false")
-					CodebenderccAPI::flushBuffer(fdevice);
+
+				int finalRetVal=0;
+				 
+				if (disable_flushing == "" || disable_flushing == "false"){	
+					int flushBufferRetVal = CodebenderccAPI::flushBuffer(fdevice);
+					finalRetVal=flushBufferRetVal;
+					if (flushBufferRetVal == -55 || flushBufferRetVal == -56 || flushBufferRetVal == -57){
+						RemovePortFromList(fdevice);
+						isAvrdudeRunning=false;	
+						flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(flushBufferRetVal));
+						return;}							
+				}
 
 				retVal = CodebenderccAPI::runAvrdude(command, false);
+				if (retVal==1){
+					if(finalRetVal == 0)
+						retVal=retVal;			
+					else 
+						retVal= 30000 + finalRetVal;
+							  }
+
 				_retVal = retVal;
 				
 				// If the current board is leonardo, wait for a few seconds until the sketch actually takes control of the port
@@ -698,7 +750,7 @@ int CodebenderccAPI::runAvrdude(const std::string& command, bool append) try {
 		}
 	CodebenderccAPI::debugMessage(lastcommand.c_str(),1);
 	CodebenderccAPI::debugMessage("CodebenderccAPI::runAvrdude ended",3);
-	return retval;
+	return retval;  			
 } catch (...) {
     error_notify("CodebenderccAPI::runAvrdude() threw an unknown exception");
     return 1;
@@ -886,39 +938,222 @@ void CodebenderccAPI::detectNewPort(const std::string& portString) try {
     error_notify("CodebenderccAPI::detectNewPort() threw an unknown exception");
 }
 
-void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &baudrate, const FB::JSObjectPtr & callback) try {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader",3);	
-	if(!CodebenderccAPI::openPort(port, baudrate, false))
-		{
+void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &baudrate, const FB::JSObjectPtr & callback, const FB::JSObjectPtr & valHandCallback) try {
+	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader",3);
+	
+	int openPortStatus=CodebenderccAPI::openPort(port, baudrate, false, "CodebenderccAPI::serialReader - ");
+
+	if(openPortStatus!=1){
+		valHandCallback->InvokeAsync("", FB::variant_list_of(shared_from_this())(openPortStatus));
 		notify("disconnect");
+		CodebenderccAPI::disconnect();
 		return;
 		}
+
 	try {
-		int d;
-		std::string rcvd;		
+
+		std::string rcvd;
+		serialPort.flushInput();
+		serialPort.flushOutput();
+		serialMonitor.lock();
+		serialMonitorStatus=true;
+		serialMonitor.unlock();
 		for (;;) {
-			if(serialPort.isOpen())
-				rcvd = "";	
-				rcvd = serialPort.read((size_t) 1);
-					if(rcvd != ""){
-						d = (int) rcvd[0];
-						std::string characterMessage="Received character:";
-						characterMessage.append(&rcvd[0]);
-						CodebenderccAPI::debugMessage(characterMessage.c_str(),2);
-						callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(d));
-					}
-			}
-		}	
-    catch (...) {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader loop interrupted",1);
-		closePort(false);
-		/*Port is already closed from closePort() and notify("disconnect") closes the port for second time*/
-        notify("disconnect");
+
+		    if (CodebenderccAPI::checkSerialMonitorStatus()==0)
+				break;
+
+		    if (!serialPort.isOpen()) 
+		        break;
+
+		    if(!serialPort.available()) 
+		        continue;   
+		    
+		    rcvd = "";
+		    rcvd = serialPort.read((size_t) 100);
+		    
+		    if (rcvd != "")
+		        callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(rcvd));	   
+
+				}
+		}catch (...) {
+
+		CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader loop interrupted",1);
+	 	error_notify("CodebenderccAPI::serialReader loop interrupted", 1);
+		notify("disconnect");
+		CodebenderccAPI::serialMonitorSetStatus();
+		CodebenderccAPI::disconnect();
+
     }
+    CodebenderccAPI::disconnect();
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader ended",3);
 } catch (...) {
-    error_notify("CodebenderccAPI::serialReader() threw an unknown exception");
+    error_notify("CodebenderccAPI::serialReader() threw an unknown exception");	
+    notify("disconnect");
+	CodebenderccAPI::serialMonitorSetStatus();
+	CodebenderccAPI::disconnect();
 }
+
+void CodebenderccAPI::serialMonitorSetStatus()
+{	serialMonitor.lock();
+	serialMonitorStatus= false;
+	serialMonitor.unlock();
+}
+
+bool CodebenderccAPI::checkSerialMonitorStatus()
+{
+	return serialMonitorStatus;
+}
+
+int CodebenderccAPI::PortNotOpenedException(std::string err_mess)try{
+	if (err_mess.find("Serial::setDTR")!=std::string::npos)
+		return 1001;
+	else if	(err_mess.find("Serial::setRTS")!=std::string::npos)
+		return 1002;
+	else 
+		return 1000;
+}catch (...) {
+error_notify("CodebenderccAPI::PortNotOpenedException threw an unknown exception.");
+    return -1;
+}
+
+int CodebenderccAPI::SerialException(std::string err_mess)try{
+	if (err_mess.find("Serial port already open.")!=std::string::npos)
+		return 2001;
+	int error_code=CodebenderccAPI::checkIfIsDigit(err_mess);
+	if (error_code == 10000)
+		return error_code;
+	if (err_mess.find("setDTR failed on a call to ioctl(TIOCMBIC):")!=std::string::npos)
+		return (2100+error_code);	
+	else if	(err_mess.find("setDTR failed on a call to ioctl(TIOCMBIS):")!=std::string::npos)
+		return (2300+error_code);	
+	else if	(err_mess.find("setRTS failed on a call to ioctl(TIOCMBIS):")!=std::string::npos)
+		return (2500+error_code);	
+	else if	(err_mess.find("setRTS failed on a call to ioctl(TIOCMBIC):")!=std::string::npos)
+		return (2700+error_code);
+	else
+		return 2000;		
+	}catch (...) {
+    error_notify("CodebenderccAPI::SerialException threw an unknown exception.");
+    	return -1;
+	}
+
+int CodebenderccAPI::invalid_argument(std::string err_mess)try{
+	if (err_mess.find("Empty port is invalid")!=std::string::npos)
+		return 3001;
+	else if	(err_mess.find("invalid char len")!=std::string::npos)
+		return 3002;
+	else if	(err_mess.find("invalid stop bit")!=std::string::npos)
+		return 3003;
+	else if	(err_mess.find("invalid parity")!=std::string::npos)
+		return 3004;
+	else if	(err_mess.find("OS does not currently support custom bauds")!=std::string::npos)
+		return 3005;
+	else 
+		return 3000;
+}catch (...) {
+error_notify("CodebenderccAPI::invalid_argument threw an unknown exception.");
+    return -1;
+}
+
+#ifndef _WIN32
+	int CodebenderccAPI::IOException(std::string err_mess)try{
+		if (err_mess.find("Too many file handles open.")!=std::string::npos)
+			return 4001;
+		else if	(err_mess.find("Invalid file descriptor, is the serial port open?")!=std::string::npos)
+			return 4002;
+		else if	(err_mess.find("::tcgetattr")!=std::string::npos)
+			return 4003;	
+		int error_code=CodebenderccAPI::GetTag(err_mess);
+		if (error_code == 20000)
+			return error_code;
+		if	(err_mess.find("IO Exception (")!=std::string::npos) 
+			return (4100+error_code);		
+		else 
+			return 4000;			
+	}catch (...) {
+    error_notify("CodebenderccAPI::IOException threw an unknown exception.");
+    	return -1;
+	}
+#endif
+#ifdef _WIN32
+	int CodebenderccAPI::IOException(std::string err_mess)try{
+		if (err_mess.find("Error setting timeouts.")!=std::string::npos)
+			return 5001;
+		else if	(err_mess.find("Error setting serial port settings")!=std::string::npos)
+			return 5002;
+		else if	(err_mess.find("Invalid file descriptor, is the serial port open?")!=std::string::npos)
+			return 5003;	
+		else if	(err_mess.find("Error getting the serial port state")!=std::string::npos)
+			return 5004;
+		int error_code=CodebenderccAPI::GetNumberBetween(err_mess);
+		if (error_code == 20000)
+			return error_code;
+		if	(err_mess.find("Unknown error opening the serial port:")!=std::string::npos)
+			return (6000+error_code);	
+		else 
+			return 5000;
+	}catch (...) {
+    error_notify("CodebenderccAPI::IOException threw an unknown exception.");
+    	return -1;
+	}
+#endif
+
+int CodebenderccAPI::checkIfIsDigit(std::string err_mess)try{
+	int err_code;
+	int nIndex;
+	stringstream strStream;
+       for (nIndex=0; nIndex < err_mess.length(); nIndex++){
+       	    if (isdigit(err_mess[nIndex]))    
+				strStream << err_mess[nIndex];
+       }
+    strStream >> err_code;
+	return err_code;
+	}catch (...) {
+    error_notify("CodebenderccAPI::checkIfIsDigit threw an unknown exception.");
+    	return 10000;
+	}
+
+int CodebenderccAPI::GetTag(std::string str)try{
+	int err_code;
+	std::string retVal;
+    std::string::size_type start = str.find('(');
+    if (start != str.npos)
+    {
+        std::string::size_type end = str.find(')', start + 1);
+        if (end != str.npos)
+        {
+            ++start;
+            std::string::size_type count = end - start;
+			retVal=str.substr(start, count);
+			err_code=atoi(retVal.c_str());
+            return err_code;
+        }
+    }
+    return -1;
+	}catch (...) {
+    error_notify("CodebenderccAPI::GetTag threw an unknown exception.");
+    	return 20000;
+	}
+
+int CodebenderccAPI::GetNumberBetween(std::string str)try{
+	int err_code;
+    std::string::size_type start = str.find_last_of(':');
+    if (start != str.npos)
+    {
+        std::string::size_type end = str.find_first_of(',', start + 1);
+        if (end != str.npos){
+            ++start;
+            std::string::size_type count = end - start;
+			err_code=atoi((str.substr(start, count)).c_str());
+            return err_code;
+        }
+    }
+    return -1;
+	}catch (...) {
+    error_notify("CodebenderccAPI::GetNumberBetween threw an unknown exception.");
+    	return 20000;
+	}	
 
 std::string CodebenderccAPI::exec(const char * cmd) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::exec",3);
@@ -946,9 +1181,9 @@ CodebenderccAPI::debugMessage("CodebenderccAPI::notify",3);
 callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
 }
 
-void CodebenderccAPI::error_notify(const std::string &message) {
+void CodebenderccAPI::error_notify(const std::string &message, int warningFlag) {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::error_notify",3);	
-	error_callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
+	error_callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str())(warningFlag));
 }
 
 DIR *
@@ -1510,7 +1745,10 @@ CodebenderccAPI::RegOpenKeyEx(HKEY hKey,
 		std::string err_msg = "CodebenderccAPI::RegOpenKeyEx() - Winerror.h error code: ";
 		err_msg += boost::lexical_cast<std::string>(rc);
 
-		error_notify(err_msg);
+		if(rc==2)
+			error_notify(err_msg,1);
+		else
+			error_notify(err_msg);
 		return rc;
 	}
 	
@@ -1538,7 +1776,10 @@ CodebenderccAPI::RegCloseKey(HKEY hKey)
 		std::string err_msg = "CodebenderccAPI::RegCloseKey() - Winerror.h error code: ";
 		err_msg += boost::lexical_cast<std::string>(rc);
 
-		error_notify(err_msg);
+		if(rc==6)
+			error_notify(err_msg,1);
+		else
+			error_notify(err_msg);
 		return rc;
 	}
 

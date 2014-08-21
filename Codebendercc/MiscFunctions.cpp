@@ -185,7 +185,7 @@ FB::variant CodebenderccAPI::getLastCommand() {
 	return lastcommand;
 }
 
-FB::variant CodebenderccAPI::getFlashResult() try {
+std::string CodebenderccAPI::getFlashResult() try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::getFlashResult",3);
 	FILE *pFile;
 	#ifdef _WIN32
@@ -427,32 +427,51 @@ int CodebenderccAPI::bootloaderPrefs(const std::string& lFuses, const std::strin
     return 0;
 }
 
-void CodebenderccAPI::flushBuffer(const std::string& port) try {
+int CodebenderccAPI::flushBuffer(const std::string& port) try {
 
  	CodebenderccAPI::debugMessage("CodebenderccAPI::flushBuffer",3);
- 	
-	if(!CodebenderccAPI::openPort(port, 9600, true)) {
-		error_notify("CodebenderccAPI::flushBuffer() got an error while opening the serial port.");	
-		return;
-	}
+    int openPortStatus=CodebenderccAPI::openPort(port, 9600, true, "CodebenderccAPI::flushBuffer - ");
+    if(openPortStatus!=1)
+		return openPortStatus;
+ 	try{
+ 	    serialPort.flushInput();
+ 	    serialPort.flushOutput();
 
- 	serialPort.flush();
+        serialPort.setDTR(false);
+        serialPort.setRTS(false);
+
+ 	    delay(100);
  	
- 	serialPort.setDTR(false);
- 	serialPort.setRTS(false);
- 	
- 	delay(100);
- 	
- 	serialPort.setDTR(true);
- 	serialPort.setRTS(true);
+ 	    serialPort.setDTR(true);
+ 	    serialPort.setRTS(true);
+     }
+    catch(serial::SerialException& se){
+        std::string err_msg = boost::lexical_cast<std::string>(se.what());
+        std::string result = "flushBuffer exception: " + err_msg;
+        error_notify(result, 1);
+        return -1;
+    }           
+    catch(serial::IOException& IOe){  
+        std::string err_msg = boost::lexical_cast<std::string>(IOe.what());
+        std::string result = "flushBuffer exception: " + err_msg;
+        error_notify(result, 1);
+        return -1;
+    }
+    catch(serial::PortNotOpenedException& pno){
+        std::string err_msg = boost::lexical_cast<std::string>(pno.what());
+        std::string result = "flushBuffer exception: " + err_msg;
+        error_notify(result, 1);
+        return -1;
+    }
  
  	CodebenderccAPI::closePort(true);
  	
  	CodebenderccAPI::debugMessage("CodebenderccAPI::flushBuffer ended",3);
  	
+	return 0;
  }catch(...) {
  	error_notify("CodebenderccAPI::flushBuffer() threw an unknown exception");
- 	return;
+ 	return -1;
  }
 
 ////////////////////////////////////////////////////////////////////////////////

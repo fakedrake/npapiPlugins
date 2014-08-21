@@ -67,8 +67,12 @@ Serial::SerialImpl::open ()
       // Use this->getPort to convert to a std::string
       ss << "Specified port, " << this->getPort() << ", does not exist.";
       THROW (IOException, ss.str().c_str());
+    case ERROR_ACCESS_DENIED:
+      // Use this->getPort to convert to a std::string
+      ss << "Can't open device, " << this->getPort() << ", access is denied.";
+      THROW (IOException, ss.str().c_str()); 
     default:
-      ss << "Unknown error opening the serial port: " << errno;
+      ss << "Unknown error opening the serial port: " << errno_;
       THROW (IOException, ss.str().c_str());
     }
   }
@@ -288,6 +292,19 @@ Serial::SerialImpl::available ()
   return static_cast<size_t>(cs.cbInQue);
 }
 
+bool
+Serial::SerialImpl::waitReadable (uint32_t timeout)
+{ 
+  THROW (IOException, "waitReadable is not implemented on Windows.");
+  return false;
+}
+
+void
+Serial::SerialImpl::waitByteTimes (size_t count)
+{
+  THROW (IOException, "waitByteTimes is not implemented on Windows.");
+}
+
 size_t
 Serial::SerialImpl::read (uint8_t *buf, size_t size)
 {
@@ -432,15 +449,20 @@ Serial::SerialImpl::flush ()
 void
 Serial::SerialImpl::flushInput ()
 {
-  THROW (IOException, "flushInput is not supported on Windows.");
+  if (is_open_ == false) {
+    throw PortNotOpenedException ("Serial::flushInput");
+  }
+  PurgeComm(fd_, PURGE_RXCLEAR);
 }
 
 void
 Serial::SerialImpl::flushOutput ()
 {
-  THROW (IOException, "flushOutput is not supported on Windows.");
+  if (is_open_ == false) {
+    throw PortNotOpenedException ("Serial::flushOutput");
+  }
+  PurgeComm(fd_, PURGE_TXCLEAR);
 }
-
 void
 Serial::SerialImpl::sendBreak (int duration)
 {

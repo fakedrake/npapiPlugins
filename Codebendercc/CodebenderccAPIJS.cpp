@@ -124,37 +124,51 @@ CodebenderccAPI::debugMessage("CodebenderccAPI::setErrorCallback ended",3);
 void CodebenderccAPI::serialWrite(const std::string & message) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialWrite",3);
     std::string mess = message;
+
 	size_t bytes_read;
-	try
-	{
-		if(serialPort.isOpen()){
-			
+	if(serialPort.isOpen()){
+		try{
 			bytes_read = serialPort.write(mess);
+
 			if(bytes_read != 0){
-				perror("Wrote to port");
 				std::string portMessage = "Wrote to port: " + mess + " ";
 				CodebenderccAPI::debugMessage(portMessage.c_str(),1);
 			}
-		}
-		else {
-			CodebenderccAPI::debugMessage("CodebenderccAPI::serialWrite port not open",1);
-			perror("null");
-		}
-	}catch(...){
-		CodebenderccAPI::debugMessage("CodebenderccAPI::serialWrite open serial port exception",1);
-		notify("disconnect");
-	}
+		}catch(serial::PortNotOpenedException& pno){
+			CodebenderccAPI::debugMessage(pno.what(),2);
+			error_notify(pno.what());
+			notify("disconnect");
+			CodebenderccAPI::disconnect();
+			return;
+			}
+		catch(serial::SerialException& se){
+			CodebenderccAPI::debugMessage(se.what(),2);
+			error_notify(se.what());
+			notify("disconnect");
+			CodebenderccAPI::disconnect();
+			return;
+			}			
+		catch(serial::IOException& IOe){
+			CodebenderccAPI::debugMessage(IOe.what(),2);
+			error_notify(IOe.what());
+			notify("disconnect");
+			CodebenderccAPI::disconnect();
+			return;
+			}
+	}else {
+		CodebenderccAPI::debugMessage("CodebenderccAPI::serialWrite port not open",1);
+		perror("null");}		
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialWrite ended",3);
-} catch (...) {
+	} catch (...) {
     error_notify("CodebenderccAPI::serialWrite() threw an unknown exception");
-}
+	}
 
 FB::variant CodebenderccAPI::disconnect() try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::disconnect",3);
 	if(!(serialPort.isOpen()))
 		return 1;
 	try{
-			CodebenderccAPI::closePort(false);
+		CodebenderccAPI::closePort(false);
 		}catch(...){
 		CodebenderccAPI::debugMessage("CodebenderccAPI::disconnect close port exception",2);
 		}
@@ -165,13 +179,13 @@ FB::variant CodebenderccAPI::disconnect() try {
     return 0;
 }
 
-bool CodebenderccAPI::serialRead(const std::string &port, const std::string &baudrate, const FB::JSObjectPtr &callback) try {
+bool CodebenderccAPI::serialRead(const std::string &port, const std::string &baudrate, const FB::JSObjectPtr &callback,  const FB::JSObjectPtr &valHandCallback) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::serialRead",3);
 	std::string message = "connecting at ";
     message += baudrate;
     callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(message));
     unsigned int brate = boost::lexical_cast<unsigned int, std::string > (baudrate);
-    boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::serialReader, this, port, brate, callback));
+    boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::serialReader, this, port, brate, callback, valHandCallback));
     CodebenderccAPI::debugMessage("CodebenderccAPI::serialRead ended",3);
 	return true; // the thread is started
 }catch (...) {
