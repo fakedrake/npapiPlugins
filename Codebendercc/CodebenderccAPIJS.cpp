@@ -171,6 +171,8 @@ FB::variant CodebenderccAPI::disconnect() try {
 		CodebenderccAPI::closePort(false);
 		}catch(...){
 		CodebenderccAPI::debugMessage("CodebenderccAPI::disconnect close port exception",2);
+		error_notify("CodebenderccAPI::disconnect close port threw an unknown exception");
+    	return 0;
 		}
 	CodebenderccAPI::debugMessage("CodebenderccAPI::disconnect ended",3);
 	return 1;	
