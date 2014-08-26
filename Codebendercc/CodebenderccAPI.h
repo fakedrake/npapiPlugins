@@ -99,7 +99,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     ///
     ////////////////////////////////////////////////////////////////////////////
-#define MSG_LEONARD_AUTORESET "Trying Arduino Leonardo auto-reset. If it does not reset automatically please reset the Arduino manually!"
+#define MSG_LEONARD_AUTORESET "Trying to auto-reset your device. If it does not reset automatically, please reset your device manually!"
 
     /**
      * Constructor for your JSAPI object.
