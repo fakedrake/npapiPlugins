@@ -32,6 +32,8 @@
 	#include <stdlib.h>
 	#include <string.h>
 	#include <tchar.h>
+    #include <tlhelp32.h>
+    #include <comdef.h>
 #else
 	#include <dirent.h>
 	#include <sys/file.h>
@@ -99,7 +101,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     ///
     ////////////////////////////////////////////////////////////////////////////
-#define MSG_LEONARD_AUTORESET "Trying Arduino Leonardo auto-reset. If it does not reset automatically please reset the Arduino manually!"
+#define MSG_LEONARD_AUTORESET "Trying to auto-reset your device. If it does not reset automatically, please reset your device manually!"
 
     /**
      * Constructor for your JSAPI object.
@@ -680,6 +682,14 @@ private:
 	 */
     int winExecAvrdude(const std::wstring & cmd, bool appendFlag);
 
+    /**
+     * Kills avrdude process if it is still running on Windows OS.
+     **/
+     
+    #ifdef _WIN32 
+    void winKillAvrdude(DWORD dwPid);
+    #endif
+
 	/**
  	 * Flushes the contents of the serial port and toggles the DTR and RTS signal values.
  	 **/
@@ -856,6 +866,20 @@ private:
                           UINT uExitCode);
 
     BOOL CloseHandle(HANDLE hObject);
+
+    HANDLE OpenProcess(DWORD dwDesiredAccess,
+                       BOOL bInheritHandle,
+                       DWORD dwProcessId);
+
+    HANDLE CreateToolhelp32Snapshot(DWORD dwFlags,
+                                    DWORD th32ProcessID);
+
+    BOOL Process32First(HANDLE hSnapshot,
+                        LPPROCESSENTRY32 lppe);
+
+    BOOL Process32Next(HANDLE hSnapshot,
+                       LPPROCESSENTRY32 lppe);
+
 #endif
 
 };
