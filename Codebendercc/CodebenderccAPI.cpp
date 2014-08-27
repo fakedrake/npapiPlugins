@@ -404,11 +404,11 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 							delay(300);
 					}catch (...) {
 					CodebenderccAPI::debugMessage("CodebenderccAPI::doflash exception thrown while opening serial port",2);
-						perror("Error opening leonardo port");
+					perror("Error opening leonardo port");
 					RemovePortFromList(fdevice);
 					}
 
-					/* Get the intial list of ports after resetting the board */
+					/* Get the initial list of ports after resetting the board */
 
 					std::string oldports = probeUSB();
 					perror(oldports.c_str());
@@ -463,7 +463,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 						delay(250);
 						elapsed_time += 250;
 
-						/* If a certain ammount of time has gone by, and the initial port is in the list of ports, 
+						/* If a certain amount of time has gone by, and the initial port is in the list of ports, 
 						upload using this port. */
 
 						if((elapsed_time >=5000) && (std::find(oldPorts.begin(), oldPorts.end(), fdevice) != oldPorts.end()) ){
@@ -474,7 +474,7 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 						if (elapsed_time == 10000) {
 							notify("Could not auto-reset or detect a manual reset!");
 							flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-1));
-							std::string noResetMessage = "Could not autoreset device connected to port: {" + fdevice +"}";
+							std::string noResetMessage = "Could not auto reset device connected to port: {" + fdevice +"}";
 							CodebenderccAPI::debugMessage(noResetMessage.c_str(),2);
 							RemovePortFromList(fdevice);
 							isAvrdudeRunning=false;
