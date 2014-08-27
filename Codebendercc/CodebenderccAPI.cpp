@@ -288,7 +288,9 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 	}while(counter <= 2000);
 
 	if(dwExitCode == STILL_ACTIVE){
-		CodebenderccAPI::TerminateProcess( pi.hProcess, 0 ); // Kill process if it is still running.
+		// Kill child & main process if it is still running.
+		DWORD dwPid = GetProcessId(pi.hProcess);
+        CodebenderccAPI::winKillAvrdude(dwPid);
 		dwExitCode = -204;
 	}
 
@@ -301,6 +303,57 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 } catch (...) {
     error_notify("CodebenderccAPI::winExecAvrdude() threw an unknown exception");
     return 0;
+}
+#endif
+
+#ifdef _WIN32
+void CodebenderccAPI::winKillAvrdude( DWORD dwPid) try {
+CodebenderccAPI::debugMessage("CodebenderccAPI::winKillAvrdude",3);
+
+PROCESSENTRY32 pe;
+memset(&pe, 0, sizeof(PROCESSENTRY32));
+pe.dwSize = sizeof(PROCESSENTRY32);
+
+HANDLE hSnap = CodebenderccAPI::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+
+	if (CodebenderccAPI::Process32First(hSnap, &pe))
+	{
+	    BOOL bContinue = TRUE;
+
+	    // kill child processes
+	    while (bContinue)
+	    {
+	        // only kill child processes
+	        if (pe.th32ParentProcessID == dwPid)
+	        {
+	            HANDLE hChildProc = CodebenderccAPI::OpenProcess(PROCESS_ALL_ACCESS, FALSE, pe.th32ProcessID);
+
+	            if (hChildProc)
+	            {
+	                CodebenderccAPI::TerminateProcess(hChildProc, 1);
+	                CodebenderccAPI::CloseHandle(hChildProc);
+	            }               
+	        }
+
+	        bContinue = CodebenderccAPI::Process32Next(hSnap, &pe);
+	    }
+
+	    // kill the main process
+	    HANDLE hProc = CodebenderccAPI::OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwPid);
+
+	    if (hProc)
+	    {
+	        CodebenderccAPI::TerminateProcess(hProc, 1);
+	        CodebenderccAPI::CloseHandle(hProc);
+	    }  
+	       
+	CodebenderccAPI::debugMessage("CodebenderccAPI::winKillAvrdude ended",3);
+	}
+
+CodebenderccAPI::CloseHandle(hSnap);
+} catch (...) {
+  error_notify("CodebenderccAPI::winKillAvrdude() threw an unknown exception");
+  return;
 }
 #endif
 
@@ -1912,6 +1965,85 @@ CodebenderccAPI::CloseHandle(HANDLE hObject)
         return rc;
 
     std::string err_msg = "CodebenderccAPI::CloseHandle() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
+
+    error_notify(err_msg);
+    return rc;
+}
+
+HANDLE
+CodebenderccAPI::OpenProcess(DWORD dwDesiredAccess,
+                            BOOL bInheritHandle,
+                            DWORD dwProcessId)
+{
+    HANDLE rc;
+
+    rc = ::OpenProcess(dwDesiredAccess,
+                      bInheritHandle,
+                      dwProcessId);
+    if (rc != NULL)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::OpenProcess() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
+
+    error_notify(err_msg);
+    return rc;
+}
+
+HANDLE
+CodebenderccAPI::CreateToolhelp32Snapshot(DWORD dwFlags,
+                            			 DWORD th32ProcessID)
+{
+    HANDLE rc;
+
+    rc = ::CreateToolhelp32Snapshot(dwFlags,
+                      			   th32ProcessID);
+    if (rc != INVALID_HANDLE_VALUE)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::CreateToolhelp32Snapshot() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
+
+    error_notify(err_msg);
+    return rc;
+}
+
+BOOL
+CodebenderccAPI::Process32First(HANDLE hSnapshot,
+                              LPPROCESSENTRY32 lppe)
+{
+    BOOL rc;
+
+    rc = ::Process32First(hSnapshot,
+                         lppe);
+    if (rc != 0)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::Process32First() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
+
+    error_notify(err_msg);
+    return rc;
+}
+
+BOOL
+CodebenderccAPI::Process32Next(HANDLE hSnapshot,
+                              LPPROCESSENTRY32 lppe)
+{
+    BOOL rc;
+
+    rc = ::Process32Next(hSnapshot,
+                         lppe);
+    if (rc != 0)
+        return rc;
+
+    DWORD err = GetLastError();
+
+    if(err == ERROR_NO_MORE_FILES)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::Process32Next() - extended error information: ";
     err_msg += boost::lexical_cast<std::string>(GetLastError());
 
     error_notify(err_msg);

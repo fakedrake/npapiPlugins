@@ -32,6 +32,8 @@
 	#include <stdlib.h>
 	#include <string.h>
 	#include <tchar.h>
+    #include <tlhelp32.h>
+    #include <comdef.h>
 #else
 	#include <dirent.h>
 	#include <sys/file.h>
@@ -680,6 +682,11 @@ private:
 	 */
     int winExecAvrdude(const std::wstring & cmd, bool appendFlag);
 
+    /**
+     * Kills avrdude process if it is still running on Windows OS.
+     **/
+    void winKillAvrdude(DWORD dwPid);
+
 	/**
  	 * Flushes the contents of the serial port and toggles the DTR and RTS signal values.
  	 **/
@@ -856,6 +863,20 @@ private:
                           UINT uExitCode);
 
     BOOL CloseHandle(HANDLE hObject);
+
+    HANDLE OpenProcess(DWORD dwDesiredAccess,
+                       BOOL bInheritHandle,
+                       DWORD dwProcessId);
+
+    HANDLE CreateToolhelp32Snapshot(DWORD dwFlags,
+                                    DWORD th32ProcessID);
+
+    BOOL Process32First(HANDLE hSnapshot,
+                        LPPROCESSENTRY32 lppe);
+
+    BOOL Process32Next(HANDLE hSnapshot,
+                       LPPROCESSENTRY32 lppe);
+
 #endif
 
 };
