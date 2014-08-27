@@ -474,6 +474,8 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 						if (elapsed_time == 10000) {
 							notify("Could not auto-reset or detect a manual reset!");
 							flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-1));
+							std::string noResetMessage = "Could not autoreset device connected to port: {" + fdevice +"}";
+							CodebenderccAPI::debugMessage(noResetMessage.c_str(),2);
 							RemovePortFromList(fdevice);
 							isAvrdudeRunning=false;
 							return;}
