@@ -576,6 +576,8 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflash ended",3);
 } catch (...) {
     error_notify("CodebenderccAPI::doFlash() threw an unknown exception");
+	isAvrdudeRunning=false;	
+	flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(9002));
 }
 
 void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std::string& code, const std::string& maxsize, std::map<std::string, std::string>& programmerData, const std::string& mcu, const FB::JSObjectPtr & flash_callback) try {
