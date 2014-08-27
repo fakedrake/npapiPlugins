@@ -685,7 +685,10 @@ private:
     /**
      * Kills avrdude process if it is still running on Windows OS.
      **/
+     
+    #ifdef _WIN32 
     void winKillAvrdude(DWORD dwPid);
+    #endif
 
 	/**
  	 * Flushes the contents of the serial port and toggles the DTR and RTS signal values.
