@@ -306,6 +306,7 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 }
 #endif
 
+#ifdef _WIN32
 void CodebenderccAPI::winKillAvrdude( DWORD dwPid) try {
 CodebenderccAPI::debugMessage("CodebenderccAPI::winKillAvrdude",3);
 
@@ -354,6 +355,7 @@ CodebenderccAPI::CloseHandle(hSnap);
   error_notify("CodebenderccAPI::winKillAvrdude() threw an unknown exception");
   return;
 }
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////PRIVATE////////////////////////////////////////////
