@@ -408,7 +408,8 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 					RemovePortFromList(fdevice);
 					}
 
-					// get the list of ports before resetting the leonardo board
+					/* Get the intial list of ports after resetting the board */
+
 					std::string oldports = probeUSB();
 					perror(oldports.c_str());
 					std::istringstream oldStream(oldports);
@@ -419,10 +420,11 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 						oldPorts.push_back(token);
 					}
 					CodebenderccAPI::debugMessage("Listing serial port changes..",2);
-					std::string oldPortsMessage = "Ports : {" + oldports + "}";
+					std::string oldPortsMessage = "Initial ports : {" + oldports + "}";
 					CodebenderccAPI::debugMessage(oldPortsMessage.c_str(),2);
 					
-					// Get the list of ports until the port 
+					/* Get the new list of ports after resetting the board */
+
 					int elapsed_time = 0;
 					bool found = false;
 					while(elapsed_time <= 10000){
@@ -434,43 +436,47 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 						while (std::getline(ss, item, ',')) {
 							newPorts.push_back(item);
 						}
-						std::string newPortsMessage = "Ports : {" + newports + "}";
+						std::string newPortsMessage = "New ports : {" + newports + "}";
 						CodebenderccAPI::debugMessage(newPortsMessage.c_str(),2);
 			
-						// Check if the new list of ports contains a port that did not exist in the previous list.
+						/* Check if the new list of ports contains a port that did not exist in the initial ports list. */
+
 						for (std::vector<std::string>::iterator it = newPorts.begin(); it != newPorts.end(); ++it) {
 							if (std::find(oldPorts.begin(), oldPorts.end(), *it) == oldPorts.end()){
 								fdevice = *it;
 								found = true;
-								break;
-							}
+								break;}
 						}
 
-						if (found){		// The new leonardo port appeared in the list. Save it and go on..
-								std::string leonardoDeviceMessage = "Found leonardo device on " + fdevice + " port";
-								CodebenderccAPI::debugMessage(leonardoDeviceMessage.c_str(),2);
-								AddtoPortList(fdevice);
-							break;
-						}
+						/* If new list of ports contains a port that did not exist previously,
+		 				Leonardo device is connected in that port. Save it and go on. */
+
+						if (found){		
+							std::string leonardoDeviceMessage = "Found leonardo device on " + fdevice + " port";
+							CodebenderccAPI::debugMessage(leonardoDeviceMessage.c_str(),2);
+							AddtoPortList(fdevice);
+							break;}
+
+						/* If new list of ports does not contain a new port, continue searching. */
 
 						oldPorts = newPorts;
 						delay(250);
 						elapsed_time += 250;
 
-						// If a certain ammount of time has gone by, and the initial port is in the lost of ports, upload using this port
+						/* If a certain ammount of time has gone by, and the initial port is in the list of ports, 
+						upload using this port. */
+
 						if((elapsed_time >=5000) && (std::find(oldPorts.begin(), oldPorts.end(), fdevice) != oldPorts.end()) ){
 							std::string uploadingDeviceMessage = "Uploading using selected port: {" + fdevice +"}";
 							CodebenderccAPI::debugMessage(uploadingDeviceMessage.c_str(),2);
-							break;
-						}
+							break;}
 
 						if (elapsed_time == 10000) {
 							notify("Could not auto-reset or detect a manual reset!");
 							flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-1));
 							RemovePortFromList(fdevice);
 							isAvrdudeRunning=false;
-							return;
-						}
+							return;}
 					}
 				}
 
