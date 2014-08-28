@@ -13,6 +13,7 @@
 
 #ifdef _WIN32
 #include "../include/serial/impl/win.h"
+#include "../src/impl/list_ports/list_ports_win.cc"
 #else
 #include "../include/serial/impl/unix.h"
 #endif

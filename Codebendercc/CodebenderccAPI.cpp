@@ -203,6 +203,44 @@ std::string CodebenderccAPI::probeUSB() try {
 }
 #endif
 
+std::string CodebenderccAPI::getPorts() try {
+
+	CodebenderccAPI::debugMessageProbe("CodebenderccAPI::getPorts",3);
+
+	std::vector<serial::PortInfo> devices = serial::list_ports();
+	std::string ports ="";
+	std::vector<std::string> portVector;
+
+	for(int i = 0; i < devices.size(); i++){
+
+		 std::string port=devices.at(i).port;
+		 std::string description=devices.at(i).description;
+		 std::string hardware_id = devices.at(i).hardware_id;
+
+		 CodebenderccAPI::debugMessage(port.c_str(),3);
+		 CodebenderccAPI::debugMessage(description.c_str(),3);
+		 CodebenderccAPI::debugMessage(hardware_id.c_str(),3);
+
+		 portVector.push_back(port);
+		 portVector.push_back(description);
+		 portVector.push_back(hardware_id);
+		 }
+
+		std::stringstream portsInfo;
+
+		copy(portVector.begin(), portVector.end(),ostream_iterator<string>(portsInfo, ","));
+		string strPortsInfo(portsInfo.str());
+
+		CodebenderccAPI::debugMessage(strPortsInfo.c_str(),3);
+		ports=strPortsInfo;
+
+    return ports;
+
+} catch (...) {
+    error_notify("CodebenderccAPI::getPorts() threw an unknown exception");
+    return "";
+}	
+
 #ifdef _WIN32
 
 int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFlag) try {
