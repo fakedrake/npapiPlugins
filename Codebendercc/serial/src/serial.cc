@@ -14,8 +14,10 @@
 #ifdef _WIN32
 #include "../include/serial/impl/win.h"
 #include "../src/impl/list_ports/list_ports_win.cc"
-#else
+#endif
+#if defined(__linux__)
 #include "../include/serial/impl/unix.h"
+#include "../src/impl/list_ports/list_ports_linux.cc"
 #endif
 
 using std::invalid_argument;
