@@ -19,6 +19,10 @@
 #include "../include/serial/impl/unix.h"
 #include "../src/impl/list_ports/list_ports_linux.cc"
 #endif
+#if defined(__APPLE__)
+#include "../include/serial/impl/unix.h"
+#include "../src/impl/list_ports/list_ports_osx.cc"
+#endif
 
 using std::invalid_argument;
 using std::min;
