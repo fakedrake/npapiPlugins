@@ -531,9 +531,9 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 					+ " -p" + mcu;
 
 				#ifdef _WIN32
-					command += " -u -D -U flash:w:file.bin:a";
+					command += " -u -D -U flash:w:file.bin:r";
 				#else
-					command += " -u -D -U flash:w:\"" + binFile + "\":a";
+					command += " -u -D -U flash:w:\"" + binFile + "\":r";
 				#endif
 				command += " -c" + protocol
 				+ " -b" + speed
@@ -645,9 +645,9 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 				std::string command = setProgrammerCommand(programmerData);
 
 				#ifdef _WIN32
-					command += " -Uflash:w:file.bin:a";
+					command += " -Uflash:w:file.bin:r";
 				#else
-					command += " -Uflash:w:\"" + binFile + "\":a";
+					command += " -Uflash:w:\"" + binFile + "\":r";
 				#endif
 				// Execute the upload command.
 			
