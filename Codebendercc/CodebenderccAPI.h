@@ -86,8 +86,11 @@
  * https://github.com/wjwwood/serial
  **/
 #include "serial/include/serial/serial.h"
-
+#include "json/writer.h"
+#include "json/reader.h"
+#include "json/elements.h"
 using namespace serial;
+using namespace json;
 
 #ifdef __APPLE__
 #import <Security/Security.h>
