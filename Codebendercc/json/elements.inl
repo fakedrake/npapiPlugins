@@ -93,7 +93,7 @@ class UnknownElement::ConstCastVisitor : public ConstVisitor
    virtual void Visit(const Object& object) {}
    virtual void Visit(const Number& number) {}
    virtual void Visit(const String& string) {}
-   virtual void Visit(const Boolean& boolean) {}
+   virtual void Visit(const Boolean_& boolean) {}
    virtual void Visit(const Null& null) {}
 };
 
@@ -113,7 +113,7 @@ class UnknownElement::CastVisitor : public Visitor
    virtual void Visit(Object& object) {}
    virtual void Visit(Number& number) {}
    virtual void Visit(String& string) {}
-   virtual void Visit(Boolean& boolean) {}
+   virtual void Visit(Boolean_& boolean) {}
    virtual void Visit(Null& null) {}
 };
 
@@ -134,7 +134,7 @@ inline UnknownElement::UnknownElement(const UnknownElement& unknown) :  m_pImp( 
 inline UnknownElement::UnknownElement(const Object& object) :           m_pImp( new Imp_T<Object>(object) ) {}
 inline UnknownElement::UnknownElement(const Array& array) :             m_pImp( new Imp_T<Array>(array) ) {}
 inline UnknownElement::UnknownElement(const Number& number) :           m_pImp( new Imp_T<Number>(number) ) {}
-inline UnknownElement::UnknownElement(const Boolean& boolean) :         m_pImp( new Imp_T<Boolean>(boolean) ) {}
+inline UnknownElement::UnknownElement(const Boolean_& boolean) :        m_pImp( new Imp_T<Boolean_>(boolean) ) {}
 inline UnknownElement::UnknownElement(const String& string) :           m_pImp( new Imp_T<String>(string) ) {}
 inline UnknownElement::UnknownElement(const Null& null) :               m_pImp( new Imp_T<Null>(null) ) {}
 
@@ -143,14 +143,14 @@ inline UnknownElement::~UnknownElement()   { delete m_pImp; }
 inline UnknownElement::operator const Object& () const    { return CastTo<Object>(); }
 inline UnknownElement::operator const Array& () const     { return CastTo<Array>(); }
 inline UnknownElement::operator const Number& () const    { return CastTo<Number>(); }
-inline UnknownElement::operator const Boolean& () const   { return CastTo<Boolean>(); }
+inline UnknownElement::operator const Boolean_& () const  { return CastTo<Boolean_>(); }
 inline UnknownElement::operator const String& () const    { return CastTo<String>(); }
 inline UnknownElement::operator const Null& () const      { return CastTo<Null>(); }
 
 inline UnknownElement::operator Object& ()    { return ConvertTo<Object>(); }
 inline UnknownElement::operator Array& ()     { return ConvertTo<Array>(); }
 inline UnknownElement::operator Number& ()    { return ConvertTo<Number>(); }
-inline UnknownElement::operator Boolean& ()   { return ConvertTo<Boolean>(); }
+inline UnknownElement::operator Boolean_& ()  { return ConvertTo<Boolean_>(); }
 inline UnknownElement::operator String& ()    { return ConvertTo<String>(); }
 inline UnknownElement::operator Null& ()      { return ConvertTo<Null>(); }
 

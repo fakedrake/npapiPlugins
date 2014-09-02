@@ -64,7 +64,7 @@ template <typename ValueTypeT>
 class TrivialType_T;
 
 typedef TrivialType_T<double> Number;
-typedef TrivialType_T<bool> Boolean;
+typedef TrivialType_T<bool> Boolean_;
 typedef TrivialType_T<std::string> String;
 
 class Object;
@@ -108,7 +108,7 @@ public:
    UnknownElement(const Object& object);
    UnknownElement(const Array& array);
    UnknownElement(const Number& number);
-   UnknownElement(const Boolean& boolean);
+   UnknownElement(const Boolean_& boolean);
    UnknownElement(const String& string);
    UnknownElement(const Null& null);
 
@@ -120,7 +120,7 @@ public:
    operator const Object& () const;
    operator const Array& () const;
    operator const Number& () const;
-   operator const Boolean& () const;
+   operator const Boolean_& () const;
    operator const String& () const;
    operator const Null& () const;
 
@@ -128,7 +128,7 @@ public:
    operator Object& ();
    operator Array& ();
    operator Number& ();
-   operator Boolean& ();
+   operator Boolean_& ();
    operator String& ();
    operator Null& ();
 

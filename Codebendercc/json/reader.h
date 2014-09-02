@@ -83,7 +83,7 @@ public:
    static void Read(Array& array, std::istream& istr);
    static void Read(String& string, std::istream& istr);
    static void Read(Number& number, std::istream& istr);
-   static void Read(Boolean& boolean, std::istream& istr);
+   static void Read(Boolean_& boolean, std::istream& istr);
    static void Read(Null& null, std::istream& istr);
 
    // ...otherwise, if you don't know, call this & visit it
@@ -135,7 +135,7 @@ private:
    void Parse(Array& array, TokenStream& tokenStream);
    void Parse(String& string, TokenStream& tokenStream);
    void Parse(Number& number, TokenStream& tokenStream);
-   void Parse(Boolean& boolean, TokenStream& tokenStream);
+   void Parse(Boolean_& boolean, TokenStream& tokenStream);
    void Parse(Null& null, TokenStream& tokenStream);
 
    const std::string& MatchExpectedToken(Token::Type nExpected, TokenStream& tokenStream);

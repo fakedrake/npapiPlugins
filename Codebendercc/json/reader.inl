@@ -154,7 +154,7 @@ inline void Reader::Read(Object& object, std::istream& istr)                { Re
 inline void Reader::Read(Array& array, std::istream& istr)                  { Read_i(array, istr); }
 inline void Reader::Read(String& string, std::istream& istr)                { Read_i(string, istr); }
 inline void Reader::Read(Number& number, std::istream& istr)                { Read_i(number, istr); }
-inline void Reader::Read(Boolean& boolean, std::istream& istr)              { Read_i(boolean, istr); }
+inline void Reader::Read(Boolean_& boolean, std::istream& istr)             { Read_i(boolean, istr); }
 inline void Reader::Read(Null& null, std::istream& istr)                    { Read_i(null, istr); }
 inline void Reader::Read(UnknownElement& unknown, std::istream& istr)       { Read_i(unknown, istr); }
 
@@ -392,7 +392,7 @@ inline void Reader::Parse(UnknownElement& element, Reader::TokenStream& tokenStr
 
       case Token::TOKEN_BOOLEAN:
       {
-         Boolean& boolean = element;
+         Boolean_& boolean = element;
          Parse(boolean, tokenStream);
          break;
       }
@@ -505,7 +505,7 @@ inline void Reader::Parse(Number& number, Reader::TokenStream& tokenStream)
 }
 
 
-inline void Reader::Parse(Boolean& boolean, Reader::TokenStream& tokenStream)
+inline void Reader::Parse(Boolean_& boolean, Reader::TokenStream& tokenStream)
 {
    const std::string& sValue = MatchExpectedToken(Token::TOKEN_BOOLEAN, tokenStream);
    boolean = (sValue == "true" ? true : false);
