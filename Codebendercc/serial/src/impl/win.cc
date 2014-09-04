@@ -74,7 +74,7 @@ Serial::SerialImpl::open ()
       ss << "Can't open device, " << this->getPort() << ", access is denied.";
       THROW (IOException, ss.str().c_str()); 
     default:
-      ss << "Unknown error opening the serial port: " << errno;
+      ss << "Unknown error opening the serial port: " << errno_;
       THROW (IOException, ss.str().c_str());
     }
   }
