@@ -649,6 +649,44 @@ CodebenderccAPI::debugMessage("CodebenderccAPI::LeonardoSketchControl ended",3);
         CodebenderccAPI::debugMessage("CodebenderccAPI::LeonardoSketchControl threw an unknown exception",2);
 }
 
+std::string CodebenderccAPI::createCommand(const std::string& fdevice,
+					   const std::string& protocol,
+					   const std::string& speed,
+					   const std::string& mcu)try{
+
+	CodebenderccAPI::debugMessage("CodebenderccAPI::createCommand",3);
+	std::string os = getPlugin().get()->getOS();
+
+	#ifndef _WIN32
+		std::string command = "\"" + avrdude + "\"" + " -C\"" + avrdudeConf + "\"";
+	#else
+		std::string command = avrdude + " -C" + avrdudeConf;
+	#endif
+
+	if (CodebenderccAPI::checkDebug() && currentLevel >= 2)
+		command += " -v -v -v -v";
+
+	command += " -V";
+	command += " -P";
+	command += (os == "Windows") ? "\\\\.\\" : "";
+	command += fdevice + " -p" + mcu;
+
+	#ifdef _WIN32
+		command += " -u -D -U flash:w:file.bin:a";
+	#else
+		command += " -u -D -U flash:w:\"" + binFile + "\":a";
+	#endif
+
+	command += " -c" + protocol + " -b" + speed + " -F";
+
+CodebenderccAPI::debugMessage("CodebenderccAPI::createCommand ended",3);
+return command;
+
+}catch (...) {
+	CodebenderccAPI::debugMessage("CodebenderccAPI::createCommand threw an unknown exception",2);
+	return "";
+}
+
 void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std::string& code, const std::string& maxsize, std::map<std::string, std::string>& programmerData, const std::string& mcu, const FB::JSObjectPtr & flash_callback) try {
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashWithProgrammer",3);
 	mtxAvrdudeFlag.lock();
