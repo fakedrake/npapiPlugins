@@ -203,6 +203,38 @@ std::string CodebenderccAPI::probeUSB() try {
 }
 #endif
 
+std::string CodebenderccAPI::getPorts() try {
+
+	CodebenderccAPI::debugMessageProbe("CodebenderccAPI::getPorts",3);
+
+	std::vector<serial::PortInfo> devices = serial::list_ports();
+	json::Array json_object_array;
+	json::Object json_object;
+	std::string json_string;
+	
+	for(unsigned int i = 0; i < devices.size(); i++){
+	
+		std::string port=devices.at(i).port;
+		std::string description=devices.at(i).description;
+		std::string hardware_id = devices.at(i).hardware_id;
+
+		json_object["port"]=String(port);
+		json_object["description"]=String(description);
+		json_object["hardware"]=String(hardware_id);
+		 
+		json_object_array.Insert(json_object);
+		}
+
+	std::stringstream json_ss;
+	Writer::Write(json_object_array, json_ss);
+	json_string = json_ss.str();
+    return json_string;
+
+} catch (...) {
+    error_notify("CodebenderccAPI::getPorts() threw an unknown exception");
+    return "";
+}	
+
 #ifdef _WIN32
 
 int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFlag) try {
@@ -288,7 +320,9 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 	}while(counter <= 2000);
 
 	if(dwExitCode == STILL_ACTIVE){
-		CodebenderccAPI::TerminateProcess( pi.hProcess, 0 ); // Kill process if it is still running.
+		// Kill child & main process if it is still running.
+		DWORD dwPid = GetProcessId(pi.hProcess);
+        CodebenderccAPI::winKillAvrdude(dwPid);
 		dwExitCode = -204;
 	}
 
@@ -301,6 +335,57 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 } catch (...) {
     error_notify("CodebenderccAPI::winExecAvrdude() threw an unknown exception");
     return 0;
+}
+#endif
+
+#ifdef _WIN32
+void CodebenderccAPI::winKillAvrdude( DWORD dwPid) try {
+CodebenderccAPI::debugMessage("CodebenderccAPI::winKillAvrdude",3);
+
+PROCESSENTRY32 pe;
+memset(&pe, 0, sizeof(PROCESSENTRY32));
+pe.dwSize = sizeof(PROCESSENTRY32);
+
+HANDLE hSnap = CodebenderccAPI::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+
+	if (CodebenderccAPI::Process32First(hSnap, &pe))
+	{
+	    BOOL bContinue = TRUE;
+
+	    // kill child processes
+	    while (bContinue)
+	    {
+	        // only kill child processes
+	        if (pe.th32ParentProcessID == dwPid)
+	        {
+	            HANDLE hChildProc = CodebenderccAPI::OpenProcess(PROCESS_ALL_ACCESS, FALSE, pe.th32ProcessID);
+
+	            if (hChildProc)
+	            {
+	                CodebenderccAPI::TerminateProcess(hChildProc, 1);
+	                CodebenderccAPI::CloseHandle(hChildProc);
+	            }               
+	        }
+
+	        bContinue = CodebenderccAPI::Process32Next(hSnap, &pe);
+	    }
+
+	    // kill the main process
+	    HANDLE hProc = CodebenderccAPI::OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwPid);
+
+	    if (hProc)
+	    {
+	        CodebenderccAPI::TerminateProcess(hProc, 1);
+	        CodebenderccAPI::CloseHandle(hProc);
+	    }  
+	       
+	CodebenderccAPI::debugMessage("CodebenderccAPI::winKillAvrdude ended",3);
+	}
+
+CodebenderccAPI::CloseHandle(hSnap);
+} catch (...) {
+  error_notify("CodebenderccAPI::winKillAvrdude() threw an unknown exception");
+  return;
 }
 #endif
 
@@ -351,11 +436,12 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 							delay(300);
 					}catch (...) {
 					CodebenderccAPI::debugMessage("CodebenderccAPI::doflash exception thrown while opening serial port",2);
-						perror("Error opening leonardo port");
+					perror("Error opening leonardo port");
 					RemovePortFromList(fdevice);
 					}
 
-					// get the list of ports before resetting the leonardo board
+					/* Get the initial list of ports after resetting the board */
+
 					std::string oldports = probeUSB();
 					perror(oldports.c_str());
 					std::istringstream oldStream(oldports);
@@ -366,10 +452,11 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 						oldPorts.push_back(token);
 					}
 					CodebenderccAPI::debugMessage("Listing serial port changes..",2);
-					std::string oldPortsMessage = "Ports : {" + oldports + "}";
+					std::string oldPortsMessage = "Initial ports : {" + oldports + "}";
 					CodebenderccAPI::debugMessage(oldPortsMessage.c_str(),2);
 					
-					// Get the list of ports until the port 
+					/* Get the new list of ports after resetting the board */
+
 					int elapsed_time = 0;
 					bool found = false;
 					while(elapsed_time <= 10000){
@@ -381,43 +468,49 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 						while (std::getline(ss, item, ',')) {
 							newPorts.push_back(item);
 						}
-						std::string newPortsMessage = "Ports : {" + newports + "}";
+						std::string newPortsMessage = "New ports : {" + newports + "}";
 						CodebenderccAPI::debugMessage(newPortsMessage.c_str(),2);
 			
-						// Check if the new list of ports contains a port that did not exist in the previous list.
+						/* Check if the new list of ports contains a port that did not exist in the initial ports list. */
+
 						for (std::vector<std::string>::iterator it = newPorts.begin(); it != newPorts.end(); ++it) {
 							if (std::find(oldPorts.begin(), oldPorts.end(), *it) == oldPorts.end()){
 								fdevice = *it;
 								found = true;
-								break;
-							}
+								break;}
 						}
 
-						if (found){		// The new leonardo port appeared in the list. Save it and go on..
-								std::string leonardoDeviceMessage = "Found leonardo device on " + fdevice + " port";
-								CodebenderccAPI::debugMessage(leonardoDeviceMessage.c_str(),2);
-								AddtoPortList(fdevice);
-							break;
-						}
+						/* If new list of ports contains a port that did not exist previously,
+		 				Leonardo device is connected in that port. Save it and go on. */
+
+						if (found){		
+							std::string leonardoDeviceMessage = "Found leonardo device on " + fdevice + " port";
+							CodebenderccAPI::debugMessage(leonardoDeviceMessage.c_str(),2);
+							AddtoPortList(fdevice);
+							break;}
+
+						/* If new list of ports does not contain a new port, continue searching. */
 
 						oldPorts = newPorts;
 						delay(250);
 						elapsed_time += 250;
 
-						// If a certain ammount of time has gone by, and the initial port is in the lost of ports, upload using this port
+						/* If a certain amount of time has gone by, and the initial port is in the list of ports, 
+						upload using this port. */
+
 						if((elapsed_time >=5000) && (std::find(oldPorts.begin(), oldPorts.end(), fdevice) != oldPorts.end()) ){
 							std::string uploadingDeviceMessage = "Uploading using selected port: {" + fdevice +"}";
 							CodebenderccAPI::debugMessage(uploadingDeviceMessage.c_str(),2);
-							break;
-						}
+							break;}
 
 						if (elapsed_time == 10000) {
 							notify("Could not auto-reset or detect a manual reset!");
 							flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-1));
+							std::string noResetMessage = "Could not auto reset device connected to port: {" + fdevice +"}";
+							CodebenderccAPI::debugMessage(noResetMessage.c_str(),2);
 							RemovePortFromList(fdevice);
 							isAvrdudeRunning=false;
-							return;
-						}
+							return;}
 					}
 				}
 
@@ -438,9 +531,9 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 					+ " -p" + mcu;
 
 				#ifdef _WIN32
-					command += " -u -D -U flash:w:file.bin:a";
+					command += " -u -D -U flash:w:file.bin:r";
 				#else
-					command += " -u -D -U flash:w:\"" + binFile + "\":a";
+					command += " -u -D -U flash:w:\"" + binFile + "\":r";
 				#endif
 				command += " -c" + protocol
 				+ " -b" + speed
@@ -515,6 +608,8 @@ void CodebenderccAPI::doflash(const std::string& device, const std::string& code
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflash ended",3);
 } catch (...) {
     error_notify("CodebenderccAPI::doFlash() threw an unknown exception");
+	isAvrdudeRunning=false;	
+	flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(9002));
 }
 
 void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std::string& code, const std::string& maxsize, std::map<std::string, std::string>& programmerData, const std::string& mcu, const FB::JSObjectPtr & flash_callback) try {
@@ -550,9 +645,9 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 				std::string command = setProgrammerCommand(programmerData);
 
 				#ifdef _WIN32
-					command += " -Uflash:w:file.bin:a";
+					command += " -Uflash:w:file.bin:r";
 				#else
-					command += " -Uflash:w:\"" + binFile + "\":a";
+					command += " -Uflash:w:\"" + binFile + "\":r";
 				#endif
 				// Execute the upload command.
 			
@@ -1912,6 +2007,85 @@ CodebenderccAPI::CloseHandle(HANDLE hObject)
         return rc;
 
     std::string err_msg = "CodebenderccAPI::CloseHandle() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
+
+    error_notify(err_msg);
+    return rc;
+}
+
+HANDLE
+CodebenderccAPI::OpenProcess(DWORD dwDesiredAccess,
+                            BOOL bInheritHandle,
+                            DWORD dwProcessId)
+{
+    HANDLE rc;
+
+    rc = ::OpenProcess(dwDesiredAccess,
+                      bInheritHandle,
+                      dwProcessId);
+    if (rc != NULL)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::OpenProcess() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
+
+    error_notify(err_msg);
+    return rc;
+}
+
+HANDLE
+CodebenderccAPI::CreateToolhelp32Snapshot(DWORD dwFlags,
+                            			 DWORD th32ProcessID)
+{
+    HANDLE rc;
+
+    rc = ::CreateToolhelp32Snapshot(dwFlags,
+                      			   th32ProcessID);
+    if (rc != INVALID_HANDLE_VALUE)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::CreateToolhelp32Snapshot() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
+
+    error_notify(err_msg);
+    return rc;
+}
+
+BOOL
+CodebenderccAPI::Process32First(HANDLE hSnapshot,
+                              LPPROCESSENTRY32 lppe)
+{
+    BOOL rc;
+
+    rc = ::Process32First(hSnapshot,
+                         lppe);
+    if (rc != 0)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::Process32First() - extended error information: ";
+    err_msg += boost::lexical_cast<std::string>(GetLastError());
+
+    error_notify(err_msg);
+    return rc;
+}
+
+BOOL
+CodebenderccAPI::Process32Next(HANDLE hSnapshot,
+                              LPPROCESSENTRY32 lppe)
+{
+    BOOL rc;
+
+    rc = ::Process32Next(hSnapshot,
+                         lppe);
+    if (rc != 0)
+        return rc;
+
+    DWORD err = GetLastError();
+
+    if(err == ERROR_NO_MORE_FILES)
+        return rc;
+
+    std::string err_msg = "CodebenderccAPI::Process32Next() - extended error information: ";
     err_msg += boost::lexical_cast<std::string>(GetLastError());
 
     error_notify(err_msg);

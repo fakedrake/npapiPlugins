@@ -32,6 +32,8 @@
 	#include <stdlib.h>
 	#include <string.h>
 	#include <tchar.h>
+    #include <tlhelp32.h>
+    #include <comdef.h>
 #else
 	#include <dirent.h>
 	#include <sys/file.h>
@@ -84,8 +86,11 @@
  * https://github.com/wjwwood/serial
  **/
 #include "serial/include/serial/serial.h"
-
+#include "json/writer.h"
+#include "json/reader.h"
+#include "json/elements.h"
 using namespace serial;
+using namespace json;
 
 #ifdef __APPLE__
 #import <Security/Security.h>
@@ -120,6 +125,7 @@ public:
 
         //Register all JS callbacks
         registerMethod("probeUSB", make_method(this, &CodebenderccAPI::probeUSB));
+		registerMethod("getPorts", make_method(this, &CodebenderccAPI::getPorts));
         registerMethod("download", make_method(this, &CodebenderccAPI::download));
         registerMethod("flash", make_method(this, &CodebenderccAPI::flash));
 		registerMethod("flashWithProgrammer", make_method(this, &CodebenderccAPI::flashWithProgrammer));
@@ -331,6 +337,9 @@ public:
      * @return a comma separated list of the detected devices.
      */
     std::string probeUSB();
+
+	std::string getPorts();
+
     /**
      * Returns the last avrdude's output.
      * @return the output recorded from avrdude.
@@ -680,6 +689,14 @@ private:
 	 */
     int winExecAvrdude(const std::wstring & cmd, bool appendFlag);
 
+    /**
+     * Kills avrdude process if it is still running on Windows OS.
+     **/
+     
+    #ifdef _WIN32 
+    void winKillAvrdude(DWORD dwPid);
+    #endif
+
 	/**
  	 * Flushes the contents of the serial port and toggles the DTR and RTS signal values.
  	 **/
@@ -856,6 +873,20 @@ private:
                           UINT uExitCode);
 
     BOOL CloseHandle(HANDLE hObject);
+
+    HANDLE OpenProcess(DWORD dwDesiredAccess,
+                       BOOL bInheritHandle,
+                       DWORD dwProcessId);
+
+    HANDLE CreateToolhelp32Snapshot(DWORD dwFlags,
+                                    DWORD th32ProcessID);
+
+    BOOL Process32First(HANDLE hSnapshot,
+                        LPPROCESSENTRY32 lppe);
+
+    BOOL Process32Next(HANDLE hSnapshot,
+                       LPPROCESSENTRY32 lppe);
+
 #endif
 
 };

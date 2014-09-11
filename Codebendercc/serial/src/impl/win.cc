@@ -2,6 +2,8 @@
 
 /* Copyright 2012 William Woodall and John Harrison */
 
+#include <sstream>
+
 #include "../../include/serial/impl/win.h"
 
 using std::string;
@@ -244,6 +246,7 @@ Serial::SerialImpl::reconfigurePort ()
 
   // activate settings
   if (!SetCommState(fd_, &dcbSerialParams)){
+    CloseHandle(fd_);
     THROW (IOException, "Error setting serial port settings.");
   }
 
@@ -264,8 +267,15 @@ Serial::SerialImpl::close ()
 {
   if (is_open_ == true) {
     if (fd_ != INVALID_HANDLE_VALUE) {
-      CloseHandle(fd_);
-      fd_ = INVALID_HANDLE_VALUE;
+      int ret;
+      ret = CloseHandle(fd_);
+      if (ret == 0) {
+        stringstream ss;
+        ss << "Error while closing serial port: " << GetLastError();
+        THROW (IOException, ss.str().c_str());
+      } else {
+        fd_ = INVALID_HANDLE_VALUE;
+      }
     }
     is_open_ = false;
   }
@@ -294,7 +304,7 @@ Serial::SerialImpl::available ()
 
 bool
 Serial::SerialImpl::waitReadable (uint32_t timeout)
-{ 
+{
   THROW (IOException, "waitReadable is not implemented on Windows.");
   return false;
 }
@@ -312,7 +322,7 @@ Serial::SerialImpl::read (uint8_t *buf, size_t size)
     throw PortNotOpenedException ("Serial::read");
   }
   DWORD bytes_read;
-  if (!ReadFile(fd_, buf, size, &bytes_read, NULL)) {
+  if (!ReadFile(fd_, buf, static_cast<DWORD>(size), &bytes_read, NULL)) {
     stringstream ss;
     ss << "Error while reading from the serial port: " << GetLastError();
     THROW (IOException, ss.str().c_str());
@@ -327,7 +337,7 @@ Serial::SerialImpl::write (const uint8_t *data, size_t length)
     throw PortNotOpenedException ("Serial::write");
   }
   DWORD bytes_written;
-  if (!WriteFile(fd_, data, length, &bytes_written, NULL)) {
+  if (!WriteFile(fd_, data, static_cast<DWORD>(length), &bytes_written, NULL)) {
     stringstream ss;
     ss << "Error while writing to the serial port: " << GetLastError();
     THROW (IOException, ss.str().c_str());
