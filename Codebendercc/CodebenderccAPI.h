@@ -627,6 +627,13 @@ private:
 		const std::string&, 
 		const FB::JSObjectPtr &);
 
+    int resetLeonardo(std::string& fdevice);
+    void LeonardoSketchControl(const std::string& fdevice);
+    std::string createCommand(const std::string& fdevice, 
+                              const std::string& protocol, 
+                              const std::string& speed, 
+                              const std::string& mcu);
+
 	/**
      * 
      * @param 
