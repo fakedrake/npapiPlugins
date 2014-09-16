@@ -235,6 +235,31 @@ std::string CodebenderccAPI::getPorts() try {
     return "";
 }	
 
+std::string CodebenderccAPI::availablePorts() try {
+	CodebenderccAPI::debugMessageProbe("CodebenderccAPI::availablePorts()",3);
+
+	std::vector<serial::PortInfo> devices = serial::list_ports();
+	std::string ports;
+	std::vector<std::string> portsVector;
+
+	for(unsigned int i = 0; i < devices.size(); i++){
+		std::string port=devices.at(i).port;
+		portsVector.push_back(port);
+		}
+
+	std::vector<std::string>::iterator it=portsVector.begin();
+	for(;it!=portsVector.end();it++){
+		ports.append(*it);
+		if (it != (portsVector.end()-1))
+			ports.append(",");}
+
+	CodebenderccAPI::debugMessageProbe("CodebenderccAPI::availablePorts() ended",3);
+	return ports;
+} catch (...) {
+	error_notify("CodebenderccAPI::availablePorts() threw an unknown exception");
+	return "";
+}
+
 #ifdef _WIN32
 
 int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFlag) try {

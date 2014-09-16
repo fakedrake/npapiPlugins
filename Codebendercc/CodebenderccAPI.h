@@ -126,6 +126,7 @@ public:
         //Register all JS callbacks
         registerMethod("probeUSB", make_method(this, &CodebenderccAPI::probeUSB));
 		registerMethod("getPorts", make_method(this, &CodebenderccAPI::getPorts));
+		registerMethod("availablePorts", make_method(this, &CodebenderccAPI::availablePorts));
         registerMethod("download", make_method(this, &CodebenderccAPI::download));
         registerMethod("flash", make_method(this, &CodebenderccAPI::flash));
 		registerMethod("flashWithProgrammer", make_method(this, &CodebenderccAPI::flashWithProgrammer));
@@ -339,6 +340,8 @@ public:
     std::string probeUSB();
 
 	std::string getPorts();
+
+	std::string availablePorts();
 
     /**
      * Returns the last avrdude's output.
