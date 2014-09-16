@@ -539,7 +539,7 @@ int CodebenderccAPI::resetLeonardo(std::string& fdevice)try {
 
         /* Get the intial list of ports before resetting the board */
 
-        std::string oldports = probeUSB();
+        std::string oldports = availablePorts();
         std::istringstream oldStream(oldports);
         std::string token;
         std::vector<std::string> oldPorts;
@@ -576,7 +576,7 @@ int CodebenderccAPI::resetLeonardo(std::string& fdevice)try {
         int elapsed_time = 0;
         bool found = false;
         while(elapsed_time <= 10000){
-                std::string newports = probeUSB();
+                std::string newports = availablePorts();
                 std::stringstream ss(newports);
                 std::string item;
                 std::vector<std::string> newPorts;
@@ -650,7 +650,7 @@ int timer = 0;
 while(timer < 2000){
 
         std::vector<std::string> portVector;
-        std::string ports = probeUSB();
+        std::string ports = availablePorts();
         std::stringstream chk(ports);
         std::string tok;
 
