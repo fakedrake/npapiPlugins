@@ -375,35 +375,37 @@ HANDLE hSnap = CodebenderccAPI::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 
 	if (CodebenderccAPI::Process32First(hSnap, &pe))
 	{
-	    BOOL bContinue = TRUE;
+	BOOL bContinue = TRUE;
 
-	    // kill child processes
-	    while (bContinue)
-	    {
-	        // only kill child processes
-	        if (pe.th32ParentProcessID == dwPid)
-	        {
-	            HANDLE hChildProc = CodebenderccAPI::OpenProcess(PROCESS_TERMINATE, FALSE, pe.th32ProcessID);
+	// kill child processes
+	while (bContinue)
+	{
+		// only kill child processes
+		if (pe.th32ParentProcessID == dwPid)
+		{
+			HANDLE hChildProc = CodebenderccAPI::OpenProcess(PROCESS_TERMINATE, FALSE, pe.th32ProcessID);
 
-	            if (hChildProc)
-	            {
-	                CodebenderccAPI::TerminateProcess(hChildProc, 1);
-	                CodebenderccAPI::CloseHandle(hChildProc);
-	            }               
-	        }
+			if (hChildProc)
+			{
+				CodebenderccAPI::TerminateProcess(hChildProc, 1);
+				CodebenderccAPI::CloseHandle(hChildProc);
+			}
+			else
+				return;
+		}
 
-	        bContinue = CodebenderccAPI::Process32Next(hSnap, &pe);
-	    }
+		bContinue = CodebenderccAPI::Process32Next(hSnap, &pe);
+	}
 
-	    // kill the main process
-	    HANDLE hProc = CodebenderccAPI::OpenProcess(PROCESS_TERMINATE, FALSE, dwPid);
+	// kill the main process
+	HANDLE hProc = CodebenderccAPI::OpenProcess(PROCESS_TERMINATE, FALSE, dwPid);
 
-	    if (hProc)
-	    {
-	        CodebenderccAPI::TerminateProcess(hProc, 1);
-	        CodebenderccAPI::CloseHandle(hProc);
-	    }  
-	       
+	if (hProc)
+	{
+		CodebenderccAPI::TerminateProcess(hProc, 1);
+		CodebenderccAPI::CloseHandle(hProc);
+	}
+
 	CodebenderccAPI::debugMessage("CodebenderccAPI::winKillAvrdude ended",3);
 	}
 
