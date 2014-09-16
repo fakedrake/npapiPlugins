@@ -383,7 +383,7 @@ HANDLE hSnap = CodebenderccAPI::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	        // only kill child processes
 	        if (pe.th32ParentProcessID == dwPid)
 	        {
-	            HANDLE hChildProc = CodebenderccAPI::OpenProcess(PROCESS_ALL_ACCESS, FALSE, pe.th32ProcessID);
+	            HANDLE hChildProc = CodebenderccAPI::OpenProcess(PROCESS_TERMINATE, FALSE, pe.th32ProcessID);
 
 	            if (hChildProc)
 	            {
@@ -396,7 +396,7 @@ HANDLE hSnap = CodebenderccAPI::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	    }
 
 	    // kill the main process
-	    HANDLE hProc = CodebenderccAPI::OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwPid);
+	    HANDLE hProc = CodebenderccAPI::OpenProcess(PROCESS_TERMINATE, FALSE, dwPid);
 
 	    if (hProc)
 	    {
