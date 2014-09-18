@@ -34,7 +34,7 @@ set(MOZILLA_PLUGINID "codebender.cc/Codebendercc")
 # strings
 set(FBSTRING_CompanyName "codebendercc")
 set(FBSTRING_FileDescription "Plugin for the Codebender.cc Arduino - Browser Communication")
-set(FBSTRING_PLUGIN_VERSION "1.6.0.6")
+set(FBSTRING_PLUGIN_VERSION "1.6.0.7")
 set(FBSTRING_LegalCopyright "Copyright 2012 codebender.cc")
 set(FBSTRING_PluginFileName "np${PLUGIN_NAME}.dll")
 set(FBSTRING_ProductName "Codebender.cc")
