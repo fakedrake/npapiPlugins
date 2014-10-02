@@ -1002,12 +1002,15 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &command, bool appendFla
         CodebenderccAPI::execvp(cmd_argv[0], cmd_argv.data());
         _exit(EXIT_FAILURE);
     }
-
+   
+try{
     long oldSize=0;
     long newSize=0;
     int counter =0;
 
     do {
+
+    		boost::this_thread::interruption_point();
         int status = 0;
 
         w = CodebenderccAPI::waitpid(pid, &status, WNOHANG);
@@ -1052,6 +1055,10 @@ int CodebenderccAPI::unixExecAvrdude (const std::string &command, bool appendFla
     killpg(pid, SIGKILL);
 	
     return -204; // child process was killed
+
+   }catch(boost::thread_interrupted&){
+   	return -1000;
+   } 
 } catch (...){
 	error_notify("CodebenderccAPI::unixExecAvrdude() threw an unknown exception");
 	return -205;
