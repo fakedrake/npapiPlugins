@@ -589,6 +589,8 @@ int CodebenderccAPI::resetLeonardo(std::string& fdevice)try {
         int elapsed_time = 0;
         bool found = false;
         while(elapsed_time <= 10000){
+        	try{
+        		boost::this_thread::interruption_point();
                 std::string newports = availablePorts();
                 std::stringstream ss(newports);
                 std::string item;
@@ -639,7 +641,10 @@ int CodebenderccAPI::resetLeonardo(std::string& fdevice)try {
                         std::string noResetMessage = "Could not auto reset device connected to port: {" + fdevice +"}";
                         CodebenderccAPI::debugMessage(noResetMessage.c_str(),2);
                         return -1;
-                }
+                      }
+          }catch(boost::thread_interrupted&){
+          	return 0;
+          }
         }
 
         CodebenderccAPI::debugMessage("CodebenderccAPI::resetLeonardo ended",3);
