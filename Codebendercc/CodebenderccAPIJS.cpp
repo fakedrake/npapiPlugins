@@ -25,6 +25,7 @@ FB::variant CodebenderccAPI::flash(const std::string& device, const std::string&
         return 0;
       } 
     boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doflash, this, device, code, maxsize, protocol, disable_flushing, speed, mcu, flash_callback));
+  thr = t;
   CodebenderccAPI::debugMessage("CodebenderccAPI::flash ended",3);    
   return 0;
 }catch (...) {
