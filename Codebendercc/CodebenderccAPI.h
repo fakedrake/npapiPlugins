@@ -143,6 +143,7 @@ public:
 		registerMethod("disableDebug", make_method(this, &CodebenderccAPI::disableDebug));
 		registerMethod("getFlashResult", make_method(this, &CodebenderccAPI::getFlashResult));
 		registerMethod("serialMonitorSetStatus", make_method(this, &CodebenderccAPI::serialMonitorSetStatus));
+        registerMethod("closeTab", make_method(this, &CodebenderccAPI::closeTab));
 
         //Register all JS read-only properties
         registerProperty("version", make_property(this, &CodebenderccAPI::get_version));
@@ -154,6 +155,9 @@ public:
 		lastPortCount=0;
 		probeFlag=false;
 		usedPort="";
+
+        thr=NULL;
+
 		//Returns the string name of the current operating system. 
         std::string os = getPlugin().get()->getOS();
 		//Returns the path and filename of the current plugin module. 
@@ -449,6 +453,9 @@ public:
 	std::string usedPort;
     boost::mutex serialMonitor;
 	bool serialMonitorStatus;
+
+    void closeTab();
+    boost::thread* thr;
 
 private:
 
