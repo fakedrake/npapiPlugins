@@ -505,12 +505,20 @@ void CodebenderccAPI::doflash(const std::string& device,
 
 				int retVal = 1;
 				retVal = CodebenderccAPI::runAvrdude(command, false);
-					if (retVal==1){
-						if(finalRetVal == 0)
-							retVal=retVal;
-						else
-							retVal= 30000 + finalRetVal;
-					}
+				
+				if (retVal==THREAD_INTERRUPTED){
+					RemovePortFromList(fdevice);
+					isAvrdudeRunning=false;
+					return;
+				}
+				
+				if (retVal==1){
+					if(finalRetVal == 0)
+						retVal=retVal;
+					else
+						retVal= 30000 + finalRetVal;
+				}
+
 				_retVal = retVal;
 
 				boost::this_thread::interruption_point();
@@ -1056,8 +1064,12 @@ try{
 	
     return -204; // child process was killed
 
+    if(boost::this_thread::interruption_requested())
+
+    std::cout << "Interrupt requested inside unixExecAvrdude? : " << std::boolalpha << boost::this_thread::interruption_requested() << "\n" << endl;
+  
    }catch(boost::thread_interrupted&){
-   	return -1000;
+   	return -1234;
    } 
 } catch (...){
 	error_notify("CodebenderccAPI::unixExecAvrdude() threw an unknown exception");

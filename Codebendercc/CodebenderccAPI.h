@@ -105,7 +105,7 @@ public:
     ///
     ////////////////////////////////////////////////////////////////////////////
 #define MSG_LEONARD_AUTORESET "Trying to auto-reset your device. If it does not reset automatically, please reset your device manually!"
-
+#define THREAD_INTERRUPTED -1234
     /**
      * Constructor for your JSAPI object.
      * You should register your methods, properties, and events
