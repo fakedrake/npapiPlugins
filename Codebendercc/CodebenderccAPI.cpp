@@ -1178,24 +1178,31 @@ void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &
 		serialMonitor.lock();
 		serialMonitorStatus=true;
 		serialMonitor.unlock();
-		for (;;) {
+		try{
+			for (;;) {
 
-		    if (CodebenderccAPI::checkSerialMonitorStatus()==0)
-				break;
+				 boost::this_thread::interruption_point();
 
-		    if (!serialPort.isOpen()) 
-		        break;
+			    if (CodebenderccAPI::checkSerialMonitorStatus()==0)
+					break;
 
-		    if(!serialPort.available()) 
-		        continue;   
-		    
-		    rcvd = "";
-		    rcvd = serialPort.read((size_t) 100);
-		    
-		    if (rcvd != "")
-		        callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(rcvd));	   
+			    if (!serialPort.isOpen()) 
+			        break;
 
-				}
+			    if(!serialPort.available()) 
+			        continue;   
+			    
+			    rcvd = "";
+			    rcvd = serialPort.read((size_t) 100);
+			    
+			    if (rcvd != "")
+			        callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(rcvd));	   
+
+					}
+		}catch(boost::thread_interrupted&){
+			CodebenderccAPI::serialMonitorSetStatus();
+			CodebenderccAPI::disconnect();
+		}		
 		}catch (...) {
 
 		CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader loop interrupted",1);
