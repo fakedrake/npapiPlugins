@@ -197,6 +197,7 @@ bool CodebenderccAPI::serialRead(const std::string &port, const std::string &bau
         callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(message));
         unsigned int brate = boost::lexical_cast<unsigned int, std::string > (baudrate);
         boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::serialReader, this, port, brate, callback, valHandCallback));
+        thr = t;
         CodebenderccAPI::debugMessage("CodebenderccAPI::serialRead ended",3);
   return true; // the thread is started
 }catch (...) {
