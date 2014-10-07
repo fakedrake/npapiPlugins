@@ -52,17 +52,24 @@ FB::variant CodebenderccAPI::flashWithProgrammer(const std::string& device, cons
     if (progValidation != 0){
       cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(progValidation));
       return 0;
-    }
-    /**
-        * Validation end
-        **/   
-    boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doflashWithProgrammer,
-    this, device, code, maxsize, programmerData, mcu, cback));  
-  CodebenderccAPI::debugMessage("CodebenderccAPI::flashWithProgrammer ended",3);
-        return 0;
+   }
+   /**
+   * Validation end
+   **/   
+   boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doflashWithProgrammer,
+                                        this, 
+                                        device, 
+                                        code, 
+                                        maxsize, 
+                                        programmerData, 
+                                        mcu, 
+                                        cback));  
+   thr=t;
+   CodebenderccAPI::debugMessage("CodebenderccAPI::flashWithProgrammer ended",3);
+   return 0;
 }catch (...) {
-        error_notify("CodebenderccAPI::flashWithProgrammer() threw an unknown exception");
-        return 0;
+   error_notify("CodebenderccAPI::flashWithProgrammer() threw an unknown exception");
+   return 0;
 }
 
 FB::variant CodebenderccAPI::flashBootloader(const std::string& device, const std::string& programmerProtocol, const std::string& programmerCommunication, const std::string& programmerSpeed, const std::string& programmerForce, const std::string& programmerDelay, const std::string& highFuses, const std::string& lowFuses, const std::string& extendedFuses, const std::string& unlockBits, const std::string& lockBits, const std::string& mcu, const FB::JSObjectPtr & cback) try {
