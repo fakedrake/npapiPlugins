@@ -262,114 +262,113 @@ std::string CodebenderccAPI::availablePorts() try {
 
 #ifdef _WIN32
 
-int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFlag) try {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::winExecAvrdude",3);
-	DWORD dwExitCode = -1;
-	DWORD APPEND;
-	DWORD CREATE;
-	if (appendFlag){
-		APPEND = FILE_APPEND_DATA;
-		CREATE = OPEN_ALWAYS;
-	}
-	else{
-		APPEND = GENERIC_WRITE;
-		CREATE = CREATE_ALWAYS;
-	}
-   
-	std::string strResult; // Contains the result of the child process created below.
+int CodebenderccAPI::winExecAvrdude(const std::wstring & command,
+                                    bool appendFlag)
+try {
+    CodebenderccAPI::debugMessage("CodebenderccAPI::winExecAvrdude",3);
+    DWORD dwExitCode = -1;
+    DWORD APPEND;
+    DWORD CREATE;
+    if (appendFlag){
+        APPEND = FILE_APPEND_DATA;
+        CREATE = OPEN_ALWAYS;
+    }
+    else{
+        APPEND = GENERIC_WRITE;
+        CREATE = CREATE_ALWAYS;
+    }
+    std::string strResult;    // Contains the result of the child process created below.
+    BOOL success;
 
-	BOOL success;
+    // Create security attributes to create pipe.
+    SECURITY_ATTRIBUTES sa    = {sizeof(SECURITY_ATTRIBUTES)} ;
+    sa.bInheritHandle        = TRUE;                                    // Set the bInheritHandle flag so pipe handles are inherited by child process. Required.
+    sa.lpSecurityDescriptor = NULL;                                    // Specify a security descriptor. Required.
 
-	try{
-	// Create security attributes to create pipe.
-	SECURITY_ATTRIBUTES sa = {sizeof(SECURITY_ATTRIBUTES)} ;
-	sa.bInheritHandle       = TRUE; // Set the bInheritHandle flag so pipe handles are inherited by child process. Required.
-	sa.lpSecurityDescriptor = NULL; // Specify a security descriptor. Required.
+    STARTUPINFO si    = { sizeof(STARTUPINFO) };                        // Specify the necessary parameters for child process.
+    si.dwFlags        = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;    // STARTF_USESTDHANDLES is required.
+    si.wShowWindow    = SW_HIDE;                                        // Prevent cmd window from flashing. Requires STARTF_USESHOWWINDOW in dwFlags.
 
-	STARTUPINFO si = { sizeof(STARTUPINFO) }; // Specify the necessary parameters for child process.
-	si.dwFlags     = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES; // STARTF_USESTDHANDLES is required.
-	si.wShowWindow = SW_HIDE; // Prevent cmd window from flashing. Requires STARTF_USESHOWWINDOW in dwFlags.
+    PROCESS_INFORMATION pi    = { 0 };                                // Create an empty process information struct. Needed to get the return value of the command.
 
-	PROCESS_INFORMATION pi  = { 0 }; // Create an empty process information struct. Needed to get the return value of the command.
+    try{
+        boost::this_thread::interruption_point();
 
-	boost::this_thread::interruption_point();
-	
-	HANDLE fh = CodebenderccAPI::CreateFile(		// Create a file handle pointing to the output file, in order to capture the output.
-		&outfile[0], 
-		APPEND,
-		FILE_SHARE_READ|FILE_SHARE_WRITE, 
-		&sa,
-		CREATE, 
-		FILE_FLAG_SEQUENTIAL_SCAN, 
-		0);
-	// Bind the stdinput, stdoutput and stderror to the output file in order to capture all the output of the command.
-	si.hStdOutput = fh;
-	si.hStdError = fh; 
-	si.hStdInput = fh; 
+        // Create a file handle pointing to the output file, in order to capture the output.
+        HANDLE fh = CodebenderccAPI::CreateFile(&outfile[0],
+                                                APPEND,
+                                                FILE_SHARE_READ|FILE_SHARE_WRITE,
+                                                &sa,
+                                                CREATE,
+                                                FILE_FLAG_SEQUENTIAL_SCAN,
+                                                0);
+        // Bind the stdinput, stdoutput and stderror to the output file in order to capture all the output of the command.
+        si.hStdOutput = fh;
+        si.hStdError = fh;
+        si.hStdInput = fh;
 
-	boost::this_thread::interruption_point();
+        boost::this_thread::interruption_point();
 
-	// Create the child process. The command simply executes the contents of the batch file, which is the actual command.
-	success = CodebenderccAPI::CreateProcess(
-		NULL,
-		(LPWSTR)command.c_str(),     // command line
-		NULL,               // process security attributes
-		NULL,               // primary thread security attributes
-		TRUE,               // Inherit pipe handles from parent process
-		CREATE_NEW_CONSOLE, // creation flags
-		NULL,               // use parent's environment
-		current_dir,        // use the plugin's directory
-		&si,                // __in, STARTUPINFO pointer
-		&pi);               // __out, receives PROCESS_INFORMATION
+        // Create the child process. The command simply executes the contents of the batch file, which is the actual command.
+        success = CodebenderccAPI::CreateProcess(NULL,
+                                                (LPWSTR)command.c_str(),            // command line
+                                                NULL,                                // process security attributes
+                                                NULL,                                // primary thread security attributes
+                                                TRUE,                                // Inherit pipe handles from parent process
+                                                CREATE_NEW_CONSOLE,                    // creation flags
+                                                NULL,                                // use parent's environment
+                                                current_dir,                        // use the plugin's directory
+                                                &si,                                // __in, STARTUPINFO pointer
+                                                &pi);                                // __out, receives PROCESS_INFORMATION
 
-	if (! success)
-	{
-		CodebenderccAPI::debugMessage("Failed to create child process.", 1);
-		return -200;
-	}
- 
-	DWORD dwFileSizeOld=0;
-	DWORD dwFileSizeNew=0;
-	int counter = 0;
+        if (! success){
+            CodebenderccAPI::debugMessage("Failed to create child process.", 1);
+            return -200;
+        }
 
-	do {
-		CodebenderccAPI::GetExitCodeProcess(pi.hProcess, &dwExitCode);
+        DWORD dwFileSizeOld=0;
+        DWORD dwFileSizeNew=0;
+        int counter = 0;
 
-		boost::this_thread::interruption_point();
+        do {
+            CodebenderccAPI::GetExitCodeProcess(pi.hProcess, &dwExitCode);
 
-		// Check if created process is still active.
-		if(dwExitCode==STILL_ACTIVE){
-			delay(10);
-			dwFileSizeNew=GetFileSize( fh, NULL );
-			// Check if output file changes.
-			if (dwFileSizeOld == dwFileSizeNew)
-				counter++;
-			else{
-				dwFileSizeOld = dwFileSizeNew;
-				counter = 0;
-			}
-		}else
-			break;
-	}while(counter <= 2000);
+            boost::this_thread::interruption_point();
 
-	if(dwExitCode == STILL_ACTIVE){
-		// Kill child & main process if it is still running.
-		DWORD dwPid = GetProcessId(pi.hProcess);
+            // Check if created process is still active.
+            if(dwExitCode==STILL_ACTIVE){
+                delay(10);
+                dwFileSizeNew=GetFileSize( fh, NULL );
+                // Check if output file changes.
+                if (dwFileSizeOld == dwFileSizeNew)
+                    counter++;
+                else{
+                    dwFileSizeOld = dwFileSizeNew;
+                    counter = 0;}
+            }else
+                break;
+        }while(counter <= 2000);
+
+        if(dwExitCode == STILL_ACTIVE){
+            // Kill child & main process if it is still running.
+            DWORD dwPid = GetProcessId(pi.hProcess);
+            CodebenderccAPI::winKillAvrdude(dwPid);
+            dwExitCode = -204;
+        }
+
+        CodebenderccAPI::CloseHandle(fh);
+        // CreateProcess docs specify that these must be closed.
+        CodebenderccAPI::CloseHandle( pi.hProcess );
+        CodebenderccAPI::CloseHandle( pi.hThread );
+        CodebenderccAPI::debugMessage("CodebenderccAPI::winExecAvrdude ended",3);
+        return dwExitCode;
+    }catch(boost::thread_interrupted&){
+        DWORD dwPid = GetProcessId(pi.hProcess);
         CodebenderccAPI::winKillAvrdude(dwPid);
-		dwExitCode = -204;
-	}
-
-	CodebenderccAPI::CloseHandle(fh);
-	// CreateProcess docs specify that these must be closed. 
-	CodebenderccAPI::CloseHandle( pi.hProcess );
-	CodebenderccAPI::CloseHandle( pi.hThread );	
-	CodebenderccAPI::debugMessage("CodebenderccAPI::winExecAvrdude ended",3);
-	return dwExitCode;
-	}catch(boost::thread_interrupted&){
-		return -1234;
-	}
+        return -1234;
+    }
 } catch (...) {
-	error_notify("CodebenderccAPI::winExecAvrdude() threw an unknown exception");
+    error_notify("CodebenderccAPI::winExecAvrdude() threw an unknown exception");
     return 0;
 }
 #endif
