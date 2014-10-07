@@ -280,6 +280,7 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 
 	BOOL success;
 
+	try{
 	// Create security attributes to create pipe.
 	SECURITY_ATTRIBUTES sa = {sizeof(SECURITY_ATTRIBUTES)} ;
 	sa.bInheritHandle       = TRUE; // Set the bInheritHandle flag so pipe handles are inherited by child process. Required.
@@ -291,6 +292,8 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 
 	PROCESS_INFORMATION pi  = { 0 }; // Create an empty process information struct. Needed to get the return value of the command.
 
+	boost::this_thread::interruption_point();
+	
 	HANDLE fh = CodebenderccAPI::CreateFile(		// Create a file handle pointing to the output file, in order to capture the output.
 		&outfile[0], 
 		APPEND,
@@ -303,6 +306,8 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 	si.hStdOutput = fh;
 	si.hStdError = fh; 
 	si.hStdInput = fh; 
+
+	boost::this_thread::interruption_point();
 
 	// Create the child process. The command simply executes the contents of the batch file, which is the actual command.
 	success = CodebenderccAPI::CreateProcess(
@@ -329,6 +334,9 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 
 	do {
 		CodebenderccAPI::GetExitCodeProcess(pi.hProcess, &dwExitCode);
+
+		boost::this_thread::interruption_point();
+
 		// Check if created process is still active.
 		if(dwExitCode==STILL_ACTIVE){
 			delay(10);
@@ -357,8 +365,11 @@ int CodebenderccAPI::winExecAvrdude(const std::wstring & command, bool appendFla
 	CodebenderccAPI::CloseHandle( pi.hThread );	
 	CodebenderccAPI::debugMessage("CodebenderccAPI::winExecAvrdude ended",3);
 	return dwExitCode;
+	}catch(boost::thread_interrupted&){
+		return -1234;
+	}
 } catch (...) {
-    error_notify("CodebenderccAPI::winExecAvrdude() threw an unknown exception");
+	error_notify("CodebenderccAPI::winExecAvrdude() threw an unknown exception");
     return 0;
 }
 #endif
@@ -411,8 +422,8 @@ HANDLE hSnap = CodebenderccAPI::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 
 CodebenderccAPI::CloseHandle(hSnap);
 } catch (...) {
-  error_notify("CodebenderccAPI::winKillAvrdude() threw an unknown exception");
-  return;
+	error_notify("CodebenderccAPI::winKillAvrdude() threw an unknown exception");
+	return;
 }
 #endif
 
