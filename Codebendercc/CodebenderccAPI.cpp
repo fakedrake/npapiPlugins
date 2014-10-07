@@ -764,24 +764,37 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 				
 				std::string fdevice = device;
 				int retVal = 1;
+				try{
+					// Create the first part of the command, which includes the programmer settings.
+					programmerData["mcu"] = mcu.c_str();
+					programmerData["device"] = fdevice.c_str();
+					boost::this_thread::interruption_point();
+					std::string command = setProgrammerCommand(programmerData);
 
-				// Create the first part of the command, which includes the programmer settings.
-				programmerData["mcu"] = mcu.c_str();
-				programmerData["device"] = fdevice.c_str();
-				std::string command = setProgrammerCommand(programmerData);
+					#ifdef _WIN32
+						command += " -Uflash:w:file.bin:r";
+					#else
+						command += " -Uflash:w:\"" + binFile + "\":r";
+					#endif
+					// Execute the upload command.
+					boost::this_thread::interruption_point();
+					retVal = CodebenderccAPI::runAvrdude(command, false);
+					
+					if (retVal==THREAD_INTERRUPTED){
+						RemovePortFromList(fdevice);
+						isAvrdudeRunning=false;
+						return;
+						}
 
-				#ifdef _WIN32
-					command += " -Uflash:w:file.bin:r";
-				#else
-					command += " -Uflash:w:\"" + binFile + "\":r";
-				#endif
-				// Execute the upload command.
-			
-				retVal = CodebenderccAPI::runAvrdude(command, false);
-				_retVal = retVal;
-				flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
-				RemovePortFromList(device);
-			}
+					_retVal = retVal;
+					flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
+					RemovePortFromList(device);
+
+			}catch(boost::thread_interrupted&){
+					RemovePortFromList(device);
+					isAvrdudeRunning=false;	
+					}
+        	}	
 			else
 			{
 				flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-22));
