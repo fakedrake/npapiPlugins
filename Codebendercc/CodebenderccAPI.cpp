@@ -273,13 +273,13 @@ try {
     // Create security attributes to create pipe.
     SECURITY_ATTRIBUTES sa    = {sizeof(SECURITY_ATTRIBUTES)} ;
     sa.bInheritHandle        = TRUE;                                    // Set the bInheritHandle flag so pipe handles are inherited by child process. Required.
-    sa.lpSecurityDescriptor = NULL;                                    // Specify a security descriptor. Required.
+    sa.lpSecurityDescriptor = NULL;                                     // Specify a security descriptor. Required.
 
     STARTUPINFO si    = { sizeof(STARTUPINFO) };                        // Specify the necessary parameters for child process.
     si.dwFlags        = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;    // STARTF_USESTDHANDLES is required.
     si.wShowWindow    = SW_HIDE;                                        // Prevent cmd window from flashing. Requires STARTF_USESHOWWINDOW in dwFlags.
 
-    PROCESS_INFORMATION pi    = { 0 };                                // Create an empty process information struct. Needed to get the return value of the command.
+    PROCESS_INFORMATION pi    = { 0 };                                  // Create an empty process information struct. Needed to get the return value of the command.
 
     try{
         boost::this_thread::interruption_point();
@@ -302,14 +302,14 @@ try {
         // Create the child process. The command simply executes the contents of the batch file, which is the actual command.
         success = CodebenderccAPI::CreateProcess(NULL,
                                                 (LPWSTR)command.c_str(),            // command line
-                                                NULL,                                // process security attributes
-                                                NULL,                                // primary thread security attributes
-                                                TRUE,                                // Inherit pipe handles from parent process
-                                                CREATE_NEW_CONSOLE,                    // creation flags
-                                                NULL,                                // use parent's environment
+                                                NULL,                               // process security attributes
+                                                NULL,                               // primary thread security attributes
+                                                TRUE,                               // Inherit pipe handles from parent process
+                                                CREATE_NEW_CONSOLE,                 // creation flags
+                                                NULL,                               // use parent's environment
                                                 current_dir,                        // use the plugin's directory
                                                 &si,                                // __in, STARTUPINFO pointer
-                                                &pi);                                // __out, receives PROCESS_INFORMATION
+                                                &pi);                               // __out, receives PROCESS_INFORMATION
 
         if (! success){
             CodebenderccAPI::debugMessage("Failed to create child process.", 1);
@@ -373,46 +373,40 @@ pe.dwSize = sizeof(PROCESSENTRY32);
 
 HANDLE hSnap = CodebenderccAPI::CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 
-	if (CodebenderccAPI::Process32First(hSnap, &pe))
-	{
-	BOOL bContinue = TRUE;
+    if (CodebenderccAPI::Process32First(hSnap, &pe))
+    {
+    BOOL bContinue = TRUE;
 
-	// kill child processes
-	while (bContinue)
-	{
-		// only kill child processes
-		if (pe.th32ParentProcessID == dwPid)
-		{
-			HANDLE hChildProc = CodebenderccAPI::OpenProcess(PROCESS_TERMINATE, FALSE, pe.th32ProcessID);
+    // kill child processes
+    while (bContinue){
+        // only kill child processes
+        if (pe.th32ParentProcessID == dwPid){
+            HANDLE hChildProc = CodebenderccAPI::OpenProcess(PROCESS_TERMINATE, FALSE, pe.th32ProcessID);
+            if (hChildProc){
+                CodebenderccAPI::TerminateProcess(hChildProc, 1);
+                CodebenderccAPI::CloseHandle(hChildProc);
+            }
+            else
+                return;
+        }
 
-			if (hChildProc)
-			{
-				CodebenderccAPI::TerminateProcess(hChildProc, 1);
-				CodebenderccAPI::CloseHandle(hChildProc);
-			}
-			else
-				return;
-		}
+        bContinue = CodebenderccAPI::Process32Next(hSnap, &pe);
+    }
 
-		bContinue = CodebenderccAPI::Process32Next(hSnap, &pe);
-	}
+    // kill the main process
+    HANDLE hProc = CodebenderccAPI::OpenProcess(PROCESS_TERMINATE, FALSE, dwPid);
 
-	// kill the main process
-	HANDLE hProc = CodebenderccAPI::OpenProcess(PROCESS_TERMINATE, FALSE, dwPid);
+    if (hProc){
+        CodebenderccAPI::TerminateProcess(hProc, 1);
+        CodebenderccAPI::CloseHandle(hProc);
+    }
 
-	if (hProc)
-	{
-		CodebenderccAPI::TerminateProcess(hProc, 1);
-		CodebenderccAPI::CloseHandle(hProc);
-	}
-
-	CodebenderccAPI::debugMessage("CodebenderccAPI::winKillAvrdude ended",3);
-	}
-
+    CodebenderccAPI::debugMessage("CodebenderccAPI::winKillAvrdude ended",3);
+    }
 CodebenderccAPI::CloseHandle(hSnap);
 } catch (...) {
-	error_notify("CodebenderccAPI::winKillAvrdude() threw an unknown exception");
-	return;
+    error_notify("CodebenderccAPI::winKillAvrdude() threw an unknown exception");
+    return;
 }
 #endif
 
