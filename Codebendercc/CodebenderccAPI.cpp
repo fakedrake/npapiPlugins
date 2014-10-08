@@ -11,108 +11,107 @@
 
 FB::variant CodebenderccAPI::download() {
     return "deprecated";
-}	
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////public//////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
-int CodebenderccAPI::openPort(const std::string &port, const unsigned int &baudrate, bool flushFlag,const std::string &functionPrefix) try {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::openPort",3);
-	std::string device;
-	device = port;
-	#ifdef _WIN32
-		device = "\\\\.\\" + port;
-	#endif
-	if(flushFlag || AddtoPortList(device))
-	{ //Check if device is used by someone else
-		try
-			{
-			usedPort=device;		
-				if (serialPort.isOpen() == false){
-					uint32_t TotalTimeoutConstantDivider = ((baudrate/9)/100 == 0)? 1 : (baudrate/9)/100; 
-					uint32_t readTotalTimeoutConst = 1000/TotalTimeoutConstantDivider;
-					portTimeout = Timeout(10, readTotalTimeoutConst, 0, 0, 10);
-					serialPort.setPort(device);				//set port name
-					serialPort.setBaudrate(baudrate);		//set port baudrate
-					serialPort.setTimeout(portTimeout);		//set the read/write timeout of the port
-					serialPort.open();			//open the port
-					serialPort.setDTR(true);	//set Data Transfer signal, needed for Arduino leonardo
-					serialPort.setRTS(false);	//set Request to Send signal to false, needed for Arduino leonardo  
-											}
-			}catch(serial::PortNotOpenedException& pno){
-				CodebenderccAPI::debugMessage(pno.what(),2);
-				std::string err_mess = boost::lexical_cast<std::string>(pno.what());
-				std::string result = functionPrefix + err_mess;
-				if (functionPrefix.find("flushBuffer")!=std::string::npos) {error_notify(result, 1);}
-				else {error_notify(result);}
-				if(!flushFlag)
-					RemovePortFromList(usedPort);
-				int return_value= CodebenderccAPI::PortNotOpenedException(err_mess);
-				return return_value;
-											}
-			catch(serial::SerialException& se){
-				CodebenderccAPI::debugMessage(se.what(),2);
-				std::string err_mess = boost::lexical_cast<std::string>(se.what());
-				std::string result = functionPrefix + err_mess;
-				if (functionPrefix.find("flushBuffer")!=std::string::npos) {error_notify(result, 1);}
-				else {error_notify(result);}
-				if(!flushFlag)
-					RemovePortFromList(usedPort);
-				int return_value= CodebenderccAPI::SerialException(err_mess);
-				return return_value;
-									}			
-			catch(std::invalid_argument& inv_arg){
-				CodebenderccAPI::debugMessage(inv_arg.what(),2);
-				std::string err_mess = boost::lexical_cast<std::string>(inv_arg.what());
-				std::string result = functionPrefix + err_mess;
-				if (functionPrefix.find("flushBuffer")!=std::string::npos) {error_notify(result, 1);}
-				else {error_notify(result);}
-				if(!flushFlag)
-					RemovePortFromList(usedPort);
-				int return_value= CodebenderccAPI::invalid_argument(err_mess);
-				return return_value;
-									}	
-			catch(serial::IOException& IOe){
-				CodebenderccAPI::debugMessage(IOe.what(),2);
-				std::string err_mess = boost::lexical_cast<std::string>(IOe.what());
-				std::string result = functionPrefix + err_mess;
-				if (functionPrefix.find("flushBuffer")!=std::string::npos) 
-					{error_notify(result, 1);}
-				else {error_notify(result);}
-				if(!flushFlag)
-					RemovePortFromList(usedPort);
-				#ifndef _WIN32
-					if (result.find("IO Exception (16)")!=std::string::npos)
-						return -55;
-					else if (result.find("IO Exception (13)")!=std::string::npos)
-						return -56;
-					else if (result.find("IO Exception (2)")!=std::string::npos)
-						return -57;
-					else{
-						int return_value= CodebenderccAPI::IOException(err_mess);
-						return return_value;}
-				#endif	
-				#ifdef _WIN32
-					if (result.find("Can't open device,")!=std::string::npos)
-						return -56;
-					else if (result.find("Specified port,")!=std::string::npos)
-						return -57;
-					else{
-						int return_value= CodebenderccAPI::IOException(err_mess);
-						return return_value;}
-				#endif
-								}						
-	}	
-	else{
-		CodebenderccAPI::debugMessage("CodebenderccAPI::Port is already in use.",3);
-		return -22;
-		}	
-	CodebenderccAPI::debugMessage("CodebenderccAPI::openPort ended",3);
-	return 1;
+int CodebenderccAPI::openPort(const std::string &port,
+                              const unsigned int &baudrate,
+                              bool flushFlag,
+                              const std::string &functionPrefix) try {
+    CodebenderccAPI::debugMessage("CodebenderccAPI::openPort",3);
+    std::string device;
+    device = port;
+    #ifdef _WIN32
+        device = "\\\\.\\" + port;
+    #endif
+    if(flushFlag || AddtoPortList(device)){ //Check if device is used by someone else
+        try{
+            usedPort=device;
+            if (serialPort.isOpen() == false){
+                uint32_t TotalTimeoutConstantDivider = ((baudrate/9)/100 == 0)? 1 : (baudrate/9)/100;
+                uint32_t readTotalTimeoutConst = 1000/TotalTimeoutConstantDivider;
+                portTimeout = Timeout(10, readTotalTimeoutConst, 0, 0, 10);
+                serialPort.setPort(device);                  //set port name
+                serialPort.setBaudrate(baudrate);            //set port baudrate
+                serialPort.setTimeout(portTimeout);          //set the read/write timeout of the port
+                serialPort.open();                           //open the port
+                serialPort.setDTR(true);                     //set Data Transfer signal, needed for Arduino leonardo
+                serialPort.setRTS(false);                    //set Request to Send signal to false, needed for Arduino leonardo
+            }
+        }catch(serial::PortNotOpenedException& pno){
+            CodebenderccAPI::debugMessage(pno.what(),2);
+            std::string err_mess = boost::lexical_cast<std::string>(pno.what());
+            std::string result = functionPrefix + err_mess;
+            if (functionPrefix.find("flushBuffer")!=std::string::npos) {error_notify(result, 1);}
+            else {error_notify(result);}
+            if(!flushFlag)
+                RemovePortFromList(usedPort);
+            int return_value= CodebenderccAPI::PortNotOpenedException(err_mess);
+            return return_value;
+        }
+        catch(serial::SerialException& se){
+            CodebenderccAPI::debugMessage(se.what(),2);
+            std::string err_mess = boost::lexical_cast<std::string>(se.what());
+            std::string result = functionPrefix + err_mess;
+            if (functionPrefix.find("flushBuffer")!=std::string::npos) {error_notify(result, 1);}
+            else {error_notify(result);}
+            if(!flushFlag)
+                RemovePortFromList(usedPort);
+            int return_value= CodebenderccAPI::SerialException(err_mess);
+            return return_value;
+        }
+        catch(std::invalid_argument& inv_arg){
+            CodebenderccAPI::debugMessage(inv_arg.what(),2);
+            std::string err_mess = boost::lexical_cast<std::string>(inv_arg.what());
+            std::string result = functionPrefix + err_mess;
+            if (functionPrefix.find("flushBuffer")!=std::string::npos) {error_notify(result, 1);}
+            else {error_notify(result);}
+            if(!flushFlag)
+                RemovePortFromList(usedPort);
+            int return_value= CodebenderccAPI::invalid_argument(err_mess);
+            return return_value;
+        }
+        catch(serial::IOException& IOe){
+            CodebenderccAPI::debugMessage(IOe.what(),2);
+            std::string err_mess = boost::lexical_cast<std::string>(IOe.what());
+            std::string result = functionPrefix + err_mess;
+            if (functionPrefix.find("flushBuffer")!=std::string::npos) {error_notify(result, 1);}
+            else {error_notify(result);}
+            if(!flushFlag)
+                RemovePortFromList(usedPort);
+            #ifndef _WIN32
+                if (result.find("IO Exception (16)")!=std::string::npos)
+                    return -55;
+                else if (result.find("IO Exception (13)")!=std::string::npos)
+                    return -56;
+                else if (result.find("IO Exception (2)")!=std::string::npos)
+                    return -57;
+                else{
+                    int return_value= CodebenderccAPI::IOException(err_mess);
+                    return return_value;}
+            #endif
+            #ifdef _WIN32
+                if (result.find("Can't open device,")!=std::string::npos)
+                    return -56;
+                else if (result.find("Specified port,")!=std::string::npos)
+                    return -57;
+                else{
+                    int return_value= CodebenderccAPI::IOException(err_mess);
+                return return_value;}
+                #endif
+        }
+    }else{
+        CodebenderccAPI::debugMessage("CodebenderccAPI::Port is already in use.",3);
+        return -22;
+    }
+    CodebenderccAPI::debugMessage("CodebenderccAPI::openPort ended",3);
+    return 1;
 } catch (...) {
     error_notify("CodebenderccAPI::openPort() threw an unknown exception");
-	return -54;
+    return -54;
 }
 
 void CodebenderccAPI::closePort(bool flushFlag) try {
