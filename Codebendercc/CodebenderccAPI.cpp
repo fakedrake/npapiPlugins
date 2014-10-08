@@ -196,59 +196,58 @@ std::string CodebenderccAPI::probeUSB() try {
 
 std::string CodebenderccAPI::getPorts() try {
 
-	CodebenderccAPI::debugMessageProbe("CodebenderccAPI::getPorts",3);
+    CodebenderccAPI::debugMessageProbe("CodebenderccAPI::getPorts",3);
 
-	std::vector<serial::PortInfo> devices = serial::list_ports();
-	json::Array json_object_array;
-	json::Object json_object;
-	std::string json_string;
-	
-	for(unsigned int i = 0; i < devices.size(); i++){
-	
-		std::string port=devices.at(i).port;
-		std::string description=devices.at(i).description;
-		std::string hardware_id = devices.at(i).hardware_id;
+    std::vector<serial::PortInfo> devices = serial::list_ports();
+    json::Array json_object_array;
+    json::Object json_object;
+    std::string json_string;
+    
+    for(unsigned int i = 0; i < devices.size(); i++){
+    
+        std::string port=devices.at(i).port;
+        std::string description=devices.at(i).description;
+        std::string hardware_id = devices.at(i).hardware_id;
 
-		json_object["port"]=String(port);
-		json_object["description"]=String(description);
-		json_object["hardware"]=String(hardware_id);
-		 
-		json_object_array.Insert(json_object);
-		}
+        json_object["port"]=String(port);
+        json_object["description"]=String(description);
+        json_object["hardware"]=String(hardware_id);
+         
+        json_object_array.Insert(json_object);
+        }
 
-	std::stringstream json_ss;
-	Writer::Write(json_object_array, json_ss);
-	json_string = json_ss.str();
+    std::stringstream json_ss;
+    Writer::Write(json_object_array, json_ss);
+    json_string = json_ss.str();
     return json_string;
 
 } catch (...) {
     error_notify("CodebenderccAPI::getPorts() threw an unknown exception");
     return "";
-}	
+}    
 
 std::string CodebenderccAPI::availablePorts() try {
-	CodebenderccAPI::debugMessageProbe("CodebenderccAPI::availablePorts()",3);
+    CodebenderccAPI::debugMessageProbe("CodebenderccAPI::availablePorts()",3);
 
-	std::vector<serial::PortInfo> devices = serial::list_ports();
-	std::string ports;
-	std::vector<std::string> portsVector;
+    std::vector<serial::PortInfo> devices = serial::list_ports();
+    std::string ports;
+    std::vector<std::string> portsVector;
 
-	for(unsigned int i = 0; i < devices.size(); i++){
-		std::string port=devices.at(i).port;
-		portsVector.push_back(port);
-		}
+    for(unsigned int i = 0; i < devices.size(); i++){
+        std::string port=devices.at(i).port;
+        portsVector.push_back(port);
+        }
 
-	std::vector<std::string>::iterator it=portsVector.begin();
-	for(;it!=portsVector.end();it++){
-		ports.append(*it);
-		if (it != (portsVector.end()-1))
-			ports.append(",");}
-
-	CodebenderccAPI::debugMessageProbe("CodebenderccAPI::availablePorts() ended",3);
-	return ports;
+    std::vector<std::string>::iterator it=portsVector.begin();
+    for(;it!=portsVector.end();it++){
+        ports.append(*it);
+        if (it != (portsVector.end()-1))
+            ports.append(",");
+    }
+    return ports;
 } catch (...) {
-	error_notify("CodebenderccAPI::availablePorts() threw an unknown exception");
-	return "";
+    error_notify("CodebenderccAPI::availablePorts() threw an unknown exception");
+    return "";
 }
 
 #ifdef _WIN32
