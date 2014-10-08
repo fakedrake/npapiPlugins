@@ -72,38 +72,64 @@ FB::variant CodebenderccAPI::flashWithProgrammer(const std::string& device, cons
    return 0;
 }
 
-FB::variant CodebenderccAPI::flashBootloader(const std::string& device, const std::string& programmerProtocol, const std::string& programmerCommunication, const std::string& programmerSpeed, const std::string& programmerForce, const std::string& programmerDelay, const std::string& highFuses, const std::string& lowFuses, const std::string& extendedFuses, const std::string& unlockBits, const std::string& lockBits, const std::string& mcu, const FB::JSObjectPtr & cback) try {
-  CodebenderccAPI::debugMessage("CodebenderccAPI::flashBootloader",3);
-  #ifdef _WIN32 // Check if finding the short path of the plugin failed.
-    if (current_dir == L""){
-      cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-2));
-      return 0;
-    }
-  #endif
-  /**
-      *  Input validation. The error codes returned correspond to 
-      *  messages printed by the javascript of the website
-      **/
-  std::map<std::string, std::string> programmerData;
-  int progValidation = programmerPrefs(device, programmerProtocol, programmerSpeed, programmerCommunication, programmerForce, programmerDelay, mcu, programmerData);
-  if (progValidation != 0){
-    cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(progValidation));
-                return 0;
-  }
+FB::variant CodebenderccAPI::flashBootloader(const std::string& device,
+                                            const std::string& programmerProtocol,
+                                            const std::string& programmerCommunication,
+                                            const std::string& programmerSpeed,
+                                            const std::string& programmerForce,
+                                            const std::string& programmerDelay,
+                                            const std::string& highFuses, const std::string& lowFuses,
+                                            const std::string& extendedFuses,
+                                            const std::string& unlockBits,
+                                            const std::string& lockBits,
+                                            const std::string& mcu,
+                                            const FB::JSObjectPtr & cback) try {
+    CodebenderccAPI::debugMessage("CodebenderccAPI::flashBootloader",3);
 
-  std::map<std::string, std::string> bootloaderData;
-  int bootValidation = bootloaderPrefs(lowFuses, highFuses, extendedFuses, unlockBits, lockBits, bootloaderData);
-  if (bootValidation != 0){
-    cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(bootValidation));
-                return 0;
-  }
-  /**
-      * Validation end
-      **/
-  boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doflashBootloader,
-    this, device, programmerData, bootloaderData, mcu, cback));
-  CodebenderccAPI::debugMessage("CodebenderccAPI::flashBootloader ended",3);
-  return 0;
+    #ifdef _WIN32 // Check if finding the short path of the plugin failed.
+    if (current_dir == L""){
+        cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-2));
+        return 0;}
+    #endif
+
+    /**Input validation. The error codes returned correspond to
+    messages printed by the javascript of the website **/
+    std::map<std::string, std::string> programmerData;
+    int progValidation = programmerPrefs(device,
+                                        programmerProtocol,
+                                        programmerSpeed,
+                                        programmerCommunication,
+                                        programmerForce,
+                                        programmerDelay,
+                                        mcu,
+                                        programmerData);
+
+    if (progValidation != 0){
+        cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(progValidation));
+        return 0;}
+
+    std::map<std::string, std::string> bootloaderData;
+    int bootValidation = bootloaderPrefs(lowFuses,
+                                         highFuses,
+                                         extendedFuses,
+                                         unlockBits,
+                                         lockBits,
+                                         bootloaderData);
+    if (bootValidation != 0){
+        cback->InvokeAsync("", FB::variant_list_of(shared_from_this())(bootValidation));
+        return 0;}
+    /**  Validation end **/
+
+    boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doflashBootloader,
+                                                    this,
+                                                    device,
+                                                    programmerData,
+                                                    bootloaderData,
+                                                    mcu,
+                                                    cback));
+    thr = t;
+    CodebenderccAPI::debugMessage("CodebenderccAPI::flashBootloader ended",3);
+    return 0;
 }catch (...) {
         error_notify("CodebenderccAPI::flashBootloader() threw an unknown exception");
         return 0;

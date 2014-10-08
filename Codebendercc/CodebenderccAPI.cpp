@@ -823,97 +823,121 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
     error_notify("CodebenderccAPI::doflashWithProgrammer() threw an unknown exception");
 }
 
-void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std::string, std::string>& programmerData, std::map<std::string, std::string>& bootloaderData, const std::string& mcu, const FB::JSObjectPtr & flash_callback) try {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader",3);
-	mtxAvrdudeFlag.lock();
-	if(isAvrdudeRunning){
-		flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-23));
-		mtxAvrdudeFlag.unlock();
-		return;
-		}
-	isAvrdudeRunning=true;
-	mtxAvrdudeFlag.unlock();
-	std::string os = getPlugin().get()->getOS();
-	try {
-		if((programmerData["communication"] == "usb")||(programmerData["communication"] == "")||(AddtoPortList(device)))
-		{
-			#ifndef _WIN32
-				chmod(avrdude.c_str(), S_IRWXU);
-			#endif		
-			
-			std::string fdevice = device;
-			int retVal = 1;
+void CodebenderccAPI::doflashBootloader(const std::string& device,
+                                        std::map<std::string,std::string>& programmerData,
+                                        std::map<std::string, std::string>& bootloaderData,
+                                        const std::string& mcu,
+                                        const FB::JSObjectPtr & flash_callback) try {
+    CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader",3);
+    mtxAvrdudeFlag.lock();
+    if(isAvrdudeRunning){
+        flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-23));
+        mtxAvrdudeFlag.unlock();
+        return;}
+    isAvrdudeRunning=true;
+    mtxAvrdudeFlag.unlock();
+    std::string os = getPlugin().get()->getOS();
 
-			// Create the first part of the command, which includes the programmer settings.
-			programmerData["mcu"] = mcu.c_str();
-			programmerData["device"] = fdevice.c_str();
-			std::string programmerCommand = setProgrammerCommand(programmerData);
+    try {
+        if((programmerData["communication"] == "usb")||(programmerData["communication"] == "")||(AddtoPortList(device))){
 
-			// The first part of the command is very likely to be used again when flashing the hex file.
-			std::string command = programmerCommand;
+            try{
+                #ifndef _WIN32
+                    chmod(avrdude.c_str(), S_IRWXU);
+                #endif
 
-			/**
-			  * Erase the chip, applying the proper values to the unlock bits and high/low/extended fuses.
-			  * Note: Values for high and low fuses MUST exist. The other values are optional, depending on the chip.
-			  */
-			command += " -e";
-			command += (bootloaderData["ulbits"] != "") ? " -Ulock:w:" + bootloaderData["ulbits"] + ":m" : "";
-			command += (bootloaderData["efuses"] != "") ? " -Uefuse:w:" + bootloaderData["efuses"] + ":m" : "";
-			command += " -Uhfuse:w:" + bootloaderData["hfuses"] + ":m"
-					+ " -Ulfuse:w:" + bootloaderData["lfuses"] + ":m";
-			
-			
-			retVal = CodebenderccAPI::runAvrdude(command, false);
-			_retVal = retVal;
+                std::string fdevice = device;
+                int retVal = 1;
 
-			// If avrdude failed return the error code, else continue.
-			if (retVal == 0){
+                // Create the first part of the command, which includes the programmer settings.
+                programmerData["mcu"] = mcu.c_str();
+                programmerData["device"] = fdevice.c_str();
 
-				// Apply a delay of one second.
-				delay(1000);
-		
-				// Check if hex bootloader wsa sent from the server. If no bootloader exists,
-				// an empty file is created.
-				std::ifstream file (hexFile.c_str(), std::ifstream::binary);
-				if (file.is_open()){
-					file.seekg (0, file.end);
-					int length = file.tellg();
+                boost::this_thread::interruption_point();
 
-					if (length == 0){
-						file.close();
-					}else{
-						command = programmerCommand;
-						#ifdef _WIN32
-							command += " -Uflash:w:bootloader.hex:i";
-						#else
-							command += " -Uflash:w:\"" + hexFile + "\":i";
-						#endif
-						command += (bootloaderData["lbits"] != "") ? " -Ulock:w:" + bootloaderData["lbits"] + ":m" : "";
+                std::string programmerCommand = setProgrammerCommand(programmerData);
 
-						
-						retVal = CodebenderccAPI::runAvrdude(command, true);
-						_retVal = retVal;
-					}
-				}
-			}
-			flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
-			RemovePortFromList(fdevice);
-		}
-	else
-		{
-			flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-22));
-			isAvrdudeRunning=false;	
-			CodebenderccAPI::debugMessage("CodebenderccAPI::Port is already in use:",3);
-		}	
-	}catch(...){
-		CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader exception",2);
-		isAvrdudeRunning=false;	
-        flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(9001));
-		RemovePortFromList(device);
-	}
-	isAvrdudeRunning=false;	
-	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader ended",3);
-} catch (...) {
+                // The first part of the command is very likely to be used again when flashing the hex file.
+                std::string command = programmerCommand;
+
+                /** Erase the chip, applying the proper values to the unlock bits and high/low/extended fuses.
+                Note: Values for high and low fuses MUST exist. The other values are optional, depending on the chip. **/
+
+                command += " -e";
+                command += (bootloaderData["ulbits"] != "") ? " -Ulock:w:" + bootloaderData["ulbits"] + ":m" : "";
+                command += (bootloaderData["efuses"] != "") ? " -Uefuse:w:" + bootloaderData["efuses"] + ":m" : "";
+                command += " -Uhfuse:w:" + bootloaderData["hfuses"] + ":m"
+                        + " -Ulfuse:w:" + bootloaderData["lfuses"] + ":m";
+
+                boost::this_thread::interruption_point();
+
+                retVal = CodebenderccAPI::runAvrdude(command, false);
+                _retVal = retVal;
+
+                if (retVal==THREAD_INTERRUPTED){
+                    RemovePortFromList(fdevice);
+                    isAvrdudeRunning=false;
+                    return;}
+
+                // If avrdude failed return the error code, else continue.
+                if (retVal == 0){
+
+                    // Apply a delay of one second.
+                    delay(1000);
+
+                    // Check if hex bootloader was sent from the server. If no bootloader exists, an empty file is created.
+                    std::ifstream file (hexFile.c_str(), std::ifstream::binary);
+                    if (file.is_open()){
+                        file.seekg (0, file.end);
+                        int length = file.tellg();
+
+                        if (length == 0){
+                            file.close();
+                        }else{
+                            command = programmerCommand;
+                            #ifdef _WIN32
+                                command += " -Uflash:w:bootloader.hex:i";
+                            #else
+                                command += " -Uflash:w:\"" + hexFile + "\":i";
+                            #endif
+                            command += (bootloaderData["lbits"] != "") ? " -Ulock:w:" + bootloaderData["lbits"] + ":m" : "";
+
+                            boost::this_thread::interruption_point();
+
+                            retVal = CodebenderccAPI::runAvrdude(command, true);
+                            _retVal = retVal;
+
+                            if (retVal==THREAD_INTERRUPTED){
+                                RemovePortFromList(fdevice);
+                                isAvrdudeRunning=false;
+                                return;}
+                        }
+                    }
+                }
+
+                flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
+                RemovePortFromList(fdevice);
+                isAvrdudeRunning=false;
+                CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader ended",3);
+
+            }catch(boost::thread_interrupted&){
+                RemovePortFromList(device);
+                isAvrdudeRunning=false;
+                return;}
+
+        }else{
+            flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-22));
+            isAvrdudeRunning=false;
+            CodebenderccAPI::debugMessage("CodebenderccAPI::Port is already in use:",3);}
+
+    }catch(...){
+        CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader exception",2);
+        isAvrdudeRunning=false;
+        RemovePortFromList(device);
+        flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(9001));}
+
+}catch (...){
+    isAvrdudeRunning=false;
     error_notify("CodebenderccAPI::doflashBootloader() threw an unknown exception");
 }
 
