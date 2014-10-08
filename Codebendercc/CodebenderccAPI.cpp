@@ -132,47 +132,41 @@ void CodebenderccAPI::closePort(bool flushFlag) try {
 }
 
 #ifdef _WIN32
-
 std::string CodebenderccAPI::probeUSB() try {
-	CodebenderccAPI::debugMessageProbe("CodebenderccAPI::probeUSB probing USB ports",3);
-	std::string ports ="";
-	HKEY hKey;
-   /*
+    CodebenderccAPI::debugMessageProbe("CodebenderccAPI::probeUSB probing USB ports",3);
+    std::string ports ="";
+    HKEY hKey;
+    /*
     * Open the registry key where serial port key-value pairs are stored.
-	*/
-   if( CodebenderccAPI::RegOpenKeyEx( HKEY_LOCAL_MACHINE,		// The name of the registry key handle is always the same.
-        TEXT("HARDWARE\\DEVICEMAP\\SERIALCOMM\\"),	// The same applies to the subkey, since we are looking for serial ports only.
-        0,
-        KEY_READ,								// Set the access rights, before reading the key contents.
-        &hKey) == ERROR_SUCCESS					// Set the variable that revieves the open key handle.
-      )
-   {
-		ports.append(CodebenderccAPI::QueryKey(hKey));  // Call QueryKey function to retrieve the available ports.
-      
-		if(lastPortCount!=ports.length()){
-			lastPortCount=ports.length();
-			CodebenderccAPI::detectNewPort(ports);
-										}
-		CodebenderccAPI::RegCloseKey(hKey);	// Need to close the key handle after the task is completed.
-   }
+    */
+    if( CodebenderccAPI::RegOpenKeyEx(HKEY_LOCAL_MACHINE,                         // The name of the registry key handle is always the same.
+                                    TEXT("HARDWARE\\DEVICEMAP\\SERIALCOMM\\"),    // The same applies to the subkey, since we are looking for serial ports only.
+                                    0,
+                                    KEY_READ,                                     // Set the access rights, before reading the key contents.
+                                    &hKey) == ERROR_SUCCESS                       // Set the variable that retrieves the open key handle.
+        ){
+        ports.append(CodebenderccAPI::QueryKey(hKey));                            // Call QueryKey function to retrieve the available ports.
+
+        if(lastPortCount!=ports.length()){
+            lastPortCount=ports.length();
+            CodebenderccAPI::detectNewPort(ports);
+        }
+        CodebenderccAPI::RegCloseKey(hKey);                                       // Need to close the key handle after the task is completed.
+    }
     return ports;
 } catch (...) {
     error_notify("[Windows] CodebenderccAPI::probeUSB() threw an unknown exception");
     return "";
 }
 #else
-
 std::string CodebenderccAPI::probeUSB() try {
-	CodebenderccAPI::debugMessageProbe("CodebenderccAPI::probeUSB probing USB ports",3);
-
+    CodebenderccAPI::debugMessageProbe("CodebenderccAPI::probeUSB probing USB ports",3);
     DIR *dp;
     std::string dirs = "";
-	struct dirent *ep;
+    struct dirent *ep;
     dp = CodebenderccAPI::opendir("/dev/");
-    if (dp != NULL) 
-    {
-        while (ep = CodebenderccAPI::readdir(dp)) 
-        {
+    if (dp != NULL) {
+        while (ep = CodebenderccAPI::readdir(dp)) {
             //UNIX ARDUINO PORTS
             if (boost::contains(ep->d_name, "ttyACM") || boost::contains(ep->d_name, "ttyUSB")) {
                 dirs += "/dev/";
@@ -185,17 +179,15 @@ std::string CodebenderccAPI::probeUSB() try {
             }
         }
         CodebenderccAPI::closedir(dp);
-	} else{
-		CodebenderccAPI::debugMessage("CodebenderccAPI::probeUSB could not open directory",2);
-	}	
-	if((size_t)lastPortCount!=dirs.length()){
-		lastPortCount=dirs.length();
-		CodebenderccAPI::detectNewPort(dirs);
-    return dirs;}
-
+    } else{
+        CodebenderccAPI::debugMessage("CodebenderccAPI::probeUSB could not open directory",2);
+    }
+    if((size_t)lastPortCount!=dirs.length()){
+        lastPortCount=dirs.length();
+        CodebenderccAPI::detectNewPort(dirs);
+        return dirs;
+    }
     return dirs;
-
-
 } catch (...) {
     error_notify("CodebenderccAPI::probeUSB() threw an unknown exception");
     return "";
