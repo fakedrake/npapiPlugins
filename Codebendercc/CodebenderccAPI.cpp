@@ -1269,117 +1269,117 @@ bool CodebenderccAPI::checkSerialMonitorStatus(){
 }
 
 int CodebenderccAPI::PortNotOpenedException(std::string err_mess)try{
-	if (err_mess.find("Serial::setDTR")!=std::string::npos)
-		return 1001;
-	else if	(err_mess.find("Serial::setRTS")!=std::string::npos)
-		return 1002;
-	else 
-		return 1000;
+    if (err_mess.find("Serial::setDTR")!=std::string::npos)
+        return 1001;
+    else if    (err_mess.find("Serial::setRTS")!=std::string::npos)
+        return 1002;
+    else
+        return 1000;
 }catch (...) {
 error_notify("CodebenderccAPI::PortNotOpenedException threw an unknown exception.");
     return -1;
 }
 
 int CodebenderccAPI::SerialException(std::string err_mess)try{
-	if (err_mess.find("Serial port already open.")!=std::string::npos)
-		return 2001;
-	int error_code=CodebenderccAPI::checkIfIsDigit(err_mess);
-	if (error_code == 10000)
-		return error_code;
-	if (err_mess.find("setDTR failed on a call to ioctl(TIOCMBIC):")!=std::string::npos)
-		return (2100+error_code);	
-	else if	(err_mess.find("setDTR failed on a call to ioctl(TIOCMBIS):")!=std::string::npos)
-		return (2300+error_code);	
-	else if	(err_mess.find("setRTS failed on a call to ioctl(TIOCMBIS):")!=std::string::npos)
-		return (2500+error_code);	
-	else if	(err_mess.find("setRTS failed on a call to ioctl(TIOCMBIC):")!=std::string::npos)
-		return (2700+error_code);
-	else
-		return 2000;		
-	}catch (...) {
+    if (err_mess.find("Serial port already open.")!=std::string::npos)
+        return 2001;
+    int error_code=CodebenderccAPI::checkIfIsDigit(err_mess);
+    if (error_code == 10000)
+        return error_code;
+    if (err_mess.find("setDTR failed on a call to ioctl(TIOCMBIC):")!=std::string::npos)
+        return (2100+error_code);
+    else if    (err_mess.find("setDTR failed on a call to ioctl(TIOCMBIS):")!=std::string::npos)
+        return (2300+error_code);
+    else if    (err_mess.find("setRTS failed on a call to ioctl(TIOCMBIS):")!=std::string::npos)
+        return (2500+error_code);
+    else if    (err_mess.find("setRTS failed on a call to ioctl(TIOCMBIC):")!=std::string::npos)
+        return (2700+error_code);
+    else
+        return 2000;
+    }catch (...) {
     error_notify("CodebenderccAPI::SerialException threw an unknown exception.");
-    	return -1;
-	}
+        return -1;
+    }
 
 int CodebenderccAPI::invalid_argument(std::string err_mess)try{
-	if (err_mess.find("Empty port is invalid")!=std::string::npos)
-		return 3001;
-	else if	(err_mess.find("invalid char len")!=std::string::npos)
-		return 3002;
-	else if	(err_mess.find("invalid stop bit")!=std::string::npos)
-		return 3003;
-	else if	(err_mess.find("invalid parity")!=std::string::npos)
-		return 3004;
-	else if	(err_mess.find("OS does not currently support custom bauds")!=std::string::npos)
-		return 3005;
-	else 
-		return 3000;
+    if (err_mess.find("Empty port is invalid")!=std::string::npos)
+        return 3001;
+    else if    (err_mess.find("invalid char len")!=std::string::npos)
+        return 3002;
+    else if    (err_mess.find("invalid stop bit")!=std::string::npos)
+        return 3003;
+    else if    (err_mess.find("invalid parity")!=std::string::npos)
+        return 3004;
+    else if    (err_mess.find("OS does not currently support custom bauds")!=std::string::npos)
+        return 3005;
+    else
+        return 3000;
 }catch (...) {
 error_notify("CodebenderccAPI::invalid_argument threw an unknown exception.");
     return -1;
 }
 
 #ifndef _WIN32
-	int CodebenderccAPI::IOException(std::string err_mess)try{
-		if (err_mess.find("Too many file handles open.")!=std::string::npos)
-			return 4001;
-		else if	(err_mess.find("Invalid file descriptor, is the serial port open?")!=std::string::npos)
-			return 4002;
-		else if	(err_mess.find("::tcgetattr")!=std::string::npos)
-			return 4003;	
-		int error_code=CodebenderccAPI::GetTag(err_mess);
-		if (error_code == 20000)
-			return error_code;
-		if	(err_mess.find("IO Exception (")!=std::string::npos) 
-			return (4100+error_code);		
-		else 
-			return 4000;			
-	}catch (...) {
+    int CodebenderccAPI::IOException(std::string err_mess)try{
+        if (err_mess.find("Too many file handles open.")!=std::string::npos)
+            return 4001;
+        else if    (err_mess.find("Invalid file descriptor, is the serial port open?")!=std::string::npos)
+            return 4002;
+        else if    (err_mess.find("::tcgetattr")!=std::string::npos)
+            return 4003;
+        int error_code=CodebenderccAPI::GetTag(err_mess);
+        if (error_code == 20000)
+            return error_code;
+        if    (err_mess.find("IO Exception (")!=std::string::npos)
+            return (4100+error_code);
+        else
+            return 4000;
+    }catch (...) {
     error_notify("CodebenderccAPI::IOException threw an unknown exception.");
-    	return -1;
-	}
+        return -1;
+    }
 #endif
 #ifdef _WIN32
-	int CodebenderccAPI::IOException(std::string err_mess)try{
-		if (err_mess.find("Error setting timeouts.")!=std::string::npos)
-			return 5001;
-		else if	(err_mess.find("Error setting serial port settings")!=std::string::npos)
-			return 5002;
-		else if	(err_mess.find("Invalid file descriptor, is the serial port open?")!=std::string::npos)
-			return 5003;	
-		else if	(err_mess.find("Error getting the serial port state")!=std::string::npos)
-			return 5004;
-		int error_code=CodebenderccAPI::GetNumberBetween(err_mess);
-		if (error_code == 20000)
-			return error_code;
-		if	(err_mess.find("Unknown error opening the serial port:")!=std::string::npos)
-			return (6000+error_code);	
-		else 
-			return 5000;
-	}catch (...) {
+    int CodebenderccAPI::IOException(std::string err_mess)try{
+        if (err_mess.find("Error setting timeouts.")!=std::string::npos)
+            return 5001;
+        else if    (err_mess.find("Error setting serial port settings")!=std::string::npos)
+            return 5002;
+        else if    (err_mess.find("Invalid file descriptor, is the serial port open?")!=std::string::npos)
+            return 5003;
+        else if    (err_mess.find("Error getting the serial port state")!=std::string::npos)
+            return 5004;
+        int error_code=CodebenderccAPI::GetNumberBetween(err_mess);
+        if (error_code == 20000)
+            return error_code;
+        if    (err_mess.find("Unknown error opening the serial port:")!=std::string::npos)
+            return (6000+error_code);
+        else
+            return 5000;
+    }catch (...) {
     error_notify("CodebenderccAPI::IOException threw an unknown exception.");
-    	return -1;
-	}
+        return -1;
+    }
 #endif
 
 int CodebenderccAPI::checkIfIsDigit(std::string err_mess)try{
-	int err_code;
-	int nIndex;
-	stringstream strStream;
+    int err_code;
+    int nIndex;
+    stringstream strStream;
        for (nIndex=0; nIndex < err_mess.length(); nIndex++){
-       	    if (isdigit(err_mess[nIndex]))    
-				strStream << err_mess[nIndex];
+               if (isdigit(err_mess[nIndex]))
+                strStream << err_mess[nIndex];
        }
     strStream >> err_code;
-	return err_code;
-	}catch (...) {
+    return err_code;
+    }catch (...) {
     error_notify("CodebenderccAPI::checkIfIsDigit threw an unknown exception.");
-    	return 10000;
-	}
+        return 10000;
+    }
 
 int CodebenderccAPI::GetTag(std::string str)try{
-	int err_code;
-	std::string retVal;
+    int err_code;
+    std::string retVal;
     std::string::size_type start = str.find('(');
     if (start != str.npos)
     {
@@ -1388,19 +1388,19 @@ int CodebenderccAPI::GetTag(std::string str)try{
         {
             ++start;
             std::string::size_type count = end - start;
-			retVal=str.substr(start, count);
-			err_code=atoi(retVal.c_str());
+            retVal=str.substr(start, count);
+            err_code=atoi(retVal.c_str());
             return err_code;
         }
     }
     return -1;
-	}catch (...) {
+    }catch (...) {
     error_notify("CodebenderccAPI::GetTag threw an unknown exception.");
-    	return 20000;
-	}
+        return 20000;
+    }
 
 int CodebenderccAPI::GetNumberBetween(std::string str)try{
-	int err_code;
+    int err_code;
     std::string::size_type start = str.find_last_of(':');
     if (start != str.npos)
     {
@@ -1408,30 +1408,29 @@ int CodebenderccAPI::GetNumberBetween(std::string str)try{
         if (end != str.npos){
             ++start;
             std::string::size_type count = end - start;
-			err_code=atoi((str.substr(start, count)).c_str());
+            err_code=atoi((str.substr(start, count)).c_str());
             return err_code;
         }
     }
     return -1;
-	}catch (...) {
+    }catch (...) {
     error_notify("CodebenderccAPI::GetNumberBetween threw an unknown exception.");
-    	return 20000;
-	}	
+        return 20000;
+    }
 
 std::string CodebenderccAPI::exec(const char * cmd) try {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::exec",3);
-	std::string result = "";
-#ifndef _WIN32
-    FILE* pipe = CodebenderccAPI::popen(cmd, "r");
-    if (!pipe) return "ERROR";
-    char buffer[128];
-    while (CodebenderccAPI::fgets(buffer, 128, pipe) != NULL) {
-
-        result += buffer;
-    }
-    CodebenderccAPI::pclose(pipe);
-#endif
-	CodebenderccAPI::debugMessage("CodebenderccAPI::exec ended",3);
+    CodebenderccAPI::debugMessage("CodebenderccAPI::exec",3);
+    std::string result = "";
+    #ifndef _WIN32
+        FILE* pipe = CodebenderccAPI::popen(cmd, "r");
+        if (!pipe) return "ERROR";
+        char buffer[128];
+        while (CodebenderccAPI::fgets(buffer, 128, pipe) != NULL) {
+            result += buffer;
+        }
+        CodebenderccAPI::pclose(pipe);
+    #endif
+    CodebenderccAPI::debugMessage("CodebenderccAPI::exec ended",3);
     return result;
 } catch (...) {
     error_notify("CodebenderccAPI::exec() threw an unknown exception");
@@ -1440,18 +1439,18 @@ std::string CodebenderccAPI::exec(const char * cmd) try {
 
 
 void CodebenderccAPI::notify(const std::string &message) {
-CodebenderccAPI::debugMessage("CodebenderccAPI::notify",3);	
+CodebenderccAPI::debugMessage("CodebenderccAPI::notify",3);
 callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
 }
 
-void CodebenderccAPI::error_notify(const std::string &message, int warningFlag) {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::error_notify",3);	
-	error_callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str())(warningFlag));
+void CodebenderccAPI::error_notify(const std::string &message,
+                                  int warningFlag) {
+    CodebenderccAPI::debugMessage("CodebenderccAPI::error_notify",3);
+    error_callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str())(warningFlag));
 }
 
 DIR *
-CodebenderccAPI::opendir(const char *name)
-{
+CodebenderccAPI::opendir(const char *name){
     DIR *dp;
 
     dp = ::opendir(name);
@@ -1987,66 +1986,61 @@ CodebenderccAPI::RegOpenKeyEx(HKEY hKey,
                               PHKEY phkResult)
 {
     LONG rc;
-	static bool errorFlag;
+    static bool errorFlag;
 
     rc = ::RegOpenKeyEx(hKey,
                         lpSubKey,
                         ulOptions,
                         samDesired,
                         phkResult);
-	if (rc == ERROR_SUCCESS){
+    if (rc == ERROR_SUCCESS){
         errorFlag = false;
-		return rc;
-	}
+        return rc;
+    }
 
-	if (rc != ERROR_SUCCESS && errorFlag == false){
-		errorFlag = true;
-		/* TODO: Print error code description with FormatMessage.
-	 *      *
-	 *           * http://msdn.microsoft.com/en-us/library/windows/desktop/ms724897%28v=vs.85%29.aspx
-	 *               */
-		std::string err_msg = "CodebenderccAPI::RegOpenKeyEx() - Winerror.h error code: ";
-		err_msg += boost::lexical_cast<std::string>(rc);
+    if (rc != ERROR_SUCCESS && errorFlag == false){
+        errorFlag = true;
+        /* TODO: Print error code description with FormatMessage.
+         http://msdn.microsoft.com/en-us/library/windows/desktop/ms724897%28v=vs.85%29.aspx */
+        std::string err_msg = "CodebenderccAPI::RegOpenKeyEx() - Winerror.h error code: ";
+        err_msg += boost::lexical_cast<std::string>(rc);
 
-		if(rc==2)
-			error_notify(err_msg,1);
-		else
-			error_notify(err_msg);
-		return rc;
-	}
-	
-	return rc;
+        if(rc==2)
+            error_notify(err_msg,1);
+        else
+            error_notify(err_msg);
+        return rc;
+    }
+    
+    return rc;
 }
 
 LONG
 CodebenderccAPI::RegCloseKey(HKEY hKey)
 {
     LONG rc;
-	static bool errorFlag;
+    static bool errorFlag;
 
     rc = ::RegCloseKey(hKey);
-	if (rc == ERROR_SUCCESS){
-		errorFlag = false;	
-		return rc;
-	}
+    if (rc == ERROR_SUCCESS){
+        errorFlag = false;
+        return rc;
+    }
 
-	if (rc != ERROR_SUCCESS && errorFlag == false){
-		errorFlag = true;
-		/* TODO: Print error code description with FormatMessage.
-	 *      *
-	 *           * http://msdn.microsoft.com/en-us/library/windows/desktop/ms724837%28v=vs.85%29.aspx
-	 *               */
-		std::string err_msg = "CodebenderccAPI::RegCloseKey() - Winerror.h error code: ";
-		err_msg += boost::lexical_cast<std::string>(rc);
+    if (rc != ERROR_SUCCESS && errorFlag == false){
+        errorFlag = true;
+     /* TODO: Print error code description with FormatMessage.
+       http://msdn.microsoft.com/en-us/library/windows/desktop/ms724837%28v=vs.85%29.aspx */
+        std::string err_msg = "CodebenderccAPI::RegCloseKey() - Winerror.h error code: ";
+        err_msg += boost::lexical_cast<std::string>(rc);
+        if(rc==6)
+            error_notify(err_msg,1);
+        else
+            error_notify(err_msg);
+        return rc;
+    }
 
-		if(rc==6)
-			error_notify(err_msg,1);
-		else
-			error_notify(err_msg);
-		return rc;
-	}
-
-	return rc;
+    return rc;
 }
 
 HANDLE
@@ -2203,12 +2197,12 @@ CodebenderccAPI::OpenProcess(DWORD dwDesiredAccess,
 
 HANDLE
 CodebenderccAPI::CreateToolhelp32Snapshot(DWORD dwFlags,
-                            			 DWORD th32ProcessID)
+                                         DWORD th32ProcessID)
 {
     HANDLE rc;
 
     rc = ::CreateToolhelp32Snapshot(dwFlags,
-                      			   th32ProcessID);
+                                     th32ProcessID);
     if (rc != INVALID_HANDLE_VALUE)
         return rc;
 
