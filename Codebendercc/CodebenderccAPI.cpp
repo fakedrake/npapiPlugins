@@ -420,6 +420,54 @@ CodebenderccAPI::CloseHandle(hSnap);
 /////////////////////////////PRIVATE////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
+int CodebenderccAPI::counter(0);
+
+int CodebenderccAPI::get_instId() { 
+	return instance_id; 
+}
+
+void CodebenderccAPI::init() {
+    apiMap[instance_id] = shared_from_this();
+}
+
+void CodebenderccAPI::printMap() {
+	std::map<int, FB::JSAPIWeakPtr>::iterator p; 
+	p= apiMap.begin();
+
+	for(; p!=apiMap.end(); ++p){
+		std::cout << "int is: " << p->first << endl;
+		FB::JSAPIPtr cur(p->second.lock());
+    	if (cur) { 
+    		std::cout << "FB::JSAPIWeakPtr is valid: " << cur.get() << endl; 
+    	}
+    	else { 
+    		std::cout << "FB::JSAPIWeakPtr is invalid" << endl; 
+    	}
+	}
+}
+
+
+void CodebenderccAPI::deleteMap() {
+	int my_id =  CodebenderccAPI::get_instId();
+	getJSAPIObjectById(my_id);
+}
+
+
+bool CodebenderccAPI::JSAPIWeakPtrExists() {
+	int my_id =  CodebenderccAPI::get_instId();
+	std::map<int, FB::JSAPIWeakPtr>::iterator p; 
+	p= apiMap.begin();
+	for(; p!=apiMap.end(); ++p){
+		if (p->first==my_id){
+			FB::JSAPIPtr cur(p->second.lock());
+	    	if (cur) { 
+	    		return true; 
+	    	}else { 
+	    		return false; 
+	    	}	
+		}
+	}
+}
 
 void CodebenderccAPI::doflash(const std::string& device,
                               const std::string& code,
@@ -434,9 +482,9 @@ void CodebenderccAPI::doflash(const std::string& device,
 
         mtxAvrdudeFlag.lock();
         if(isAvrdudeRunning){
-                flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-23));
-                mtxAvrdudeFlag.unlock();
-                return;}
+        	CodebenderccAPI::Invoke(flash_callback, -23);
+            mtxAvrdudeFlag.unlock();
+            return;}
         isAvrdudeRunning=true;
         mtxAvrdudeFlag.unlock();
 
@@ -463,7 +511,7 @@ void CodebenderccAPI::doflash(const std::string& device,
                                 int LeonardoPortStatus = CodebenderccAPI::resetLeonardo(fdevice);
 
                                 if (LeonardoPortStatus!=1){
-                                        flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(LeonardoPortStatus));
+                                		CodebenderccAPI::Invoke(flash_callback, LeonardoPortStatus);
                                         isAvrdudeRunning=false;
                                         return;}
 
@@ -481,7 +529,7 @@ void CodebenderccAPI::doflash(const std::string& device,
                                 if (flushBufferRetVal == -55 || flushBufferRetVal == -56 || flushBufferRetVal == -57){
                                         RemovePortFromList(fdevice);
                                         isAvrdudeRunning=false;
-                                        flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(flushBufferRetVal));
+                                       	CodebenderccAPI::Invoke(flash_callback, flushBufferRetVal);
                                         return;}
                         }
 
@@ -491,7 +539,7 @@ void CodebenderccAPI::doflash(const std::string& device,
                                                                fmcu);
 
                         if (command == ""){
-                                flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-100));
+                        		CodebenderccAPI::Invoke(flash_callback, -100);
                                 RemovePortFromList(fdevice);
                                 isAvrdudeRunning=false;
                                 return;}
@@ -510,21 +558,20 @@ void CodebenderccAPI::doflash(const std::string& device,
 
 			if (mcu == "atmega32u4")
 				CodebenderccAPI::LeonardoSketchControl(initialDevice);
-
-                        flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
+						CodebenderccAPI::Invoke(flash_callback, retVal);
                         RemovePortFromList(fdevice);
                         isAvrdudeRunning=false;
 
                 }else{
                         CodebenderccAPI::debugMessage("Port is in use, choose another port",3);
                         isAvrdudeRunning=false;
-                        flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-22));}
+                        CodebenderccAPI::Invoke(flash_callback, -22);}
 
         } catch (...) {
                 CodebenderccAPI::debugMessage("CodebenderccAPI::doflash exception",2);
                 RemovePortFromList(device);
                 isAvrdudeRunning=false;
-        flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(9001));
+        CodebenderccAPI::Invoke(flash_callback, 9001);
     }
 
         CodebenderccAPI::debugMessage("CodebenderccAPI::doflash ended",3);
@@ -532,7 +579,7 @@ void CodebenderccAPI::doflash(const std::string& device,
 } catch (...) {
     error_notify("CodebenderccAPI::doFlash() threw an unknown exception");
     isAvrdudeRunning=false;
-        flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(9002));
+    CodebenderccAPI::Invoke(flash_callback, 9002);   
 }
 
 int CodebenderccAPI::resetLeonardo(std::string& fdevice)try {
@@ -718,7 +765,7 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashWithProgrammer",3);
 	mtxAvrdudeFlag.lock();
 	if(isAvrdudeRunning){
-		flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-23));
+		CodebenderccAPI::Invoke(flash_callback, -23);
 		mtxAvrdudeFlag.unlock();
 		return;
 		}
@@ -755,19 +802,19 @@ void CodebenderccAPI::doflashWithProgrammer(const std::string& device, const std
 			
 				retVal = CodebenderccAPI::runAvrdude(command, false);
 				_retVal = retVal;
-				flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
+				CodebenderccAPI::Invoke(flash_callback, retVal);
 				RemovePortFromList(device);
 			}
 			else
 			{
-				flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-22));
+				CodebenderccAPI::Invoke(flash_callback, -22);
 				isAvrdudeRunning=false;	
 				CodebenderccAPI::debugMessage("CodebenderccAPI::Port is already in use.",3);
 			}
 	}catch(...){
 		CodebenderccAPI::debugMessage("CodebenderccAPI::doflashWithProgrammer exception",2);
 		isAvrdudeRunning=false;	
-        flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(9001));
+		CodebenderccAPI::Invoke(flash_callback, 9001);
 		RemovePortFromList(device);
     }
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashWithProgrammer ended",3);
@@ -780,7 +827,7 @@ void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std
 	CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader",3);
 	mtxAvrdudeFlag.lock();
 	if(isAvrdudeRunning){
-		flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-23));
+		CodebenderccAPI::Invoke(flash_callback, -23);
 		mtxAvrdudeFlag.unlock();
 		return;
 		}
@@ -849,19 +896,19 @@ void CodebenderccAPI::doflashBootloader(const std::string& device,  std::map<std
 					}
 				}
 			}
-			flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(retVal));
+			CodebenderccAPI::Invoke(flash_callback, retVal);
 			RemovePortFromList(fdevice);
 		}
 	else
 		{
-			flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(-22));
+			CodebenderccAPI::Invoke(flash_callback, -22);
 			isAvrdudeRunning=false;	
 			CodebenderccAPI::debugMessage("CodebenderccAPI::Port is already in use:",3);
 		}	
 	}catch(...){
 		CodebenderccAPI::debugMessage("CodebenderccAPI::doflashBootloader exception",2);
-		isAvrdudeRunning=false;	
-        flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(9001));
+		isAvrdudeRunning=false;
+		CodebenderccAPI::Invoke(flash_callback, 9001);	
 		RemovePortFromList(device);
 	}
 	isAvrdudeRunning=false;	
@@ -1141,7 +1188,7 @@ void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &
 	int openPortStatus=CodebenderccAPI::openPort(port, baudrate, false, "CodebenderccAPI::serialReader - ");
 
 	if(openPortStatus!=1){
-		valHandCallback->InvokeAsync("", FB::variant_list_of(shared_from_this())(openPortStatus));
+		CodebenderccAPI::Invoke(valHandCallback, openPortStatus);
 		notify("disconnect");
 		CodebenderccAPI::disconnect();
 		return;
@@ -1170,7 +1217,7 @@ void CodebenderccAPI::serialReader(const std::string &port, const unsigned int &
 		    rcvd = serialPort.read((size_t) 100);
 		    
 		    if (rcvd != "")
-		        callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(rcvd));	   
+		    	CodebenderccAPI::Invoke(valHandCallback, rcvd);
 
 				}
 		}catch (...) {
@@ -1372,15 +1419,30 @@ std::string CodebenderccAPI::exec(const char * cmd) try {
     return "";
 }
 
+void CodebenderccAPI::Invoke(const FB::JSObjectPtr &flash_callback, const int &value) {
+	CodebenderccAPI::debugMessage("CodebenderccAPI::Invoke",3);
+	if (CodebenderccAPI::JSAPIWeakPtrExists()==true)
+
+		flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(value));
+}
+
+void CodebenderccAPI::Invoke(const FB::JSObjectPtr &flash_callback, const string &value) {
+	CodebenderccAPI::debugMessage("CodebenderccAPI::Invoke",3);
+	if (CodebenderccAPI::JSAPIWeakPtrExists()==true)
+
+		flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(value));
+}
 
 void CodebenderccAPI::notify(const std::string &message) {
-CodebenderccAPI::debugMessage("CodebenderccAPI::notify",3);	
-callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
+	CodebenderccAPI::debugMessage("CodebenderccAPI::notify",3);
+	if (CodebenderccAPI::JSAPIWeakPtrExists()==true)	
+		callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str()));
 }
 
 void CodebenderccAPI::error_notify(const std::string &message, int warningFlag) {
-	CodebenderccAPI::debugMessage("CodebenderccAPI::error_notify",3);	
-	error_callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str())(warningFlag));
+	CodebenderccAPI::debugMessage("CodebenderccAPI::error_notify",3);
+	if (CodebenderccAPI::JSAPIWeakPtrExists()==true)	
+		error_callback_->InvokeAsync("", FB::variant_list_of(shared_from_this())(message.c_str())(warningFlag));
 }
 
 DIR *

@@ -31,6 +31,9 @@ bool CanBeUsed(string port);
 extern boost::mutex mtxAvrdudeFlag;
 extern bool isAvrdudeRunning;
 
+extern std::map<int, FB::JSAPIWeakPtr> apiMap;
+FB::JSAPIPtr getJSAPIObjectById(int id);   
+
 FB_FORWARD_PTR(Codebendercc)
 class Codebendercc : public FB::PluginCore
 {
