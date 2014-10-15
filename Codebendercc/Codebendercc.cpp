@@ -133,6 +133,11 @@ vector <string> vectorPortsInUseList;
 vector< string >::const_iterator iter;
 boost::mutex mtxPort;
 
+std::map<int, FB::JSAPIWeakPtr> apiMap;
+
+void getJSAPIObjectById(int id) {
+    apiMap.erase(id);
+}
 bool CanBeUsed(string port)
 {
     if (vectorPortsInUseList.empty()){

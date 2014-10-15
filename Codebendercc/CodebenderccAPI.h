@@ -144,12 +144,16 @@ public:
         registerMethod("getFlashResult", make_method(this, &CodebenderccAPI::getFlashResult));
         registerMethod("serialMonitorSetStatus", make_method(this, &CodebenderccAPI::serialMonitorSetStatus));
         registerMethod("closeTab", make_method(this, &CodebenderccAPI::closeTab));
-
+        registerMethod("init", make_method(this, &CodebenderccAPI::init));
+        registerMethod("printMap", make_method(this, &CodebenderccAPI::printMap));
+        registerMethod("deleteMap", make_method(this, &CodebenderccAPI::deleteMap));
         //Register all JS read-only properties
         registerProperty("version", make_property(this, &CodebenderccAPI::get_version));
         registerProperty("command", make_property(this, &CodebenderccAPI::getLastCommand));
         registerProperty("retVal", make_property(this, &CodebenderccAPI::getRetVal));
+        registerProperty("instance_id", make_property(this, &CodebenderccAPI::get_instId));
 
+        instance_id = counter++;
         serialMonitorStatus=false;
         debug_ = false;
         lastPortCount=0;
@@ -468,6 +472,14 @@ public:
 
     boost::thread* thr;
 
+    static int counter;
+    int instance_id;
+    int get_instId() ;
+    void init() ;
+    void printMap();
+    void deleteMap();
+    bool JSAPIWeakPtrExists();
+
 private:
 
     /**
@@ -569,7 +581,9 @@ private:
      */
     void error_notify(const std::string &message, int optionalWarningFlag = 0);
 
+    void Invoke(const FB::JSObjectPtr& flash_callback, const int &value);
 
+    void Invoke(const FB::JSObjectPtr& flash_callback, const string &value);
     /**
       * Validates the input and creates a map with the parameters of the programmer.
       * Returns zero upon success. All other return codes represent validation errors.
