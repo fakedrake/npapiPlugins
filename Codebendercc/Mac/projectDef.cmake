@@ -43,8 +43,10 @@ set(LOCALIZED "Mac/bundle_template/Localized.r")
 add_mac_plugin(${PROJECT_NAME} ${PLIST} ${STRINGS} ${LOCALIZED} SOURCES)
 
 # add library dependencies here; leave ${PLUGIN_INTERNAL_DEPS} there unless you know what you're doing!
+find_library(IOKIT_FRAMEWORK IOKit)
+
 target_link_libraries(${PROJECT_NAME}
     ${PLUGIN_INTERNAL_DEPS}
-		"-framework Security"
+    "-framework Security"
+    ${IOKIT_FRAMEWORK}
     )
-
