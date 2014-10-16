@@ -583,6 +583,7 @@ void CodebenderccAPI::doflash(const std::string& device,
 
 } catch (...) {
     error_notify("CodebenderccAPI::doFlash() threw an unknown exception");
+    RemovePortFromList(device);
     isAvrdudeRunning=false;
     CodebenderccAPI::Invoke(flash_callback, 9002);
 }
