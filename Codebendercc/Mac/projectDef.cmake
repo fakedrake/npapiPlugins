@@ -28,12 +28,22 @@ add_definitions(
     
 )
 
+file (GLOB MAC_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+    MacFiles/Mac.avrdude.conf
+    MacFiles/Mac.avrdude
+    )
+set_source_files_properties(
+    ${MAC_FILES}
+    PROPERTIES
+    MACOSX_PACKAGE_LOCATION "../"
+    )
 
 SOURCE_GROUP(Mac FILES ${PLATFORM})
 
 set (SOURCES
     ${SOURCES}
     ${PLATFORM}
+    ${MAC_FILES}
     )
 
 set(PLIST "Mac/bundle_template/Info.plist")
