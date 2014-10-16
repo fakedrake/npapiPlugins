@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 <?define ProductVersion="1.6.0.8"?>
-
-<?define CustomDir = "$(sys.CURRENTDIR)\..\..\plugin\Codebendercc\Win" ?>
+<?define CurrentDir = "$(sys.CURRENTDIR)\..\..\..\" ?>
+<?define CustomDir = "$(var.CurrentDir)\plugin\Codebendercc\Win" ?>
     <Product Id="*" Name="Codebender.cc" Language="1033" Version="$(var.ProductVersion)" Manufacturer="codebender.cc" UpgradeCode="{5ed63a74-511c-5a42-8646-a6b6d982a2d3}">
     <Package InstallerVersion="200" Compressed="yes" Description="Installer for the Codebendercc plugin" InstallScope="perUser" />
 
