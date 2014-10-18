@@ -699,9 +699,9 @@ std::string CodebenderccAPI::createCommand(const std::string& fdevice,
 	command += fdevice + " -p" + mcu;
 
 	#ifdef _WIN32
-		command += " -u -D -U flash:w:file.bin:a";
+		command += " -u -D -U flash:w:file.bin:r";
 	#else
-		command += " -u -D -U flash:w:\"" + binFile + "\":a";
+		command += " -u -D -U flash:w:\"" + binFile + "\":r";
 	#endif
 
 	command += " -c" + protocol + " -b" + speed + " -F";
