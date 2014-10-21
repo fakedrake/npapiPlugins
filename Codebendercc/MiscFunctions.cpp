@@ -491,7 +491,7 @@ bool CodebenderccAPI::validate_device(const std::string & input) try {
     static const boost::regex acm("\\/dev\\/ttyACM[[:digit:]]+");
     static const boost::regex usb("\\/dev\\/ttyUSB[[:digit:]]+");
     static const boost::regex com("COM[[:digit:]]+");
-    static const boost::regex cu("\\/dev\\/cu.[0-9a-zA-Z\\-]+");
+    static const boost::regex cu("\\/dev\\/cu.[0-9a-zA-Z\\-\\s(=>_)]+");
 
     return boost::regex_match(input, acm)
         || boost::regex_match(input, usb)
