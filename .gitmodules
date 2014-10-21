@@ -1,3 +1,6 @@
 [submodule "Codebendercc/tftp_client"]
 	path = Codebendercc/tftp_client
 	url = git://github.com/codebendercc/tftp.git
+[submodule "firebreath-dev"]
+	path = firebreath-dev
+	url = git://github.com/taxilian/FireBreath.git
