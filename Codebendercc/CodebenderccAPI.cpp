@@ -115,20 +115,23 @@ int CodebenderccAPI::openPort(const std::string &port,
 }
 
 void CodebenderccAPI::closePort(bool flushFlag) try {
-    CodebenderccAPI::debugMessage("CodebenderccAPI::closePort",3);
-    try{
-        if(serialPort.isOpen())
-            serialPort.close();
-            if(!flushFlag)
-                RemovePortFromList(usedPort);
-    }catch(...){
-    CodebenderccAPI::debugMessage("CodebenderccAPI::closePort exception",2);
-    if(!flushFlag)
-        RemovePortFromList(usedPort);
-    }
-    CodebenderccAPI::debugMessage("CodebenderccAPI::closePort ended",3);
-} catch (...) {
+	CodebenderccAPI::debugMessage("CodebenderccAPI::closePort",3);
+	if(serialPort.isOpen())
+		serialPort.close();
+	if(!flushFlag)
+		RemovePortFromList(usedPort);
+	CodebenderccAPI::debugMessage("CodebenderccAPI::closePort ended",3);
+}catch(serial::IOException& IOe){
+	CodebenderccAPI::debugMessage(IOe.what(),2);
+	std::string err_mess = boost::lexical_cast<std::string>(IOe.what());
+	error_notify(err_mess);
+	if(!flushFlag)
+		RemovePortFromList(usedPort);
+}catch (...){
+	CodebenderccAPI::debugMessage("CodebenderccAPI::closePort exception",2);
     error_notify("CodebenderccAPI::closePort() threw an unknown exception");
+    if(!flushFlag)
+		RemovePortFromList(usedPort);
 }
 
 #ifdef _WIN32
