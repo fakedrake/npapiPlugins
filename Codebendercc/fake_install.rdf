@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<RDF:RDF xmlns:em="http://www.mozilla.org/2004/em-rdf#"
+         xmlns:NC="http://home.netscape.com/NC-rdf#"
+         xmlns:RDF="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <RDF:Description RDF:about="urn:mozilla:install-manifest">
+    <em:id>codebender@codebender.cc</em:id>
+    <em:name>Codebender.cc Plugin</em:name>
+    <em:version>1.6.0.8</em:version>
+    <em:description>Arduino Codebender.cc communication</em:description>
+    <em:creator>The Codebender Team</em:creator>
+    <em:homepageURL>http://codebender.cc</em:homepageURL>
+    <em:type>2</em:type>
+    <em:unpack>true</em:unpack>
+    <em:targetApplication>
+      <RDF:Description >
+	<em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id>
+	<em:minVersion>3.6.*</em:minVersion>
+	<em:maxVersion>*</em:maxVersion>
+      </RDF:Description>
+    </em:targetApplication>
+  </RDF:Description>
+</RDF:RDF>
