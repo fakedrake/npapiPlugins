@@ -2,13 +2,13 @@
  *
  * \section intro_sec Introduction
  *
- * These pages give a better understanding to the people that want to work on or use the Codebender Browser plugin.\n  
+ * These pages give a better understanding to the people that want to work on or use the Codebender Browser plugin.\n
  *
  * \section install_sec Installation
  * The generated library file should be placed in the suitable directory for each platform/browser.
- * 
+ *
  * \author Dimitrios Amaxilatis {d.amaxilatis at gmail}
- * 
+ *
  * \todo fix the error messages add full-stops and rest
  * @see http://codebender.cc
  * @see http://www.firebreath.org/display/documentation/FireBreath+Home
@@ -16,37 +16,37 @@
 
 
 #ifdef _WIN32
-    #define MAX_KEY_LENGTH 255
-    #define WIN32_LEAN_AND_MEAN 
-    #include <SDKDDKVer.h>
-    #include "dirent.h"
-    #include <windows.h>
-    #include <tchar.h>
-    #include <Shellapi.h>
-    #include <Tchar.h>
-    #include <Iepmapi.h>
-    #include <stdio.h>
-    #include <iostream>
-    #include <fstream>
-    #include <string>
-    #include <stdlib.h>
-    #include <string.h>
-    #include <tchar.h>
-    #include <tlhelp32.h>
-    #include <comdef.h>
+#define MAX_KEY_LENGTH 255
+#define WIN32_LEAN_AND_MEAN
+#include <SDKDDKVer.h>
+#include "dirent.h"
+#include <windows.h>
+#include <tchar.h>
+#include <Shellapi.h>
+#include <Tchar.h>
+#include <Iepmapi.h>
+#include <stdio.h>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <stdlib.h>
+#include <string.h>
+#include <tchar.h>
+#include <tlhelp32.h>
+#include <comdef.h>
 #else
-    #include <dirent.h>
-    #include <sys/file.h>
-    #include <sys/syscall.h>
-    #include <unistd.h>
-    #include <stddef.h>
-    #include <stdlib.h>
-    #include <sys/types.h>
-    #include <sys/wait.h>
-    #include <signal.h>
-    #include <stdio.h>
-    #include <string.h>
-    #include <errno.h>
+#include <dirent.h>
+#include <sys/file.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <signal.h>
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
 #endif
 
 #include <boost/filesystem.hpp>
@@ -55,7 +55,7 @@
 #include <boost/regex.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/thread.hpp>
-#include <boost/thread/thread.hpp> 
+#include <boost/thread/thread.hpp>
 #include <boost/date_time.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/buffer.hpp>
@@ -80,9 +80,9 @@
 #include "SimpleStreamHelper.h"
 #include "variant_list.h"
 #include "SimpleSerial.h"
-#include <exception> 
+#include <exception>
 /**
- * Wjwwod serial library. 
+ * Wjwwod serial library.
  * https://github.com/wjwwood/serial
  **/
 #include "serial/include/serial/serial.h"
@@ -110,14 +110,14 @@ public:
      * Constructor for your JSAPI object.
      * You should register your methods, properties, and events
      * that should be accessible to Javascript from here.
-     * 
+     *
      * @see FB::JSAPIAuto::registerMethod
      * @see FB::JSAPIAuto::registerProperty
      * @see FB::JSAPIAuto::registerEvent
      * @param plugin
      * @param host
      */
-    CodebenderccAPI(const CodebenderccPtr& plugin, const FB::BrowserHostPtr& host) :
+CodebenderccAPI(const CodebenderccPtr& plugin, const FB::BrowserHostPtr& host) :
     m_plugin(plugin), m_host(host), io() {
 
         // Retrieve a reference to the DOM Window
@@ -132,7 +132,7 @@ public:
         registerMethod("flashWithProgrammer", make_method(this, &CodebenderccAPI::flashWithProgrammer));
         registerMethod("flashBootloader", make_method(this, &CodebenderccAPI::flashBootloader));
         registerMethod("saveToHex", make_method(this, &CodebenderccAPI::saveToHex));
-        
+
         registerMethod("openPort", make_method(this, &CodebenderccAPI::openPort));
         registerMethod("serialRead", make_method(this, &CodebenderccAPI::serialRead));
         registerMethod("disconnect", make_method(this, &CodebenderccAPI::disconnect));
@@ -148,6 +148,8 @@ public:
         registerMethod("printMap", make_method(this, &CodebenderccAPI::printMap));
         registerMethod("deleteMap", make_method(this, &CodebenderccAPI::deleteMap));
         //Register all JS read-only properties
+        registerProperty("baudrate", make_property(this, &CodebenderccAPI::getBaudrate,
+						   &CodebenderccAPI::setBaudrate));
         registerProperty("version", make_property(this, &CodebenderccAPI::get_version));
         registerProperty("command", make_property(this, &CodebenderccAPI::getLastCommand));
         registerProperty("retVal", make_property(this, &CodebenderccAPI::getRetVal));
@@ -162,23 +164,23 @@ public:
 
         thr=NULL;
 
-        //Returns the string name of the current operating system. 
+        //Returns the string name of the current operating system.
         std::string os = getPlugin().get()->getOS();
-        //Returns the path and filename of the current plugin module. 
+        //Returns the path and filename of the current plugin module.
         path = getPlugin().get()->getFSPath();
         //Finds the last / and returns the rest of the path.
         path = path.substr(0, path.find_last_of("/\\") + 1);
 
         std::string arch = "32";
-        #ifdef __x86_64
-                arch = "64";
-        #endif
+#ifdef __x86_64
+	arch = "64";
+#endif
 
         // paths to files
-        
+
 #ifdef _WIN32
-    current_dir = getShortPaths(path);
-    std::wstring wchdir(current_dir);
+	current_dir = getShortPaths(path);
+	std::wstring wchdir(current_dir);
         if (os == "Windows")
         {
             // WINDOWS
@@ -199,21 +201,21 @@ public:
         hexFile = path + "bootloader.hex";
         outfile = path + "out";
         debugFilename = path + "debugging.txt";
-            if (os == "X11") {
-                // LINUX
-                avrdude = path + os + "." + arch + ".avrdude";
-                avrdudeConf = path + os + "." + arch + ".avrdude.conf";
-                             } 
-            else {
-                // MAC
-                path = path + "../../";
-                avrdude = path + os + ".avrdude";
-                avrdudeConf = path + os + ".avrdude.conf";
-                    #ifdef __APPLE__        //added to avoid messing up compilation process
-                        binFile = path + "file.bin";
-                        outfile = path + "out";
-                    #endif
-                 }
+	if (os == "X11") {
+	    // LINUX
+	    avrdude = path + os + "." + arch + ".avrdude";
+	    avrdudeConf = path + os + "." + arch + ".avrdude.conf";
+	}
+	else {
+	    // MAC
+	    path = path + "../../";
+	    avrdude = path + os + ".avrdude";
+	    avrdudeConf = path + os + ".avrdude.conf";
+#ifdef __APPLE__        //added to avoid messing up compilation process
+	    binFile = path + "file.bin";
+	    outfile = path + "out";
+#endif
+	}
 #endif
 
         _retVal = 9999;
@@ -235,6 +237,9 @@ public:
      */
     CodebenderccPtr getPlugin();
 
+    const uint32_t getBaudrate () {return serialPort.getBaudrate();}
+    void setBaudrate (const uint32_t baudrate) { serialPort.setBaudrate(baudrate); }
+
     /**
      * Gets the plugin version.
      * @return the version string.
@@ -245,7 +250,7 @@ public:
      * Used to Download Avrdude Objects.
      * @deprecated
      * This function is now available only for compatibility. No functionality here.
-     * 
+     *
      * @return "deprecated".
      */
     FB::variant download();
@@ -254,7 +259,7 @@ public:
      * Used to flash a binary file to a connected Arduino/device.
      * The flash operation is initiated in a @b new @b thread
      * @param device The port of the device as a string. @see validate_device
-     * @param code A base64 encoded string of the binary file to be flashed to the device. 
+     * @param code A base64 encoded string of the binary file to be flashed to the device.
      * @param maxsize The maximum size of a binary file that can be flashed to the specific Arduino/other Board.
      * @param protocol The protocol to be used for Avrdude.
      * @param disable_flushing Specify whether the serial port buffer should be flushed or not.
@@ -276,10 +281,10 @@ public:
      * Alternative flash function. Used to flash a binary using a programmer.
      * The flash operation is initiated in a new @b thread
      * @param device The port of the device as a string. @see validate_device
-     * @param code A base64 encoded string of the binary file to be flashed to the device connected to the programmer. 
+     * @param code A base64 encoded string of the binary file to be flashed to the device connected to the programmer.
      * @param maxsize The maximum size of a binary file that can be flashed to the specific device.
      * @param programmerProtocol The protocol to be used for Avrdude.
-     * @param programmerCommunication The communication method used when programming the device. 
+     * @param programmerCommunication The communication method used when programming the device.
      * @param programmerSpeed The baudrate to be used with Avrdude, when the programmer imlements serial communication.
      * @param programmerForce Specifies whether or not -F flag should be used for Avrdude.
      * @param programmerDelay The delay applied when using parallel programmer.
@@ -304,7 +309,7 @@ public:
      * @param hexContent the content of the hex bootloader file
      * @param device The port of the device as a string.
      * @param programmerProtocol The protocol to be used for Avrdude.
-     * @param programmerCommunication The communication method used when programming the device. 
+     * @param programmerCommunication The communication method used when programming the device.
      * @param programmerSpeed The baudrate to be used with Avrdude, when the programmer imlements serial communication.
      * @param programmerForce Specifies whether or not -F flag should be used for Avrdude.
      * @param programmerDelay The delay applied when using parallel programmer.
@@ -317,7 +322,7 @@ public:
      * @param cback A callback used to report the flash result.
      * @return 0 if the flash process is started. Anything else is an error value.
      */
-     FB::variant flashBootloader(const std::string& device,
+    FB::variant flashBootloader(const std::string& device,
                                 const std::string& programmerProtocol,
                                 const std::string& programmerCommunication,
                                 const std::string& programmerSpeed,
@@ -386,9 +391,9 @@ public:
     bool setErrorCallback(const FB::JSObjectPtr &error_callback);
 
     /**
-     * Opens a Serial Port and Reads input from it. 
+     * Opens a Serial Port and Reads input from it.
      * The connection is maintained in a @b new @b thread.
-     * 
+     *
      * @see serialRead
      * @param port The port of the device as a string. @see validate_device
      * @param baudrate The baudrate to use for the connection as a string.
@@ -404,7 +409,7 @@ public:
     void serialWrite(const std::string &);
     /**
      * Disconnects from serial port.
-     * @return 1 when disconnected. Any other value is an error value. 
+     * @return 1 when disconnected. Any other value is an error value.
      */
     FB::variant disconnect();
     /**
@@ -443,7 +448,7 @@ public:
     /**
      * Functions that print debugging messages depending on the level.
      **/
-    void debugMessage(const char * messageDebug, int minimumLevel); 
+    void debugMessage(const char * messageDebug, int minimumLevel);
 
     void debugMessageProbe(const char * messageDebug, int minimumLevel);
 
@@ -487,7 +492,7 @@ private:
      * Devices in Linux are /dev/tty{USB??,ACM??}.
      * Devices in Mac are /dev/cu.{}.
      * Devices in Windows are COM??.
-     * 
+     *
      * @param input the device string.
      * @return true if valid, false else.
      */
@@ -496,7 +501,7 @@ private:
     /**
      * Exec system command.
      * @param filename
-     * @return 
+     * @return
      */
     std::string exec(const char * cmd);
 
@@ -507,24 +512,24 @@ private:
      */
     bool fileExists(const std::string& filename);
     /**
-     * 
+     *
      * @param source
      * @param target
      * @param targetlen
-     * @return 
+     * @return
      */
     size_t base64_decode(const char *source, unsigned char *target, size_t targetlen);
     /**
-     * 
+     *
      * @param base64char
-     * @return 
+     * @return
      */
     int _base64_char_value(char base64char);
     /**
-     * 
+     *
      * @param quadruple
      * @param result
-     * @return 
+     * @return
      */
     int _base64_decode_triple(char quadruple[4], unsigned char *result);
     /**
@@ -541,15 +546,15 @@ private:
     void saveToHex(const std::string& bootloaderContent);
 
     /**
-      * Detects which port was added or removed.
-      */
+     * Detects which port was added or removed.
+     */
     void detectNewPort(const std::string& portString);
 
     /**
-      * Validate hex string number.
-      * @param input the string hex number to validate
-      * $return true if the string is a hex value, false else.
-      **/
+     * Validate hex string number.
+     * @param input the string hex number to validate
+     * $return true if the string is a hex value, false else.
+     **/
     bool validate_hex(const std::string &);
 
     /**
@@ -585,57 +590,57 @@ private:
 
     void Invoke(const FB::JSObjectPtr& flash_callback, const string &value);
     /**
-      * Validates the input and creates a map with the parameters of the programmer.
-      * Returns zero upon success. All other return codes represent validation errors.
-      * @param device port to be used when uploading with programmer or burning bootloader.
-      * @param programmerProtocol the protocol used by the selected programmer.
-      * @param programmerSpeed the speed specified by the programmer protocol to be used with avrdude. 
-      * @param programmerCommunication the communication method specified by the programmer protocol.
-      * @param programmerForce the flage specifying whether or not to used -F flag with avrdude
-      * @param programmerDelay the delay applied when writing data to the device.
-      * @param mcu the device microcontroller unit.
-      * @param programmerData a map containing the programmer parameters.
-      **/
-    int programmerPrefs(const std::string& port, 
-        const std::string& programmerProtocol, 
-        const std::string& programmerSpeed, 
-        const std::string& programmerCommunication, 
-        const std::string& programmerForce, 
-        const std::string& programmerDelay, 
-        const std::string& mcu, 
-        std::map<std::string, std::string>& programmerData);
+     * Validates the input and creates a map with the parameters of the programmer.
+     * Returns zero upon success. All other return codes represent validation errors.
+     * @param device port to be used when uploading with programmer or burning bootloader.
+     * @param programmerProtocol the protocol used by the selected programmer.
+     * @param programmerSpeed the speed specified by the programmer protocol to be used with avrdude.
+     * @param programmerCommunication the communication method specified by the programmer protocol.
+     * @param programmerForce the flage specifying whether or not to used -F flag with avrdude
+     * @param programmerDelay the delay applied when writing data to the device.
+     * @param mcu the device microcontroller unit.
+     * @param programmerData a map containing the programmer parameters.
+     **/
+    int programmerPrefs(const std::string& port,
+			const std::string& programmerProtocol,
+			const std::string& programmerSpeed,
+			const std::string& programmerCommunication,
+			const std::string& programmerForce,
+			const std::string& programmerDelay,
+			const std::string& mcu,
+			std::map<std::string, std::string>& programmerData);
 
     /**
-      * Validates the bootloader parameters and creates a map containing them.
-      * Returns zero upon success. All other return codes represent validation errors.
-      * @param lowFuses
-      * @param highFuses
-      * @param extendedFuses
-      * @param unLockBits
-      * @param lockBits
-      * @param bootloaderData
-      **/
-    int bootloaderPrefs(const std::string& lowFuses, 
-        const std::string& highFuses, 
-        const std::string& extendedFuses, 
-        const std::string& unLockBits, 
-        const std::string& lockBits, 
-        std::map<std::string, std::string>& bootloaderData);
-    
+     * Validates the bootloader parameters and creates a map containing them.
+     * Returns zero upon success. All other return codes represent validation errors.
+     * @param lowFuses
+     * @param highFuses
+     * @param extendedFuses
+     * @param unLockBits
+     * @param lockBits
+     * @param bootloaderData
+     **/
+    int bootloaderPrefs(const std::string& lowFuses,
+			const std::string& highFuses,
+			const std::string& extendedFuses,
+			const std::string& unLockBits,
+			const std::string& lockBits,
+			std::map<std::string, std::string>& bootloaderData);
+
     /**
-      * Creates the first part of the avrdude command for uploading with
-      * a programmer or flashing a bootloader. 
-      * @param programmerData a map including the settings of the selected programmer.
-      */
+     * Creates the first part of the avrdude command for uploading with
+     * a programmer or flashing a bootloader.
+     * @param programmerData a map including the settings of the selected programmer.
+     */
     const std::string setProgrammerCommand(std::map<std::string, std::string>& data);
 
     /**
-      * Executes a command with avrdude.
-      * When on Widnows, the functions creates a batch file and then 
-      * calls CodebenderccAPI::execAvrdude function to execute the batch file,
-      * else calls CodebenderccAPI::unixExecAvrdude function.
-      * If appendFlag is true append the output of the avrdude command to the output file, if one exists.
-      */
+     * Executes a command with avrdude.
+     * When on Widnows, the functions creates a batch file and then
+     * calls CodebenderccAPI::execAvrdude function to execute the batch file,
+     * else calls CodebenderccAPI::unixExecAvrdude function.
+     * If appendFlag is true append the output of the avrdude command to the output file, if one exists.
+     */
     int runAvrdude(const std::string& command, bool append);
 
     int unixExecAvrdude(const std::string &unixExecCommand, bool unixAppendFlag);
@@ -643,9 +648,9 @@ private:
     long filesize(const char *filename);
 
     /**
-     * 
+     *
      * @param device The port of the device as a string. @see validate_device
-     * @param code A base64 encoded string of the binary file to be flashed to the device. 
+     * @param code A base64 encoded string of the binary file to be flashed to the device.
      * @param maxsize The maximum size of a binary file that can be flashed to the specific Arduino/other Board.
      * @param protocol The protocol to be used for Avrdude.
      * @param disable_flushing Specify whether the serial port buffer should be flushed or not.
@@ -654,46 +659,46 @@ private:
      * @param cback A callback used to report the flash result.
      */
     void doflash(const std::string&,
-                const std::string&,
-                const std::string&,
-                const std::string&,
-                const std::string&,
-                const std::string&,
-                const std::string&,
-                const FB::JSObjectPtr &);
+		 const std::string&,
+		 const std::string&,
+		 const std::string&,
+		 const std::string&,
+		 const std::string&,
+		 const std::string&,
+		 const FB::JSObjectPtr &);
 
     int resetLeonardo(std::string& fdevice);
 
     void LeonardoSketchControl(const std::string& fdevice);
-    std::string createCommand(const std::string& fdevice, 
-                              const std::string& protocol, 
-                              const std::string& speed, 
+    std::string createCommand(const std::string& fdevice,
+                              const std::string& protocol,
+                              const std::string& speed,
                               const std::string& mcu);
 
     /**
-     * 
-     * @param 
-     * @param 
-     * @param 
-     * @param 
-     * @param 
-     * @param 
+     *
+     * @param
+     * @param
+     * @param
+     * @param
+     * @param
+     * @param
      */
     void doflashWithProgrammer(const std::string&,
-                              const std::string&,
-                              const std::string&,
-                              std::map<std::string, std::string>&,
-                              const std::string&,
-                              const FB::JSObjectPtr &);
+			       const std::string&,
+			       const std::string&,
+			       std::map<std::string, std::string>&,
+			       const std::string&,
+			       const FB::JSObjectPtr &);
 
     /**
-      *
-      * @param
-      * @param
-      * @param
-      * @param
-      * @param
-      */
+     *
+     * @param
+     * @param
+     * @param
+     * @param
+     * @param
+     */
     void doflashBootloader(const std::string&,
                            std::map<std::string, std::string>&,
                            std::map<std::string, std::string>&,
@@ -701,10 +706,10 @@ private:
                            const FB::JSObjectPtr &);
 
     /**
-     * 
-     * @param 
-     * @param 
-     * @param 
+     *
+     * @param
+     * @param
+     * @param
      * @param
      */
     void serialReader(const std::string &, const unsigned int &, const FB::JSObjectPtr &, const FB::JSObjectPtr &);
@@ -725,7 +730,7 @@ private:
 
     /**
      * Creates a separate process to run the avrdude command when on Windows OS.
-     * Thus, one can get both the output of the command (the output that would originally be printed on a 
+     * Thus, one can get both the output of the command (the output that would originally be printed on a
      * command prompt) and the value returned by the process.
      * If appendFlag is true, append the output to the existing output file.
      * @return a code (integer) that indicates whether the command was successful or not
@@ -736,9 +741,9 @@ private:
      * Kills avrdude process if it is still running on Windows OS.
      **/
 
-    #ifdef _WIN32 
-        void winKillAvrdude(DWORD dwPid);
-    #endif
+#ifdef _WIN32
+    void winKillAvrdude(DWORD dwPid);
+#endif
 
     /** Flushes the contents of the serial port and toggles the DTR and RTS signal values. **/
     int flushBuffer(const std::string &);
@@ -755,23 +760,23 @@ private:
     /**
      */
 
-    #ifdef _WIN32
-        std::string avrdude, avrdudeConf;
-        std::wstring binFile, hexFile, outfile, batchFile;
-        const wchar_t * current_dir;
-    #else
-        std::string avrdude, avrdudeConf, binFile, hexFile, outfile;
-    #endif
+#ifdef _WIN32
+    std::string avrdude, avrdudeConf;
+    std::wstring binFile, hexFile, outfile, batchFile;
+    const wchar_t * current_dir;
+#else
+    std::string avrdude, avrdudeConf, binFile, hexFile, outfile;
+#endif
     /**
      */
     std::string lastcommand;
     int _retVal;
     /**
-    */
+     */
 
     FB::JSObjectPtr callback_;
     FB::JSObjectPtr error_callback_;
-    
+
     /**
      * Serial library and timeout objects
      **/
@@ -931,4 +936,3 @@ private:
 };
 
 #endif // H_CodebenderccAPI
-
