@@ -147,13 +147,22 @@ CodebenderccAPI(const CodebenderccPtr& plugin, const FB::BrowserHostPtr& host) :
         registerMethod("init", make_method(this, &CodebenderccAPI::init));
         registerMethod("printMap", make_method(this, &CodebenderccAPI::printMap));
         registerMethod("deleteMap", make_method(this, &CodebenderccAPI::deleteMap));
-        //Register all JS read-only properties
+        registerMethod("flush", make_method(this, &CodebenderccAPI::flush));
+        registerMethod("setRTS", make_method(this, &CodebenderccAPI::setRTS));
+        registerMethod("setDTR", make_method(this, &CodebenderccAPI::setDTR));
+        //Register all JS read-only properties;
+        registerProperty("connectedPort", make_property(this, &CodebenderccAPI::getConnectedPort));
         registerProperty("baudrate", make_property(this, &CodebenderccAPI::getBaudrate,
-						   &CodebenderccAPI::setBaudrate));
+					      	   &CodebenderccAPI::setBaudrate));
         registerProperty("version", make_property(this, &CodebenderccAPI::get_version));
         registerProperty("command", make_property(this, &CodebenderccAPI::getLastCommand));
         registerProperty("retVal", make_property(this, &CodebenderccAPI::getRetVal));
         registerProperty("instance_id", make_property(this, &CodebenderccAPI::get_instId));
+
+        registerMethod("CTS", make_property(this, &CodebenderccAPI::getCTS));
+        registerMethod("DSR", make_property(this, &CodebenderccAPI::getDSR));
+        registerMethod("RI", make_property(this, &CodebenderccAPI::getRI));
+        registerMethod("CD", make_property(this, &CodebenderccAPI::getCD));
 
         instance_id = counter++;
         serialMonitorStatus=false;
@@ -237,8 +246,48 @@ CodebenderccAPI(const CodebenderccPtr& plugin, const FB::BrowserHostPtr& host) :
      */
     CodebenderccPtr getPlugin();
 
-    const uint32_t getBaudrate () {return serialPort.getBaudrate();}
-    void setBaudrate (const uint32_t baudrate) { serialPort.setBaudrate(baudrate); }
+    const string getConnectedPort () { return serialPort.getPort(); }
+
+    /* RTS */
+    void flush ()
+    {
+	serialPort.flush();
+    }
+
+    /* BaudRate */
+    const uint32_t getBaudrate ()
+    {
+	return serialPort.getBaudrate();
+    }
+
+    void setBaudrate (const uint32_t baudrate)
+    {
+	serialPort.setBaudrate(baudrate);
+    }
+
+    /* RTS */
+    void setRTS (const uint32_t val)
+    {
+	serialPort.setRTS(val);
+    }
+
+    /* DTR */
+    void setDTR (const uint32_t val)
+    {
+	serialPort.setDTR(val);
+    }
+
+    /* CTS */
+    const bool getCTS () { return serialPort.getCTS(); }
+
+    /* DTR */
+    const bool getDSR () { return serialPort.getDSR(); }
+
+    /* RI */
+    const bool getRI () { return serialPort.getRI(); }
+
+    /* CD */
+    const bool getCD () { return serialPort.getCD(); }
 
     /**
      * Gets the plugin version.
