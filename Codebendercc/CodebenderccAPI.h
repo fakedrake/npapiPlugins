@@ -117,8 +117,8 @@ public:
      * @param plugin
      * @param host
      */
-CodebenderccAPI(const CodebenderccPtr& plugin, const FB::BrowserHostPtr& host) :
-    m_plugin(plugin), m_host(host), io() {
+    CodebenderccAPI(const CodebenderccPtr& plugin, const FB::BrowserHostPtr& host) :
+	m_plugin(plugin), m_host(host), io() {
 
         // Retrieve a reference to the DOM Window
         FB::DOM::WindowPtr window = m_host->getDOMWindow();
@@ -150,6 +150,8 @@ CodebenderccAPI(const CodebenderccPtr& plugin, const FB::BrowserHostPtr& host) :
         registerMethod("flush", make_method(this, &CodebenderccAPI::flush));
         registerMethod("setRTS", make_method(this, &CodebenderccAPI::setRTS));
         registerMethod("setDTR", make_method(this, &CodebenderccAPI::setDTR));
+        registerMethod("write", make_method(this, &CodebenderccAPI::write));
+
         //Register all JS read-only properties;
         registerProperty("connectedPort", make_property(this, &CodebenderccAPI::getConnectedPort));
         registerProperty("baudrate", make_property(this, &CodebenderccAPI::getBaudrate,
@@ -159,12 +161,14 @@ CodebenderccAPI(const CodebenderccPtr& plugin, const FB::BrowserHostPtr& host) :
         registerProperty("retVal", make_property(this, &CodebenderccAPI::getRetVal));
         registerProperty("instance_id", make_property(this, &CodebenderccAPI::get_instId));
 
-        registerMethod("CTS", make_property(this, &CodebenderccAPI::getCTS));
-        registerMethod("DSR", make_property(this, &CodebenderccAPI::getDSR));
-        registerMethod("RI", make_property(this, &CodebenderccAPI::getRI));
-        registerMethod("CD", make_property(this, &CodebenderccAPI::getCD));
+        registerProperty("CTS", make_property(this, &CodebenderccAPI::getCTS));
+        registerProperty("DSR", make_property(this, &CodebenderccAPI::getDSR));
+        registerProperty("RI", make_property(this, &CodebenderccAPI::getRI));
+        registerProperty("CD", make_property(this, &CodebenderccAPI::getCD));
+	registerProperty("serialBuffer", make_property(this, &CodebenderccAPI::getBufferSize,
+						       &CodebenderccAPI::setBufferSize));
 
-        instance_id = counter++;
+	instance_id = counter++;
         serialMonitorStatus=false;
         debug_ = false;
         lastPortCount=0;
@@ -228,6 +232,7 @@ CodebenderccAPI(const CodebenderccPtr& plugin, const FB::BrowserHostPtr& host) :
 #endif
 
         _retVal = 9999;
+	buffer_size = 4096;
     }
 
     /**
@@ -250,44 +255,75 @@ CodebenderccAPI(const CodebenderccPtr& plugin, const FB::BrowserHostPtr& host) :
 
     /* RTS */
     void flush ()
-    {
-	serialPort.flush();
-    }
+	{
+	    serialPort.flush();
+	}
 
     /* BaudRate */
-    const uint32_t getBaudrate ()
-    {
-	return serialPort.getBaudrate();
-    }
+    const int getBaudrate ()
+	{
+	    return serialPort.getBaudrate();
+	}
 
-    void setBaudrate (const uint32_t baudrate)
-    {
-	serialPort.setBaudrate(baudrate);
+    void setBaudrate (const int baudrate)
+	{
+	    serialPort.setBaudrate(baudrate);
+	}
+
+    /* Buffer Size */
+    const uint32_t getBufferSize ()
+	{
+	    return buffer_size;
+	}
+
+    void setBufferSize (const size_t bufSize)
+	{
+	    buffer_size = bufSize;
+	}
+
+    size_t write(const std::vector<unsigned char> &data) {
+	std::string msg(data.begin(), data.end());
+	dumpDataCodes("[write] writing to device ", msg);
+	return serialPort.write(msg);
     }
 
     /* RTS */
-    void setRTS (const uint32_t val)
-    {
-	serialPort.setRTS(val);
-    }
+    bool setRTS (bool val)
+	{
+	    if (serialPort.isOpen()) {
+		serialPort.setRTS(val);
+		return true;
+	    }
+	    return false;
+	}
+
 
     /* DTR */
-    void setDTR (const uint32_t val)
-    {
-	serialPort.setDTR(val);
-    }
+    bool setDTR (bool val)
+	{
+	    if (serialPort.isOpen()) {
+		serialPort.setDTR(val);
+		return true;
+	    }
+	    return false;
+	}
+
+#define WITH_SERIAL_OPEN(SERIAL, METHOD) do {		\
+	return (SERIAL).isOpen() && (SERIAL).METHOD();	\
+    } while(0)
 
     /* CTS */
-    const bool getCTS () { return serialPort.getCTS(); }
+    const bool getCTS () {WITH_SERIAL_OPEN (serialPort, getCTS); }
 
     /* DTR */
-    const bool getDSR () { return serialPort.getDSR(); }
+    const bool getDSR () { WITH_SERIAL_OPEN (serialPort, getDSR); }
 
     /* RI */
-    const bool getRI () { return serialPort.getRI(); }
+    const bool getRI () { WITH_SERIAL_OPEN (serialPort, getRI); }
 
     /* CD */
-    const bool getCD () { return serialPort.getCD(); }
+    const bool getCD () { WITH_SERIAL_OPEN (serialPort, getCD); }
+
 
     /**
      * Gets the plugin version.
@@ -536,6 +572,14 @@ CodebenderccAPI(const CodebenderccPtr& plugin, const FB::BrowserHostPtr& host) :
 
 private:
 
+    void dumpDataCodes (std::string prefix, std::string data) {
+	std::cout << prefix << " (length" << data.size() << "): [" ;
+	for (int i = 0; i < data.size(); i++) {
+	    cout << static_cast<int>((unsigned char)data[i]) << ", ";
+	}
+
+	std::cout << "]" << endl;
+    }
     /**
      * Validate Device Name.
      * Devices in Linux are /dev/tty{USB??,ACM??}.
@@ -635,8 +679,9 @@ private:
      */
     void error_notify(const std::string &message, int optionalWarningFlag = 0);
 
+    void Invoke(const FB::JSObjectPtr& flash_callback,
+		const std::vector<unsigned char> &value);
     void Invoke(const FB::JSObjectPtr& flash_callback, const int &value);
-
     void Invoke(const FB::JSObjectPtr& flash_callback, const string &value);
     /**
      * Validates the input and creates a map with the parameters of the programmer.
@@ -835,6 +880,7 @@ private:
     boost::asio::io_service io;
     boost::array<char, 1 > buf;
     std::string path;
+    size_t buffer_size;
 
     void delay(int duration) {
 #ifdef _WIN32

@@ -124,12 +124,14 @@ void CodebenderccAPI::closePort(bool flushFlag) try {
 }catch(serial::IOException& IOe){
 	CodebenderccAPI::debugMessage(IOe.what(),2);
 	std::string err_mess = boost::lexical_cast<std::string>(IOe.what());
-	error_notify(err_mess);
+	std::cerr << err_mess << endl;
+	// error_notify(err_mess);
 	if(!flushFlag)
 		RemovePortFromList(usedPort);
 }catch (...){
 	CodebenderccAPI::debugMessage("CodebenderccAPI::closePort exception",2);
-    error_notify("CodebenderccAPI::closePort() threw an unknown exception");
+	std::cerr << "CodebenderccAPI::closePort() threw an unknown exception" << endl;
+	// error_notify("CodebenderccAPI::closePort() threw an unknown exception");
     if(!flushFlag)
 		RemovePortFromList(usedPort);
 }
@@ -205,9 +207,9 @@ std::string CodebenderccAPI::getPorts() try {
     json::Array json_object_array;
     json::Object json_object;
     std::string json_string;
-    
+
     for(unsigned int i = 0; i < devices.size(); i++){
-    
+
         std::string port=devices.at(i).port;
         std::string description=devices.at(i).description;
         std::string hardware_id = devices.at(i).hardware_id;
@@ -215,7 +217,7 @@ std::string CodebenderccAPI::getPorts() try {
         json_object["port"]=String(port);
         json_object["description"]=String(description);
         json_object["hardware"]=String(hardware_id);
-         
+
         json_object_array.Insert(json_object);
         }
 
@@ -227,7 +229,7 @@ std::string CodebenderccAPI::getPorts() try {
 } catch (...) {
     error_notify("CodebenderccAPI::getPorts() threw an unknown exception");
     return "";
-}    
+}
 
 std::string CodebenderccAPI::availablePorts() try {
     CodebenderccAPI::debugMessageProbe("CodebenderccAPI::availablePorts()",3);
@@ -424,6 +426,7 @@ int CodebenderccAPI::get_instId() {
 }
 
 void CodebenderccAPI::init() {
+    std::cout << "Codebender.cc plugin" << endl;
     apiMap[instance_id] = shared_from_this();
 }
 
@@ -541,7 +544,7 @@ void CodebenderccAPI::doflash(const std::string& device,
 
                 int retVal = 1;
                 retVal = CodebenderccAPI::runAvrdude(command, false);
-                
+
                 if (retVal==THREAD_INTERRUPTED){
                     RemovePortFromList(fdevice);
                     isAvrdudeRunning=false;
@@ -562,7 +565,7 @@ void CodebenderccAPI::doflash(const std::string& device,
                 if (mcu == "atmega32u4")
                     CodebenderccAPI::LeonardoSketchControl(initialDevice);
 
-                CodebenderccAPI::Invoke(flash_callback, retVal); 
+                CodebenderccAPI::Invoke(flash_callback, retVal);
                 RemovePortFromList(fdevice);
                 isAvrdudeRunning=false;
 
@@ -709,7 +712,7 @@ void CodebenderccAPI::LeonardoSketchControl(const std::string& fdevice)try{
 
     CodebenderccAPI::debugMessage("CodebenderccAPI::LeonardoSketchControl",3);
 
-    /* If the current board is leonardo, wait for a few seconds 
+    /* If the current board is leonardo, wait for a few seconds
     until the sketch actually takes control of the port. */
 
     delay(500);
@@ -979,7 +982,7 @@ void CodebenderccAPI::doflashBootloader(const std::string& device,
 }
 
 const std::string CodebenderccAPI::setProgrammerCommand(std::map<std::string, std::string>& programmerData) try {
-    
+
     CodebenderccAPI::debugMessage("CodebenderccAPI::setProgrammerCommand",3);
     std::string os = getPlugin().get()->getOS();
     #ifndef _WIN32
@@ -1211,7 +1214,7 @@ void CodebenderccAPI::saveToHex(const std::string& hexContent) try {
 }
 
 void CodebenderccAPI::detectNewPort(const std::string& portString) try {
-    
+
     std::vector<std::string> portVector;
     std::vector< std::string >::iterator externalIterator = portsList.begin();
 
@@ -1222,9 +1225,9 @@ void CodebenderccAPI::detectNewPort(const std::string& portString) try {
     while (std::getline(chk, tok, ',')) {
         portVector.push_back(tok);
     }
-    
+
     std::vector< std::string >::iterator internalIterator = portVector.begin();
-    
+
     while (externalIterator != portsList.end()){
         if (std::find(portVector.begin(), portVector.end(), *externalIterator) == portVector.end()){
             mess = "Device removed from port : " + *externalIterator;
@@ -1239,7 +1242,7 @@ void CodebenderccAPI::detectNewPort(const std::string& portString) try {
         }
         internalIterator++;
     }
-    
+
     portsList = portVector;
 } catch (...) {
     error_notify("CodebenderccAPI::detectNewPort() threw an unknown exception");
@@ -1249,8 +1252,8 @@ void CodebenderccAPI::serialReader(const std::string &port,
                                    const unsigned int &baudrate,
                                    const FB::JSObjectPtr & callback,
                                    const FB::JSObjectPtr & valHandCallback) try {
-    CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader",3);
-    
+    CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader", 3);
+
     int openPortStatus=CodebenderccAPI::openPort(port, baudrate, false, "CodebenderccAPI::serialReader - ");
 
     if(openPortStatus!=1){
@@ -1271,28 +1274,31 @@ void CodebenderccAPI::serialReader(const std::string &port,
         try{
             for (;;) {
 
-                 boost::this_thread::interruption_point();
+		boost::this_thread::interruption_point();
 
-                if (CodebenderccAPI::checkSerialMonitorStatus()==0)
+		 if (CodebenderccAPI::checkSerialMonitorStatus()==0){
+		     std::cerr << "[ERROR] Bad serial monitor status." << endl;
+		     break;
+		 }
+		 if (!serialPort.isOpen()) {
+		    std::cerr << "[ERROR] Reading from closed port." << endl;
                     break;
-
-                if (!serialPort.isOpen())
-                    break;
-
-                if(!serialPort.available())
+		}
+		 if(!serialPort.available())
                     continue;
-                
-                rcvd = "";
-                rcvd = serialPort.read((size_t) 100);
-                
-                if (rcvd != "")
-                    CodebenderccAPI::Invoke(callback, rcvd);
 
+		 rcvd = serialPort.read((size_t) buffer_size);
+
+                if (rcvd != "") {
+		    dumpDataCodes("[read] reading from serial ", rcvd);
+                    CodebenderccAPI::Invoke(callback,
+					    std::vector<unsigned char>(rcvd.begin(), rcvd.end()));
+		}
             }
         }catch(boost::thread_interrupted&){
             CodebenderccAPI::serialMonitorSetStatus();
             CodebenderccAPI::disconnect();
-        }        
+        }
     }catch (...) {
         CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader loop interrupted",1);
          error_notify("CodebenderccAPI::serialReader loop interrupted", 1);
@@ -1302,7 +1308,7 @@ void CodebenderccAPI::serialReader(const std::string &port,
     }
     CodebenderccAPI::disconnect();
     CodebenderccAPI::debugMessage("CodebenderccAPI::serialReader ended",3);
-} catch (...) {
+}catch (...) {
     error_notify("CodebenderccAPI::serialReader() threw an unknown exception");
     notify("disconnect");
     CodebenderccAPI::serialMonitorSetStatus();
@@ -1488,6 +1494,14 @@ std::string CodebenderccAPI::exec(const char * cmd) try {
     return "";
 }
 
+void CodebenderccAPI::Invoke(const FB::JSObjectPtr &flash_callback, const std::vector<unsigned char> &data) {
+    CodebenderccAPI::debugMessage("CodebenderccAPI::Invoke",3);
+    if (CodebenderccAPI::JSAPIWeakPtrExists()==true){
+	dumpDataCodes("[invoke:vector] Callback args: ", std::string(data.begin(), data.end()));
+        flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(data));
+    }
+}
+
 void CodebenderccAPI::Invoke(const FB::JSObjectPtr &flash_callback, const int &value) {
     CodebenderccAPI::debugMessage("CodebenderccAPI::Invoke",3);
     if (CodebenderccAPI::JSAPIWeakPtrExists()==true)
@@ -1496,8 +1510,11 @@ void CodebenderccAPI::Invoke(const FB::JSObjectPtr &flash_callback, const int &v
 
 void CodebenderccAPI::Invoke(const FB::JSObjectPtr &flash_callback, const string &value) {
     CodebenderccAPI::debugMessage("CodebenderccAPI::Invoke",3);
-    if (CodebenderccAPI::JSAPIWeakPtrExists()==true)
+    if (CodebenderccAPI::JSAPIWeakPtrExists()==true){
+	dumpDataCodes("[invoke:string] Callback args: ", value);
         flash_callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(value));
+    }else
+	std::cerr << "Cannot invoke callback with " << value << "no weak pointer" << endl;
 }
 
 void CodebenderccAPI::notify(const std::string &message) {
@@ -2074,7 +2091,7 @@ CodebenderccAPI::RegOpenKeyEx(HKEY hKey,
             error_notify(err_msg);
         return rc;
     }
-    
+
     return rc;
 }
 

@@ -84,13 +84,13 @@ FB::variant CodebenderccAPI::flashWithProgrammer(const std::string& device,
     /**Validation end**/
 
    boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::doflashWithProgrammer,
-                                        this, 
-                                        device, 
-                                        code, 
-                                        maxsize, 
-                                        programmerData, 
-                                        mcu, 
-                                        cback));  
+                                        this,
+                                        device,
+                                        code,
+                                        maxsize,
+                                        programmerData,
+                                        mcu,
+                                        cback));
    thr=t;
    CodebenderccAPI::debugMessage("CodebenderccAPI::flashWithProgrammer ended",3);
    return 0;
@@ -244,7 +244,7 @@ bool CodebenderccAPI::serialRead(const std::string &port,
     std::string message = "connecting at ";
     message += baudrate;
     message += '\n';
-    callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(message));
+//     callback->InvokeAsync("", FB::variant_list_of(shared_from_this())(message));
     unsigned int brate = boost::lexical_cast<unsigned int, std::string > (baudrate);
     boost::thread* t = new boost::thread(boost::bind(&CodebenderccAPI::serialReader,
                                                     this,

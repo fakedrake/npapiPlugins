@@ -11,9 +11,9 @@ std::string CodebenderccAPI::QueryKey(HKEY hKey) try {
     DWORD    cValues;              // number of values for key
     DWORD    cchMaxValue;          // longest value name (characters)
     DWORD    cbMaxValueData;       // longest value data (bytes)
-    
-    DWORD i, retCode; 
- 
+
+    DWORD i, retCode;
+
     TCHAR    achValue[MAX_KEY_LENGTH];
     DWORD    cchValue = MAX_KEY_LENGTH;
 
@@ -40,10 +40,10 @@ std::string CodebenderccAPI::QueryKey(HKEY hKey) try {
 
     if (cValues)                // cValues is the count of values found in the SERIALCOMM subkey
     {
-        for (i=0, retCode=ERROR_SUCCESS; i<cValues; i++) 
-        { 
+        for (i=0, retCode=ERROR_SUCCESS; i<cValues; i++)
+        {
             cchValue = MAX_KEY_LENGTH;
-            achValue[0] = '\0'; 
+            achValue[0] = '\0';
             retCode = CodebenderccAPI::RegEnumValue(
                 hKey,             // A handle to an open registry key
                 i,                // The index of the value to be retrieved
@@ -55,7 +55,7 @@ std::string CodebenderccAPI::QueryKey(HKEY hKey) try {
                 NULL);
 
             if (retCode == ERROR_SUCCESS )
-            { 
+            {
                 DWORD lpData = cbMaxValueData;
                 buffer[0] = '\0';
                 LONG dwRes = CodebenderccAPI::RegQueryValueEx(hKey, achValue, 0, NULL, (LPBYTE)buffer, &lpData);
@@ -210,7 +210,7 @@ std::string CodebenderccAPI::getFlashResult() try {
  * @return length of converted data on success, -1 otherwise
  */
 size_t CodebenderccAPI::base64_decode(const char *source, unsigned char *target, size_t targetlen) try {
-    
+
     char *src, *tmpptr;
     char quadruple[4];
     unsigned char tmpresult[3];
@@ -436,7 +436,7 @@ int CodebenderccAPI::flushBuffer(const std::string& port) try {
         error_notify(result, 1);
         return -1;
     }
-    catch(serial::IOException& IOe){  
+    catch(serial::IOException& IOe){
         std::string err_msg = boost::lexical_cast<std::string>(IOe.what());
         std::string result = "flushBuffer exception: " + err_msg;
         error_notify(result, 1);
@@ -448,7 +448,7 @@ int CodebenderccAPI::flushBuffer(const std::string& port) try {
         error_notify(result, 1);
         return -1;
     }
- 
+
      CodebenderccAPI::closePort(true);
 
      CodebenderccAPI::debugMessage("CodebenderccAPI::flushBuffer ended",3);
