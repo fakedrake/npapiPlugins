@@ -168,6 +168,7 @@ public:
 	registerProperty("serialBuffer", make_property(this, &CodebenderccAPI::getBufferSize,
 						       &CodebenderccAPI::setBufferSize));
 
+	// Constants
 	instance_id = counter++;
         serialMonitorStatus=false;
         debug_ = false;
